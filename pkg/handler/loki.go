@@ -17,9 +17,10 @@ import (
 var hlog = logrus.WithField("module", "handler")
 
 const (
-	exportCSVFormat = "csv"
-	lokiOrgIDHeader = "X-Scope-OrgID"
-	getFlowsURLPath = "/loki/api/v1/query_range"
+	queryParam        = "query"
+	exportCSVFormat   = "csv"
+	lokiOrgIDHeader   = "X-Scope-OrgID"
+	queryRangeURLPath = "/loki/api/v1/query_range"
 )
 
 type LokiConfig struct {
@@ -29,7 +30,7 @@ type LokiConfig struct {
 	Labels   []string
 }
 
-func GetFlows(cfg LokiConfig, allowExport bool) func(w http.ResponseWriter, r *http.Request) {
+func GetClient(cfg LokiConfig) httpclient.HTTPClient {
 	var headers map[string][]string
 	if cfg.TenantID != "" {
 		headers = map[string][]string{
@@ -37,7 +38,11 @@ func GetFlows(cfg LokiConfig, allowExport bool) func(w http.ResponseWriter, r *h
 		}
 	}
 	// TODO: loki with auth
-	lokiClient := httpclient.NewHTTPClient(cfg.Timeout, headers)
+	return httpclient.NewHTTPClient(cfg.Timeout, headers)
+}
+
+func GetFlows(cfg LokiConfig, allowExport bool, topology bool) func(w http.ResponseWriter, r *http.Request) {
+	lokiClient := GetClient(cfg)
 
 	// TODO: improve search mecanism:
 	// - better way to make difference between labels and values
@@ -48,7 +53,7 @@ func GetFlows(cfg LokiConfig, allowExport bool) func(w http.ResponseWriter, r *h
 		hlog.Debugf("GetFlows query params: %s", params)
 
 		//allow export only on specific endpoints
-		queryBuilder := loki.NewQuery(cfg.Labels, allowExport)
+		queryBuilder := loki.NewQuery(cfg.Labels, allowExport, topology)
 		if err := queryBuilder.AddParams(params); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -64,7 +69,9 @@ func GetFlows(cfg LokiConfig, allowExport bool) func(w http.ResponseWriter, r *h
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		flowsURL := strings.TrimRight(cfg.URL.String(), "/") + getFlowsURLPath + "?" + query
+		hlog.Debugf("GetFlows query: %s", query)
+
+		flowsURL := strings.TrimRight(cfg.URL.String(), "/") + queryRangeURLPath + "?" + queryParam + "=" + EncodeQuery(query)
 		hlog.Debugf("GetFlows URL: %s", flowsURL)
 
 		resp, code, err := lokiClient.Get(flowsURL)
@@ -90,6 +97,15 @@ func GetFlows(cfg LokiConfig, allowExport bool) func(w http.ResponseWriter, r *h
 			writeRawJSON(w, http.StatusOK, resp)
 		}
 	}
+}
+
+/* loki query will fail if spaces or quotes are not encoded
+ * we can't use url.QueryEscape or url.Values here since Loki doesn't manage encoded parenthesis
+ */
+func EncodeQuery(url string) string {
+	unquoted := strings.ReplaceAll(url, "\"", "%22")
+	unspaced := strings.ReplaceAll(unquoted, " ", "%20")
+	return unspaced
 }
 
 func getLokiError(resp []byte, code int) string {

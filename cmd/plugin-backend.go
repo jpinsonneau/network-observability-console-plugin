@@ -30,7 +30,7 @@ var (
 	lokiLabels   = flag.String("loki-labels", "SrcK8S_Namespace,SrcK8S_OwnerName,DstK8S_Namespace,DstK8S_OwnerName,FlowDirection", "Loki labels, comma separated")
 	lokiTimeout  = flag.Duration("loki-timeout", 10*time.Second, "Timeout of the Loki query to retrieve logs")
 	lokiTenantID = flag.String("loki-tenant-id", "", "Tenant organization ID for multi-tenant-loki (submitted as the X-Scope-OrgID HTTP header)")
-	logLevel     = flag.String("loglevel", "info", "log level (default: info)")
+	logLevel     = flag.String("loglevel", "trace", "log level (default: info)")
 	versionFlag  = flag.Bool("v", false, "print version")
 	log          = logrus.WithField("module", "main")
 )

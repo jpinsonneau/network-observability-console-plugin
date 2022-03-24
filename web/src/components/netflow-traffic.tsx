@@ -19,13 +19,15 @@ import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from 'react-router-dom';
-import { isAllowed, Feature } from '../utils/features-gate';
 import { Record } from '../api/ipfix';
-import { getFlows } from '../api/routes';
+import { TopologyMetrics } from '../api/loki';
+import { getFlows, getTopology as getTopologyMetrics } from '../api/routes';
 import { QueryOptions } from '../model/query-options';
+import { DefaultOptions, LayoutName, TopologyOptions } from '../model/topology';
 import { Column, getDefaultColumns } from '../utils/columns';
 import { TimeRange } from '../utils/datetime';
 import { getHTTPErrorDetails } from '../utils/errors';
+import { Feature, isAllowed } from '../utils/features-gate';
 import { Filter } from '../utils/filters';
 import {
   LOCAL_STORAGE_COLS_KEY,
@@ -54,6 +56,7 @@ import TimeRangeModal from './modals/time-range-modal';
 import { RecordPanel } from './netflow-record/record-panel';
 import NetflowTable from './netflow-table/netflow-table';
 import NetflowTopology from './netflow-topology/netflow-topology';
+import OptionsPanel from './netflow-topology/options-panel';
 import './netflow-traffic.css';
 
 export type ViewId = 'table' | 'topology';
@@ -66,6 +69,10 @@ export const NetflowTraffic: React.FC<{
   const [extensions] = useResolvedExtensions<ModelFeatureFlag>(isModelFeatureFlag);
   const [loading, setLoading] = React.useState(true);
   const [flows, setFlows] = React.useState<Record[]>([]);
+  const [metrics, setMetrics] = React.useState<TopologyMetrics[]>([]);
+  const [layout, setLayout] = React.useState<LayoutName>(LayoutName.ColaNoForce);
+  const [topologyOptions, setTopologyOptions] = React.useState<TopologyOptions>(DefaultOptions);
+  const [isShowTopologyOptions, setShowTopologyOptions] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | undefined>();
   const [size, setSize] = useLocalStorage<Size>(LOCAL_STORAGE_SIZE_KEY, 'm');
   const [isTRModalOpen, setTRModalOpen] = React.useState(false);
@@ -109,6 +116,18 @@ export const NetflowTraffic: React.FC<{
         case 'table':
           getFlows(qa)
             .then(setFlows)
+            .catch(err => {
+              setFlows([]);
+              const errorMessage = getHTTPErrorDetails(err);
+              setError(errorMessage);
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+          break;
+        case 'topology':
+          getTopologyMetrics(qa)
+            .then(setMetrics)
             .catch(err => {
               setFlows([]);
               const errorMessage = getHTTPErrorDetails(err);
@@ -185,6 +204,7 @@ export const NetflowTraffic: React.FC<{
   };
 
   const actions = () => {
+    //TODO: add data dropdown for topology (bytes / packets / connections ?)
     switch (selectedViewId) {
       case 'table':
       case 'topology':
@@ -246,6 +266,38 @@ export const NetflowTraffic: React.FC<{
     }
   };
 
+  const panelContent = () => {
+    if (selectedRecord) {
+      return (
+        <RecordPanel
+          id="recordPanel"
+          record={selectedRecord}
+          columns={getDefaultColumns(t, false, false)}
+          filters={filters}
+          range={range}
+          options={queryOptions}
+          setFilters={setFilters}
+          setRange={setRange}
+          setQueryOptions={setQueryOptions}
+          onClose={() => onSelect(undefined)}
+        />
+      );
+    } else if (isShowTopologyOptions) {
+      return (
+        <OptionsPanel
+          id="optionsPanel"
+          layout={layout}
+          setLayout={setLayout}
+          options={topologyOptions}
+          setOptions={setTopologyOptions}
+          onClose={() => setShowTopologyOptions(false)}
+        />
+      );
+    } else {
+      return null;
+    }
+  };
+
   const pageContent = () => {
     switch (selectedViewId) {
       case 'table':
@@ -262,7 +314,21 @@ export const NetflowTraffic: React.FC<{
           />
         );
       case 'topology':
-        return <NetflowTopology loading={loading} error={error} />;
+        return (
+          <NetflowTopology
+            loading={loading}
+            error={error}
+            range={range}
+            metrics={metrics}
+            layout={layout}
+            options={topologyOptions}
+            filters={filters}
+            setFilters={setFilters}
+            lowScale={0.1}
+            medScale={0.3}
+            toggleTopologyOptions={() => setShowTopologyOptions(!isShowTopologyOptions)}
+          />
+        );
       default:
         return null;
     }
@@ -304,24 +370,12 @@ export const NetflowTraffic: React.FC<{
           </OverflowMenu>
         }
       </FiltersToolbar>
-      <Drawer id="drawer" isExpanded={selectedRecord !== undefined}>
-        <DrawerContent
-          id="drawerContent"
-          panelContent={
-            <RecordPanel
-              id="recordPanel"
-              record={selectedRecord}
-              columns={getDefaultColumns(t, false, false)}
-              filters={filters}
-              range={range}
-              options={queryOptions}
-              setFilters={setFilters}
-              setRange={setRange}
-              setQueryOptions={setQueryOptions}
-              onClose={() => onSelect(undefined)}
-            />
-          }
-        >
+      <Drawer
+        id="drawer"
+        isExpanded={selectedRecord !== undefined || isShowTopologyOptions}
+        isInline={isShowTopologyOptions}
+      >
+        <DrawerContent id="drawerContent" panelContent={panelContent()}>
           <DrawerContentBody id="drawerBody">{pageContent()}</DrawerContentBody>
         </DrawerContent>
       </Drawer>
