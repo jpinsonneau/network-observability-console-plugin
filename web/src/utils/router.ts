@@ -3,13 +3,14 @@ import * as _ from 'lodash';
 import { Column, ColumnsId } from './columns';
 import { createFilterValue, Filter, FilterType, FilterValue } from './filters';
 import { TimeRange } from './datetime';
-import { Match, QueryOptions, Reporter } from '../model/query-options';
+import { Match, MetricType, QueryOptions, Reporter } from '../model/query-options';
 
 const SPLIT_FILTER_CHAR = ',';
 export const DEFAULT_TIME_RANGE = 300;
 export const DEFAULT_LIMIT = 100;
 export const DEFAULT_FLOWDIR = '0';
 export const DEFAULT_MATCH = 'all';
+export const DEFAULT_TOPOLOGY_METRIC_TYPE = 'Bytes';
 export const NETFLOW_TRAFFIC_PATH = '/netflow-traffic';
 
 export enum QueryArgument {
@@ -18,7 +19,8 @@ export enum QueryArgument {
   TimeRange = 'timeRange',
   RefreshInterval = 'refresh',
   Limit = 'limit',
-  Match = 'match'
+  Match = 'match',
+  MetricType = 'metricType'
 }
 type AnyQueryArgs = ColumnsId | QueryArgument;
 export type QueryArguments = { [k in AnyQueryArgs]?: unknown };
@@ -50,10 +52,16 @@ const stringToMatch: { [match: string]: Match } = {
   any: 'any'
 };
 
+const stringToMetricType: { [metricType: string]: MetricType } = {
+  bytes: 'Bytes',
+  packets: 'Packets'
+};
+
 export const buildQueryArguments = (
   filters: Filter[],
   range: number | TimeRange,
-  opts: QueryOptions
+  opts: QueryOptions,
+  forTopology: boolean
 ): QueryArguments => {
   // Note: at the moment the browser query params and API query params are tied together;
   // we may want to decouple them in the future.
@@ -74,6 +82,10 @@ export const buildQueryArguments = (
   }
   params[QueryArgument.Limit] = opts.limit;
   params[QueryArgument.Match] = opts.match;
+  //specific topology params
+  if (forTopology) {
+    params[QueryArgument.MetricType] = opts.metricType || DEFAULT_TOPOLOGY_METRIC_TYPE;
+  }
   return params;
 };
 
@@ -147,7 +159,10 @@ export const getQueryOptionsFromURL = (): QueryOptions => {
   return {
     match: stringToMatch[getURLQueryArgument(QueryArgument.Match) ?? DEFAULT_MATCH] ?? DEFAULT_MATCH,
     limit: getURLQueryArgumentAsNumber(QueryArgument.Limit) ?? DEFAULT_LIMIT,
-    reporter: flowdirToReporter[getURLQueryArgument(ColumnsId.flowdir) ?? DEFAULT_FLOWDIR]
+    reporter: flowdirToReporter[getURLQueryArgument(ColumnsId.flowdir) ?? DEFAULT_FLOWDIR],
+    metricType:
+      stringToMetricType[getURLQueryArgument(QueryArgument.MetricType) ?? DEFAULT_TOPOLOGY_METRIC_TYPE] ??
+      DEFAULT_TOPOLOGY_METRIC_TYPE
   };
 };
 

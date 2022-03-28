@@ -15,7 +15,9 @@ import { CogIcon, SearchIcon, TimesIcon } from '@patternfly/react-icons';
 import {
   createTopologyControlButtons,
   defaultControlButtonsOptions,
-  GRAPH_LAYOUT_END_EVENT, Model, SelectionEventListener,
+  GRAPH_LAYOUT_END_EVENT,
+  Model,
+  SelectionEventListener,
   SELECTION_EVENT,
   TopologyControlBar,
   TopologyView,
@@ -29,7 +31,7 @@ import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TopologyMetrics } from '../../api/loki';
-import { generateDataModel, LayoutName, TopologyOptions } from '../../model/topology';
+import { generateDataModel, LayoutName, TopologyMetricTypes, TopologyOptions } from '../../model/topology';
 import { ColumnsId } from '../../utils/columns';
 import { TimeRange } from '../../utils/datetime';
 import { Filter } from '../../utils/filters';
@@ -49,13 +51,14 @@ const FIT_PADDING = 80;
 
 const TopologyContent: React.FC<{
   range: number | TimeRange;
+  metricType: TopologyMetricTypes;
   metrics: TopologyMetrics[];
   options: TopologyOptions;
   layout: LayoutName;
   filters: Filter[];
   setFilters: (v: Filter[]) => void;
   toggleTopologyOptions: () => void;
-}> = ({ range, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
+}> = ({ range, metricType, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
   const controller = useVisualizationController();
 
@@ -171,7 +174,7 @@ const TopologyContent: React.FC<{
   }, [fitView]);
 
   //get options with updated time range and max edge value
-  const getNodeOptions = React.useCallback(() => {
+  const getOptions = React.useCallback(() => {
     let rangeInSeconds: number;
     if (typeof range === 'number') {
       rangeInSeconds = range;
@@ -181,8 +184,8 @@ const TopologyContent: React.FC<{
     const maxEdgeValue = _.isEmpty(metrics)
       ? 0
       : metrics.reduce((prev, current) => (prev.total > current.total ? prev : current)).total;
-    return { ...options, rangeInSeconds, maxEdgeValue } as TopologyOptions;
-  }, [metrics, options, range]);
+    return { ...options, rangeInSeconds, maxEdgeValue, metricType } as TopologyOptions;
+  }, [metrics, options, range, metricType]);
 
   //update graph details level
   const setDetailsLevel = React.useCallback(() => {
@@ -223,9 +226,9 @@ const TopologyContent: React.FC<{
     }
 
     const currentModel = controller.toModel();
-    const mergedModel = generateDataModel(metrics, getNodeOptions(), filters, currentModel.nodes, currentModel.edges);
+    const mergedModel = generateDataModel(metrics, getOptions(), filters, currentModel.nodes, currentModel.edges);
     controller.fromModel(mergedModel);
-  }, [controller, filters, getNodeOptions, metrics, resetGraph]);
+  }, [controller, filters, getOptions, metrics, resetGraph]);
 
   /*update model on layout / options / metrics / filters change
    * reset graph and details level on specific layout / options change to force render
@@ -347,13 +350,14 @@ const NetflowTopology: React.FC<{
   loading?: boolean;
   error?: string;
   range: number | TimeRange;
+  metricType: TopologyMetricTypes;
   metrics: TopologyMetrics[];
   options: TopologyOptions;
   layout: LayoutName;
   filters: Filter[];
   setFilters: (v: Filter[]) => void;
   toggleTopologyOptions: () => void;
-}> = ({ loading, error, range, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
+}> = ({ loading, error, range, metricType, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
   const [controller, setController] = React.useState<Visualization>();
 
@@ -387,6 +391,7 @@ const NetflowTopology: React.FC<{
       <VisualizationProvider controller={controller}>
         <TopologyContent
           range={range}
+          metricType={metricType}
           metrics={metrics}
           layout={layout}
           options={options}

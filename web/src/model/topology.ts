@@ -32,6 +32,11 @@ export enum TopologyGroupTypes {
   ALL = 'all'
 }
 
+export enum TopologyMetricTypes {
+  BYTES = 'Bytes',
+  PACKETS = 'Packets'
+}
+
 export interface TopologyOptions {
   rangeInSeconds: number;
   maxEdgeValue: number;
@@ -44,6 +49,7 @@ export interface TopologyOptions {
   groupTypes: TopologyGroupTypes;
   lowScale: number;
   medScale: number;
+  metricType: TopologyMetricTypes;
 }
 
 export const DefaultOptions: TopologyOptions = {
@@ -57,7 +63,8 @@ export const DefaultOptions: TopologyOptions = {
   truncateLabels: true,
   groupTypes: TopologyGroupTypes.NAMESPACES,
   lowScale: 0.3,
-  medScale: 0.5
+  medScale: 0.5,
+  metricType: TopologyMetricTypes.BYTES,
 };
 
 export const DEFAULT_NODE_TRUNCATE_LENGTH = 25;
@@ -136,12 +143,22 @@ export const getTagStatus = (n: number, total: number) => {
   }
 };
 
-export const getEdgeStyle = (bytes: number) => {
-  return bytes ? EdgeStyle.dashed : EdgeStyle.dotted;
+export const getEdgeStyle = (count: number) => {
+  return count ? EdgeStyle.dashed : EdgeStyle.dotted;
 };
 
-export const getEdgeTag = (amount: number, options: TopologyOptions) => {
-  return options.edgeTags && amount ? bytesPerSeconds(amount, options.rangeInSeconds) : undefined;
+export const getEdgeTag = (count: number, options: TopologyOptions) => {
+  if (options.edgeTags && count) {
+    switch (options.metricType) {
+      case TopologyMetricTypes.BYTES:
+        return bytesPerSeconds(count, options.rangeInSeconds);
+      case TopologyMetricTypes.PACKETS:
+      default:
+        return count;
+    }
+  } else {
+    return undefined;
+  }
 };
 
 export const generateEdge = (
@@ -164,7 +181,7 @@ export const generateEdge = (
       endTerminalStatus: NodeStatus.default,
       tag: getEdgeTag(count, options),
       tagStatus: getTagStatus(count, options.maxEdgeValue),
-      bytes: count
+      count
     }
   };
 };
@@ -210,7 +227,7 @@ export const generateDataModel = (
           collapsedHeight: 75,
           truncateLength: options.truncateLabels
             ? //match node label length according to badge
-              options.nodeBadges
+            options.nodeBadges
               ? DEFAULT_NODE_TRUNCATE_LENGTH + 2
               : DEFAULT_NODE_TRUNCATE_LENGTH - 3
             : undefined
@@ -249,15 +266,15 @@ export const generateDataModel = (
     return node;
   }
 
-  function addEdge(sourceId: string, targetId: string, bytes: number) {
+  function addEdge(sourceId: string, targetId: string, count: number) {
     let edge = edges.find(e => e.data.sourceId === sourceId && e.data.targetId === targetId);
     if (edge) {
       //update style and datas
-      edge.edgeStyle = getEdgeStyle(bytes);
-      edge.animationSpeed = getAnimationSpeed(bytes, options.maxEdgeValue);
-      edge.data = { ...edge.data, tag: getEdgeTag(bytes, options), bytes };
+      edge.edgeStyle = getEdgeStyle(count);
+      edge.animationSpeed = getAnimationSpeed(count, options.maxEdgeValue);
+      edge.data = { ...edge.data, tag: getEdgeTag(count, options), count };
     } else {
-      edge = generateEdge(sourceId, targetId, bytes, opts);
+      edge = generateEdge(sourceId, targetId, count, opts);
       edges.push(edge);
     }
 
@@ -279,8 +296,8 @@ export const generateDataModel = (
         : undefined;
     const srcOwnerGroup =
       [TopologyGroupTypes.ALL, TopologyGroupTypes.OWNERS].includes(options.groupTypes) &&
-      !_.isEmpty(ownerType) &&
-      !_.isEmpty(ownerName)
+        !_.isEmpty(ownerType) &&
+        !_.isEmpty(ownerName)
         ? addGroup(ownerName, ownerType, srcNamespaceGroup, srcNamespaceGroup === undefined)
         : undefined;
     const srcNode = addNode(namespace, type, name, addr, srcOwnerGroup ? srcOwnerGroup : srcNamespaceGroup);

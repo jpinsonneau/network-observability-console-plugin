@@ -23,7 +23,7 @@ import { Record } from '../api/ipfix';
 import { TopologyMetrics } from '../api/loki';
 import { getFlows, getTopology as getTopologyMetrics } from '../api/routes';
 import { QueryOptions } from '../model/query-options';
-import { DefaultOptions, LayoutName, TopologyOptions } from '../model/topology';
+import { DefaultOptions, LayoutName, TopologyMetricTypes, TopologyOptions } from '../model/topology';
 import { Column, getDefaultColumns } from '../utils/columns';
 import { TimeRange } from '../utils/datetime';
 import { getHTTPErrorDetails } from '../utils/errors';
@@ -47,6 +47,7 @@ import {
   setURLQueryArguments
 } from '../utils/router';
 import DisplayDropdown, { Size } from './dropdowns/display-dropdown';
+import MetricDropdown from './dropdowns/metric-dropdown';
 import { RefreshDropdown } from './dropdowns/refresh-dropdown';
 import TimeRangeDropdown from './dropdowns/time-range-dropdown';
 import { FiltersToolbar } from './filters-toolbar';
@@ -104,8 +105,13 @@ export const NetflowTraffic: React.FC<{
   };
 
   const getQueryArguments = React.useCallback(() => {
-    return buildQueryArguments(forcedFilters ? forcedFilters : filters, range, queryOptions);
-  }, [filters, forcedFilters, queryOptions, range]);
+    return buildQueryArguments(
+      forcedFilters ? forcedFilters : filters,
+      range,
+      queryOptions,
+      selectedViewId === 'topology'
+    );
+  }, [filters, forcedFilters, queryOptions, range, selectedViewId]);
 
   const tick = React.useCallback(
     (queryArgs?: QueryArguments) => {
@@ -204,12 +210,18 @@ export const NetflowTraffic: React.FC<{
   };
 
   const actions = () => {
-    //TODO: add data dropdown for topology (bytes / packets / connections ?)
     switch (selectedViewId) {
       case 'table':
       case 'topology':
         return (
           <div className="co-actions">
+            {selectedViewId === 'topology' && (
+              <MetricDropdown
+                id="metric"
+                selected={queryOptions.metricType}
+                setMetricType={v => setQueryOptions({ ...queryOptions, metricType: v })}
+              />
+            )}
             <TimeRangeDropdown
               id="time-range-dropdown"
               range={typeof range === 'number' ? range : undefined}
@@ -319,6 +331,7 @@ export const NetflowTraffic: React.FC<{
             loading={loading}
             error={error}
             range={range}
+            metricType={queryOptions.metricType as TopologyMetricTypes}
             metrics={metrics}
             layout={layout}
             options={topologyOptions}
