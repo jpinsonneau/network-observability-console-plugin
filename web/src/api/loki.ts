@@ -1,3 +1,4 @@
+import { MetricFunction } from 'src/model/query-options';
 import { cyrb53 } from '../utils/hash';
 import { Fields, Labels, Record } from './ipfix';
 
@@ -47,8 +48,26 @@ export interface TopologyMetrics {
   total: number;
 }
 
-export const calculateMatrixTotals = (tm: TopologyMetrics) => {
+/* calculate total for selected function
+ * loki will return matrix with multiple values (one per step = 60s)
+ */
+export const calculateMatrixTotals = (tm: TopologyMetrics, mf: MetricFunction) => {
   tm.total = 0;
-  tm.values.forEach(v => (tm.total += Number(v[1])));
+  switch (mf) {
+    case 'max':
+      tm.total = Math.max(...tm.values.map(v => Number(v[1])));
+      break;
+    case 'avg':
+    case 'rate':
+      tm.values.forEach(v => (tm.total += Number(v[1])));
+      tm.total = tm.total / tm.values.length;
+      break;
+    case 'sum':
+    default:
+      tm.values.forEach(v => (tm.total += Number(v[1])));
+      break;
+  }
+  //round total
+  tm.total = Math.round(tm.total * 100) / 100;
   return tm;
 };

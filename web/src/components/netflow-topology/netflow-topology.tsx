@@ -31,7 +31,13 @@ import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TopologyMetrics } from '../../api/loki';
-import { generateDataModel, LayoutName, TopologyMetricTypes, TopologyOptions } from '../../model/topology';
+import {
+  generateDataModel,
+  LayoutName,
+  TopologyMetricFunctions,
+  TopologyMetricTypes,
+  TopologyOptions
+} from '../../model/topology';
 import { ColumnsId } from '../../utils/columns';
 import { TimeRange } from '../../utils/datetime';
 import { Filter } from '../../utils/filters';
@@ -51,6 +57,7 @@ const FIT_PADDING = 80;
 
 const TopologyContent: React.FC<{
   range: number | TimeRange;
+  metricFunction: TopologyMetricFunctions;
   metricType: TopologyMetricTypes;
   metrics: TopologyMetrics[];
   options: TopologyOptions;
@@ -58,7 +65,7 @@ const TopologyContent: React.FC<{
   filters: Filter[];
   setFilters: (v: Filter[]) => void;
   toggleTopologyOptions: () => void;
-}> = ({ range, metricType, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
+}> = ({ range, metricFunction, metricType, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
   const controller = useVisualizationController();
 
@@ -184,8 +191,8 @@ const TopologyContent: React.FC<{
     const maxEdgeValue = _.isEmpty(metrics)
       ? 0
       : metrics.reduce((prev, current) => (prev.total > current.total ? prev : current)).total;
-    return { ...options, rangeInSeconds, maxEdgeValue, metricType } as TopologyOptions;
-  }, [metrics, options, range, metricType]);
+    return { ...options, rangeInSeconds, maxEdgeValue, metricFunction, metricType } as TopologyOptions;
+  }, [metrics, options, range, metricFunction, metricType]);
 
   //update graph details level
   const setDetailsLevel = React.useCallback(() => {
@@ -350,6 +357,7 @@ const NetflowTopology: React.FC<{
   loading?: boolean;
   error?: string;
   range: number | TimeRange;
+  metricFunction: TopologyMetricFunctions;
   metricType: TopologyMetricTypes;
   metrics: TopologyMetrics[];
   options: TopologyOptions;
@@ -357,7 +365,19 @@ const NetflowTopology: React.FC<{
   filters: Filter[];
   setFilters: (v: Filter[]) => void;
   toggleTopologyOptions: () => void;
-}> = ({ loading, error, range, metricType, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
+}> = ({
+  loading,
+  error,
+  range,
+  metricFunction,
+  metricType,
+  metrics,
+  layout,
+  options,
+  filters,
+  setFilters,
+  toggleTopologyOptions
+}) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
   const [controller, setController] = React.useState<Visualization>();
 
@@ -391,6 +411,7 @@ const NetflowTopology: React.FC<{
       <VisualizationProvider controller={controller}>
         <TopologyContent
           range={range}
+          metricFunction={metricFunction}
           metricType={metricType}
           metrics={metrics}
           layout={layout}

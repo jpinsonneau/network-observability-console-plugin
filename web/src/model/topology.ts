@@ -32,9 +32,16 @@ export enum TopologyGroupTypes {
   ALL = 'all'
 }
 
+export enum TopologyMetricFunctions {
+  SUM = 'sum',
+  MAX = 'max',
+  AVG = 'avg',
+  RATE = 'rate'
+}
+
 export enum TopologyMetricTypes {
-  BYTES = 'Bytes',
-  PACKETS = 'Packets'
+  BYTES = 'bytes',
+  PACKETS = 'packets'
 }
 
 export interface TopologyOptions {
@@ -49,6 +56,7 @@ export interface TopologyOptions {
   groupTypes: TopologyGroupTypes;
   lowScale: number;
   medScale: number;
+  metricFunction: TopologyMetricFunctions;
   metricType: TopologyMetricTypes;
 }
 
@@ -64,7 +72,8 @@ export const DefaultOptions: TopologyOptions = {
   groupTypes: TopologyGroupTypes.NAMESPACES,
   lowScale: 0.3,
   medScale: 0.5,
-  metricType: TopologyMetricTypes.BYTES,
+  metricFunction: TopologyMetricFunctions.AVG,
+  metricType: TopologyMetricTypes.BYTES
 };
 
 export const DEFAULT_NODE_TRUNCATE_LENGTH = 25;
@@ -149,12 +158,26 @@ export const getEdgeStyle = (count: number) => {
 
 export const getEdgeTag = (count: number, options: TopologyOptions) => {
   if (options.edgeTags && count) {
-    switch (options.metricType) {
-      case TopologyMetricTypes.BYTES:
-        return bytesPerSeconds(count, options.rangeInSeconds);
-      case TopologyMetricTypes.PACKETS:
-      default:
-        return count;
+    if (options.metricFunction === TopologyMetricFunctions.RATE) {
+      return `${count}%`;
+    } else {
+      switch (options.metricType) {
+        case TopologyMetricTypes.BYTES:
+          //divide by real time range for sum, else use default step = 60s
+          return bytesPerSeconds(
+            count,
+            options.metricFunction === TopologyMetricFunctions.SUM ? options.rangeInSeconds : 60
+          );
+        case TopologyMetricTypes.PACKETS:
+        default:
+          switch (options.metricFunction) {
+            case TopologyMetricFunctions.MAX:
+            case TopologyMetricFunctions.AVG:
+              return `${count}/min`;
+            default:
+              return count;
+          }
+      }
     }
   } else {
     return undefined;
@@ -177,7 +200,10 @@ export const generateEdge = (
     data: {
       sourceId,
       targetId,
-      endTerminalType: EdgeTerminalType.directional,
+      //edges are directed from src to dst. It will become bidirectionnal if inverted pair is found
+      startTerminalType: EdgeTerminalType.none,
+      startTerminalStatus: NodeStatus.default,
+      endTerminalType: count > 0 ? EdgeTerminalType.directional : EdgeTerminalType.none,
       endTerminalStatus: NodeStatus.default,
       tag: getEdgeTag(count, options),
       tagStatus: getTagStatus(count, options.maxEdgeValue),
@@ -267,12 +293,22 @@ export const generateDataModel = (
   }
 
   function addEdge(sourceId: string, targetId: string, count: number) {
-    let edge = edges.find(e => e.data.sourceId === sourceId && e.data.targetId === targetId);
+    let edge = edges.find(e =>
+      (e.data.sourceId === sourceId && e.data.targetId === targetId) ||
+      (e.data.sourceId === targetId && e.data.targetId === sourceId)
+    );
     if (edge) {
       //update style and datas
-      edge.edgeStyle = getEdgeStyle(count);
-      edge.animationSpeed = getAnimationSpeed(count, options.maxEdgeValue);
-      edge.data = { ...edge.data, tag: getEdgeTag(count, options), count };
+      const totalCount = edge.data.count + count;
+      edge.edgeStyle = getEdgeStyle(totalCount);
+      edge.animationSpeed = getAnimationSpeed(totalCount, options.maxEdgeValue);
+      edge.data = {
+        ...edge.data, tag: getEdgeTag(totalCount, options), count: totalCount,
+      };
+      //show bidirectionnal if src / dst are inverted
+      if (edge.data.sourceId === targetId) {
+        edge.data.startTerminalType = EdgeTerminalType.directional;
+      }
     } else {
       edge = generateEdge(sourceId, targetId, count, opts);
       edges.push(edge);

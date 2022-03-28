@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { MetricFunction } from 'src/model/query-options';
 import { getURLParams, QueryArguments } from '../utils/router';
 import { Record } from './ipfix';
 import { calculateMatrixTotals, parseStream, StreamResult, TopologyMetrics } from './loki';
@@ -32,8 +33,8 @@ export const getNamespaces = (): Promise<string[]> => {
   });
 };
 
-export const getResources = (kind: string, namespace: string): Promise<string[]> => {
-  return axios.get(host + '/api/resources', { params: { kind, namespace } }).then(r => {
+export const getResources = (namespace: string, kind: string): Promise<string[]> => {
+  return axios.get(`${host}/api/resources/namespace/${namespace}/kind/${kind}/names`).then(r => {
     if (r.status >= 400) {
       throw new Error(`${r.statusText} [code=${r.status}]`);
     }
@@ -46,6 +47,8 @@ export const getTopology = (params: QueryArguments): Promise<TopologyMetrics[]> 
     if (r.status >= 400) {
       throw new Error(`${r.statusText} [code=${r.status}]`);
     }
-    return (r.data.data.result as TopologyMetrics[]).flatMap(r => calculateMatrixTotals(r));
+    return (r.data.data.result as TopologyMetrics[]).flatMap(r =>
+      calculateMatrixTotals(r, params.function as MetricFunction)
+    );
   });
 };

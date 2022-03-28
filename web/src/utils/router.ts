@@ -3,14 +3,15 @@ import * as _ from 'lodash';
 import { Column, ColumnsId } from './columns';
 import { createFilterValue, Filter, FilterType, FilterValue } from './filters';
 import { TimeRange } from './datetime';
-import { Match, MetricType, QueryOptions, Reporter } from '../model/query-options';
+import { Match, MetricFunction, MetricType, QueryOptions, Reporter } from '../model/query-options';
 
 const SPLIT_FILTER_CHAR = ',';
 export const DEFAULT_TIME_RANGE = 300;
 export const DEFAULT_LIMIT = 100;
 export const DEFAULT_FLOWDIR = '0';
 export const DEFAULT_MATCH = 'all';
-export const DEFAULT_TOPOLOGY_METRIC_TYPE = 'Bytes';
+export const DEFAULT_TOPOLOGY_FUNCTION = 'max';
+export const DEFAULT_TOPOLOGY_METRIC_TYPE = 'bytes';
 export const NETFLOW_TRAFFIC_PATH = '/netflow-traffic';
 
 export enum QueryArgument {
@@ -20,7 +21,8 @@ export enum QueryArgument {
   RefreshInterval = 'refresh',
   Limit = 'limit',
   Match = 'match',
-  MetricType = 'metricType'
+  MetricFunction = 'function',
+  MetricType = 'type'
 }
 type AnyQueryArgs = ColumnsId | QueryArgument;
 export type QueryArguments = { [k in AnyQueryArgs]?: unknown };
@@ -52,9 +54,16 @@ const stringToMatch: { [match: string]: Match } = {
   any: 'any'
 };
 
+const stringToFunction: { [metricFunction: string]: MetricFunction } = {
+  max: 'max',
+  sum: 'sum',
+  avg: 'avg',
+  rate: 'rate'
+};
+
 const stringToMetricType: { [metricType: string]: MetricType } = {
-  bytes: 'Bytes',
-  packets: 'Packets'
+  bytes: 'bytes',
+  packets: 'packets'
 };
 
 export const buildQueryArguments = (
@@ -84,7 +93,11 @@ export const buildQueryArguments = (
   params[QueryArgument.Match] = opts.match;
   //specific topology params
   if (forTopology) {
-    params[QueryArgument.MetricType] = opts.metricType || DEFAULT_TOPOLOGY_METRIC_TYPE;
+    const mf = opts.metricFunction || DEFAULT_TOPOLOGY_FUNCTION;
+    params[QueryArgument.MetricFunction] = mf;
+    if (mf !== 'rate') {
+      params[QueryArgument.MetricType] = opts.metricType || DEFAULT_TOPOLOGY_METRIC_TYPE;
+    }
   }
   return params;
 };
@@ -160,6 +173,9 @@ export const getQueryOptionsFromURL = (): QueryOptions => {
     match: stringToMatch[getURLQueryArgument(QueryArgument.Match) ?? DEFAULT_MATCH] ?? DEFAULT_MATCH,
     limit: getURLQueryArgumentAsNumber(QueryArgument.Limit) ?? DEFAULT_LIMIT,
     reporter: flowdirToReporter[getURLQueryArgument(ColumnsId.flowdir) ?? DEFAULT_FLOWDIR],
+    metricFunction:
+      stringToFunction[getURLQueryArgument(QueryArgument.MetricFunction) ?? DEFAULT_TOPOLOGY_FUNCTION] ??
+      DEFAULT_TOPOLOGY_FUNCTION,
     metricType:
       stringToMetricType[getURLQueryArgument(QueryArgument.MetricType) ?? DEFAULT_TOPOLOGY_METRIC_TYPE] ??
       DEFAULT_TOPOLOGY_METRIC_TYPE

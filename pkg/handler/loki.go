@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -17,10 +18,8 @@ import (
 var hlog = logrus.WithField("module", "handler")
 
 const (
-	queryParam        = "query"
-	exportCSVFormat   = "csv"
-	lokiOrgIDHeader   = "X-Scope-OrgID"
-	queryRangeURLPath = "/loki/api/v1/query_range"
+	exportCSVFormat = "csv"
+	lokiOrgIDHeader = "X-Scope-OrgID"
 )
 
 type LokiConfig struct {
@@ -30,7 +29,7 @@ type LokiConfig struct {
 	Labels   []string
 }
 
-func GetClient(cfg LokiConfig) httpclient.HTTPClient {
+func newLokiClient(cfg *LokiConfig) httpclient.HTTPClient {
 	var headers map[string][]string
 	if cfg.TenantID != "" {
 		headers = map[string][]string{
@@ -41,8 +40,8 @@ func GetClient(cfg LokiConfig) httpclient.HTTPClient {
 	return httpclient.NewHTTPClient(cfg.Timeout, headers)
 }
 
-func GetFlows(cfg LokiConfig, allowExport bool, topology bool) func(w http.ResponseWriter, r *http.Request) {
-	lokiClient := GetClient(cfg)
+func GetFlows(cfg LokiConfig, allowExport bool) func(w http.ResponseWriter, r *http.Request) {
+	lokiClient := newLokiClient(&cfg)
 
 	// TODO: improve search mecanism:
 	// - better way to make difference between labels and values
@@ -53,37 +52,18 @@ func GetFlows(cfg LokiConfig, allowExport bool, topology bool) func(w http.Respo
 		hlog.Debugf("GetFlows query params: %s", params)
 
 		//allow export only on specific endpoints
-		queryBuilder := loki.NewQuery(cfg.Labels, allowExport, topology)
+		queryBuilder := loki.NewQuery(cfg.URL.String(), cfg.Labels, allowExport)
 		if err := queryBuilder.AddParams(params); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		queryBuilder, err := queryBuilder.PrepareToSubmit()
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "can't build loki query:"+err.Error())
-		}
 
-		//build get flows url
-		query, err := queryBuilder.URLQuery()
+		resp, code, err := executeFlowQuery(queryBuilder, lokiClient)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
+			writeError(w, code, "Loki query failed: "+err.Error())
 			return
 		}
-		hlog.Debugf("GetFlows query: %s", query)
 
-		flowsURL := strings.TrimRight(cfg.URL.String(), "/") + queryRangeURLPath + "?" + queryParam + "=" + EncodeQuery(query)
-		hlog.Debugf("GetFlows URL: %s", flowsURL)
-
-		resp, code, err := lokiClient.Get(flowsURL)
-		if err != nil {
-			writeError(w, http.StatusServiceUnavailable, "Loki backend responded: "+err.Error())
-			return
-		}
-		if code != http.StatusOK {
-			msg := getLokiError(resp, code)
-			writeError(w, http.StatusBadRequest, "Loki backend responded: "+msg)
-			return
-		}
 		hlog.Tracef("GetFlows raw response: %s", resp)
 		if allowExport {
 			switch f := queryBuilder.ExportFormat(); f {
@@ -119,4 +99,31 @@ func getLokiError(resp []byte, code int) string {
 		return fmt.Sprintf("Unknown error from Loki - no message found (code: %d)", code)
 	}
 	return fmt.Sprintf("Error from Loki (code: %d): %s", code, message)
+}
+
+func executeFlowQuery(queryBuilder *loki.Query, lokiClient httpclient.HTTPClient) ([]byte, int, error) {
+	queryBuilder, err := queryBuilder.PrepareToSubmit()
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
+	flowsURL, err := queryBuilder.URLQuery()
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+	return executeLokiQuery(flowsURL, lokiClient)
+}
+
+func executeLokiQuery(flowsURL string, lokiClient httpclient.HTTPClient) ([]byte, int, error) {
+	hlog.Debugf("executeLokiQuery URL: %s", flowsURL)
+
+	resp, code, err := lokiClient.Get(EncodeQuery(flowsURL))
+	if err != nil {
+		return nil, http.StatusServiceUnavailable, err
+	}
+	if code != http.StatusOK {
+		msg := getLokiError(resp, code)
+		return nil, http.StatusBadRequest, errors.New("Loki backend responded: " + msg)
+	}
+	return resp, http.StatusOK, nil
 }

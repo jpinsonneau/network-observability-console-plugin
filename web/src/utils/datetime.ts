@@ -22,6 +22,7 @@ export interface TimeRange {
 export const getTimeRangeOptions = (t: TFunction) => {
   const timeRangeOptions = {
     [CUSTOM_TIME_RANGE_KEY]: t('Custom time range'),
+    '1m': t('Last {{count}} minute', { count: 1 }),
     '5m': t('Last {{count}} minute', { count: 5 }),
     '15m': t('Last {{count}} minute', { count: 15 }),
     '30m': t('Last {{count}} minute', { count: 30 }),

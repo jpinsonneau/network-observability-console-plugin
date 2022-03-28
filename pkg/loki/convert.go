@@ -24,10 +24,10 @@ func (q *Query) convertToAnyMatch() *Query {
 	}
 
 	out := Query{
+		baseURL:      q.baseURL,
 		urlParams:    q.urlParams,
 		labelJoiner:  joinOr,
 		specialAttrs: q.specialAttrs,
-		topology:     q.topology,
 	}
 	// if the input query only has line filters, we merge them into a single
 	// regexp and return it

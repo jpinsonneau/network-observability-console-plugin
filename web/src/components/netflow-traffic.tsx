@@ -23,7 +23,13 @@ import { Record } from '../api/ipfix';
 import { TopologyMetrics } from '../api/loki';
 import { getFlows, getTopology as getTopologyMetrics } from '../api/routes';
 import { QueryOptions } from '../model/query-options';
-import { DefaultOptions, LayoutName, TopologyMetricTypes, TopologyOptions } from '../model/topology';
+import {
+  DefaultOptions,
+  LayoutName,
+  TopologyMetricFunctions,
+  TopologyMetricTypes,
+  TopologyOptions
+} from '../model/topology';
 import { Column, getDefaultColumns } from '../utils/columns';
 import { TimeRange } from '../utils/datetime';
 import { getHTTPErrorDetails } from '../utils/errors';
@@ -47,7 +53,8 @@ import {
   setURLQueryArguments
 } from '../utils/router';
 import DisplayDropdown, { Size } from './dropdowns/display-dropdown';
-import MetricDropdown from './dropdowns/metric-dropdown';
+import MetricTypeDropdown from './dropdowns/metric-type-dropdown';
+import MetricFunctionDropdown from './dropdowns/metric-function-dropdown';
 import { RefreshDropdown } from './dropdowns/refresh-dropdown';
 import TimeRangeDropdown from './dropdowns/time-range-dropdown';
 import { FiltersToolbar } from './filters-toolbar';
@@ -210,37 +217,38 @@ export const NetflowTraffic: React.FC<{
   };
 
   const actions = () => {
-    switch (selectedViewId) {
-      case 'table':
-      case 'topology':
-        return (
-          <div className="co-actions">
-            {selectedViewId === 'topology' && (
-              <MetricDropdown
-                id="metric"
-                selected={queryOptions.metricType}
-                setMetricType={v => setQueryOptions({ ...queryOptions, metricType: v })}
-              />
-            )}
-            <TimeRangeDropdown
-              id="time-range-dropdown"
-              range={typeof range === 'number' ? range : undefined}
-              setRange={setRange}
-              openCustomModal={() => setTRModalOpen(true)}
-            />
-            <RefreshDropdown id="refresh-dropdown" interval={interval} setInterval={setInterval} />
-            <Button
-              id="refresh-button"
-              className="co-action-refresh-button"
-              variant="primary"
-              onClick={() => tick()}
-              icon={<SyncAltIcon style={{ animation: `spin ${loading ? 1 : 0}s linear infinite` }} />}
-            />
-          </div>
-        );
-      default:
-        return null;
-    }
+    return (
+      <div className="co-actions">
+        {selectedViewId === 'topology' && (
+          <MetricFunctionDropdown
+            id="metricFunction"
+            selected={queryOptions.metricFunction}
+            setMetricFunction={v => setQueryOptions({ ...queryOptions, metricFunction: v })}
+          />
+        )}
+        {selectedViewId === 'topology' && queryOptions.metricFunction !== 'rate' && (
+          <MetricTypeDropdown
+            id="metricType"
+            selected={queryOptions.metricType}
+            setMetricType={v => setQueryOptions({ ...queryOptions, metricType: v })}
+          />
+        )}
+        <TimeRangeDropdown
+          id="time-range-dropdown"
+          range={typeof range === 'number' ? range : undefined}
+          setRange={setRange}
+          openCustomModal={() => setTRModalOpen(true)}
+        />
+        <RefreshDropdown id="refresh-dropdown" interval={interval} setInterval={setInterval} />
+        <Button
+          id="refresh-button"
+          className="co-action-refresh-button"
+          variant="primary"
+          onClick={() => tick()}
+          icon={<SyncAltIcon style={{ animation: `spin ${loading ? 1 : 0}s linear infinite` }} />}
+        />
+      </div>
+    );
   };
 
   const pageButtons = () => {
@@ -331,6 +339,7 @@ export const NetflowTraffic: React.FC<{
             loading={loading}
             error={error}
             range={range}
+            metricFunction={queryOptions.metricFunction as TopologyMetricFunctions}
             metricType={queryOptions.metricType as TopologyMetricTypes}
             metrics={metrics}
             layout={layout}

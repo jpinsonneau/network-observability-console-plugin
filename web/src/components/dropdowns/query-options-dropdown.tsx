@@ -43,6 +43,8 @@ export const QueryOptionsPanel: React.FC<QueryOptionsDropdownProps> = ({ options
     }
   ];
 
+  const limitOptions: number[] = [10, 50, 100, 500, 1000];
+
   return (
     <>
       <div className="pf-c-select__menu-group">
@@ -74,12 +76,7 @@ export const QueryOptionsPanel: React.FC<QueryOptionsDropdownProps> = ({ options
         ))}
       </div>
       <div className="pf-c-select__menu-group">
-        <Tooltip
-          content={t(
-            // eslint-disable-next-line max-len
-            'Whether each query result has to match all the filters or just any of them'
-          )}
-        >
+        <Tooltip content={t('Whether each query result has to match all the filters or just any of them')}>
           <div className="pf-c-select__menu-group-title">
             <>
               {t('Match filters')} <InfoAltIcon />
@@ -102,7 +99,7 @@ export const QueryOptionsPanel: React.FC<QueryOptionsDropdownProps> = ({ options
         ))}
       </div>
       <div className="pf-c-select__menu-group-title">{t('Limit')}</div>
-      {[100, 500, 1000].map(l => (
+      {limitOptions.map(l => (
         <div key={'limit-' + l}>
           <label className="pf-c-select__menu-item">
             <Radio
