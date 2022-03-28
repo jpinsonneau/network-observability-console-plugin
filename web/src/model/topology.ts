@@ -10,15 +10,16 @@ import {
   NodeStatus
 } from '@patternfly/react-topology';
 import _ from 'lodash';
-import { Filter } from '../utils/filters';
+import { TopologyMetrics } from '../api/loki';
 import { bytesPerSeconds } from '../utils/bytes';
+import { Filter } from '../utils/filters';
 import { kindToAbbr } from '../utils/label';
 import { DEFAULT_TIME_RANGE } from '../utils/router';
-import { TopologyMetrics } from '../api/loki';
 
 export enum LayoutName {
   Cola = 'Cola',
   ColaNoForce = 'ColaNoForce',
+  Concentric = 'Concentric',
   Dagre = 'Dagre',
   Force = 'Force',
   Grid = 'Grid'
@@ -41,6 +42,8 @@ export interface TopologyOptions {
   startCollapsed?: boolean;
   truncateLabels?: boolean;
   groupTypes: TopologyGroupTypes;
+  lowScale: number;
+  medScale: number;
 }
 
 export const DefaultOptions: TopologyOptions = {
@@ -52,7 +55,9 @@ export const DefaultOptions: TopologyOptions = {
   maxEdgeValue: 0,
   startCollapsed: false,
   truncateLabels: true,
-  groupTypes: TopologyGroupTypes.NAMESPACES
+  groupTypes: TopologyGroupTypes.NAMESPACES,
+  lowScale: 0.3,
+  medScale: 0.5
 };
 
 export const DEFAULT_NODE_TRUNCATE_LENGTH = 25;
@@ -142,7 +147,7 @@ export const getEdgeTag = (amount: number, options: TopologyOptions) => {
 export const generateEdge = (
   sourceId: string,
   targetId: string,
-  bytes: number,
+  count: number,
   options: TopologyOptions
 ): EdgeModel => {
   return {
@@ -150,16 +155,16 @@ export const generateEdge = (
     type: 'edge',
     source: sourceId,
     target: targetId,
-    edgeStyle: getEdgeStyle(bytes),
-    animationSpeed: getAnimationSpeed(bytes, options.maxEdgeValue),
+    edgeStyle: getEdgeStyle(count),
+    animationSpeed: getAnimationSpeed(count, options.maxEdgeValue),
     data: {
       sourceId,
       targetId,
       endTerminalType: EdgeTerminalType.directional,
       endTerminalStatus: NodeStatus.default,
-      tag: getEdgeTag(bytes, options),
-      tagStatus: getTagStatus(bytes, options.maxEdgeValue),
-      bytes
+      tag: getEdgeTag(count, options),
+      tagStatus: getTagStatus(count, options.maxEdgeValue),
+      bytes: count
     }
   };
 };
@@ -174,20 +179,14 @@ export const generateDataModel = (
   const opts = { ...DefaultOptions, ...options };
 
   //refresh existing items
-  nodes = nodes.map(node => {
-    if (node.group) {
-      //nothing to update on groups
-      return node;
-    }
-    return {
-      ...node,
-      //update options and filter indicators
-      ...generateNode(node.data.namespace, node.data.type, node.data.name, node.data.addr, opts, filters)
-    };
-  });
+  nodes = nodes.map(node => ({
+    ...node,
+    //update options and filter indicators
+    ...generateNode(node.data.namespace, node.data.type, node.data.name, node.data.addr, opts, filters)
+  }));
   edges = edges.map(edge => ({
     ...edge,
-    //update options and reset bytes
+    //update options and reset counter
     ...generateEdge(edge.source!, edge.target!, 0, opts)
   }));
 
@@ -207,6 +206,8 @@ export const generateDataModel = (
           type,
           labelPosition: LabelPosition.bottom,
           collapsible: true,
+          collapsedWidth: 75,
+          collapsedHeight: 75,
           truncateLength: options.truncateLabels
             ? //match node label length according to badge
               options.nodeBadges
@@ -248,7 +249,7 @@ export const generateDataModel = (
     return node;
   }
 
-  function addEdge(sourceId: string, targetId: string, bytes: number, options: TopologyOptions) {
+  function addEdge(sourceId: string, targetId: string, bytes: number) {
     let edge = edges.find(e => e.data.sourceId === sourceId && e.data.targetId === targetId);
     if (edge) {
       //update style and datas
@@ -256,7 +257,7 @@ export const generateDataModel = (
       edge.animationSpeed = getAnimationSpeed(bytes, options.maxEdgeValue);
       edge.data = { ...edge.data, tag: getEdgeTag(bytes, options), bytes };
     } else {
-      edge = generateEdge(sourceId, targetId, bytes, options);
+      edge = generateEdge(sourceId, targetId, bytes, opts);
       edges.push(edge);
     }
 
@@ -292,7 +293,7 @@ export const generateDataModel = (
     const dstNode = manageNode('Dst', d);
 
     if (options.edges && srcNode && dstNode) {
-      addEdge(srcNode.id, dstNode.id, d.total, opts);
+      addEdge(srcNode.id, dstNode.id, d.total);
     }
   });
 

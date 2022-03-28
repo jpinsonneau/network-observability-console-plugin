@@ -274,7 +274,7 @@ const renderDecorators = (
   );
 };
 
-export const StyleNode: React.FC<StyleNodeProps> = ({
+const StyleNode: React.FC<StyleNodeProps> = ({
   element,
   onContextMenu,
   contextMenuOpen,
@@ -327,7 +327,7 @@ export const StyleNode: React.FC<StyleNodeProps> = ({
         renderDecorators(t, element, data, isPinned, setPinned, isFiltered, setFiltered, rest.getShapeDecoratorCenter)
       }
     >
-      {detailsLevel !== ScaleDetailsLevel.low && renderIcon(passedData, element)}
+      {renderIcon(passedData, element)}
     </DefaultNode>
   );
 };

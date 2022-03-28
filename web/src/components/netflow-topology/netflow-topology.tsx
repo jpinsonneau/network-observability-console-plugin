@@ -15,11 +15,12 @@ import { CogIcon, SearchIcon, TimesIcon } from '@patternfly/react-icons';
 import {
   createTopologyControlButtons,
   defaultControlButtonsOptions,
-  GRAPH_LAYOUT_END_EVENT,
-  SelectionEventListener,
+  GRAPH_LAYOUT_END_EVENT, Model, SelectionEventListener,
   SELECTION_EVENT,
   TopologyControlBar,
   TopologyView,
+  useEventListener,
+  useVisualizationController,
   Visualization,
   VisualizationProvider,
   VisualizationSurface
@@ -33,123 +34,53 @@ import { ColumnsId } from '../../utils/columns';
 import { TimeRange } from '../../utils/datetime';
 import { Filter } from '../../utils/filters';
 import { usePrevious } from '../../utils/previous-hook';
-import { componentFactory } from './componentFactories/componentFactory';
-import { stylesComponentFactory } from './componentFactories/stylesComponentFactory';
-import { layoutFactory } from './layouts/layoutFactory';
+import componentFactory from './componentFactories/componentFactory';
+import stylesComponentFactory from './componentFactories/stylesComponentFactory';
+import layoutFactory from './layouts/layoutFactory';
 import './netflow-topology.css';
 import { FILTER_EVENT } from './styles/styleNode';
 
 let requestFit = false;
 let lastNodeIdsFound: string[] = [];
 
-const controller = new Visualization();
-controller.registerLayoutFactory(layoutFactory);
-controller.registerComponentFactory(componentFactory);
-controller.registerComponentFactory(stylesComponentFactory);
-
 const ZOOM_IN = 4 / 3;
 const ZOOM_OUT = 3 / 4;
 const FIT_PADDING = 80;
 
-const NetflowTopology: React.FC<{
-  loading?: boolean;
-  error?: string;
+const TopologyContent: React.FC<{
   range: number | TimeRange;
   metrics: TopologyMetrics[];
   options: TopologyOptions;
   layout: LayoutName;
-  lowScale: number;
-  medScale: number;
   filters: Filter[];
   setFilters: (v: Filter[]) => void;
   toggleTopologyOptions: () => void;
-}> = ({
-  loading,
-  error,
-  range,
-  metrics,
-  layout,
-  lowScale,
-  medScale,
-  options,
-  filters,
-  setFilters,
-  toggleTopologyOptions
-}) => {
+}> = ({ range, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
-  const [isSearchOpen, setSearchOpen] = React.useState<boolean>(false);
-  const [searchValue, setSearchValue] = React.useState<string>('');
-  const [searchValidated, setSearchValidated] = React.useState<ValidatedOptions>();
-  const [searchResultCount, setSearchResultCount] = React.useState<string>('');
-  const [hasListeners, setHasListeners] = React.useState<boolean>(false);
-  const [selectedIds, setSelectedIds] = React.useState<string[]>();
+  const controller = useVisualizationController();
+
   const prevLayout = usePrevious(layout);
   const prevOptions = usePrevious(options);
   const prevFilters = usePrevious(filters);
 
-  //get options with updated time range and max edge value
-  const getNodeOptions = React.useCallback(() => {
-    let rangeInSeconds: number;
-    if (typeof range === 'number') {
-      rangeInSeconds = range;
-    } else {
-      rangeInSeconds = (range.from - range.to) / 1000;
-    }
-    const maxEdgeValue = _.isEmpty(metrics)
-      ? 0
-      : metrics.reduce((prev, current) => (prev.total > current.total ? prev : current)).total;
-    return { ...options, rangeInSeconds, maxEdgeValue } as TopologyOptions;
-  }, [metrics, options, range]);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [isSearchOpen, setSearchOpen] = React.useState<boolean>(false);
+  const [searchValue, setSearchValue] = React.useState<string>('');
+  const [searchValidated, setSearchValidated] = React.useState<ValidatedOptions>();
+  const [searchResultCount, setSearchResultCount] = React.useState<string>('');
 
-  //reset graph and model
-  const resetGraph = React.useCallback(() => {
-    const model = {
-      graph: {
-        id: 'g1',
-        type: 'graph',
-        layout: layout
-      }
-    };
-    controller.fromModel(model, false);
-  }, [layout]);
-
-  //update model merging existing nodes / edges
-  const updateModel = React.useCallback(() => {
-    if (controller.hasGraph()) {
-      const currentModel = controller.toModel();
-      const mergedModel = generateDataModel(metrics, getNodeOptions(), filters, currentModel.nodes, currentModel.edges);
-      controller.fromModel(mergedModel);
-    } else {
-      console.error('updateModel called before controller graph');
-    }
-  }, [filters, getNodeOptions, metrics]);
-
-  //update graph details level
-  const setDetailsLevel = React.useCallback(() => {
-    if (controller.hasGraph()) {
-      controller.getGraph().setDetailsLevelThresholds({
-        low: lowScale,
-        medium: medScale
-      });
-    }
-  }, [lowScale, medScale]);
-
-  //fit view to elements
-  const fitView = () => {
-    if (controller.hasGraph()) {
-      controller.getGraph().fit(FIT_PADDING);
-    } else {
-      console.error('fitView called before controller graph');
-    }
-  };
+  const onSelect = React.useCallback(ids => {
+    setSelectedIds(ids);
+    setSearchOpen(false);
+  }, []);
 
   //search element by label or secondaryLabel
-  const searchElement = () => {
+  const onSearch = (searchValue: string) => {
     if (_.isEmpty(searchValue)) {
       return;
     }
 
-    if (controller.hasGraph()) {
+    if (controller && controller.hasGraph()) {
       const currentModel = controller.toModel();
       const nodeModelsFound = currentModel.nodes?.filter(
         n =>
@@ -179,7 +110,7 @@ const NetflowTopology: React.FC<{
     }
   };
 
-  const manageFilters = React.useCallback(
+  const onFilter = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
       const result = _.cloneDeep(filters);
@@ -220,30 +151,81 @@ const NetflowTopology: React.FC<{
     [filters, setFilters]
   );
 
-  //register all event listeners at startup
-  if (!hasListeners) {
-    setHasListeners(true);
-    controller.addEventListener(FILTER_EVENT, manageFilters);
-    controller.addEventListener(GRAPH_LAYOUT_END_EVENT, () => {
-      if (requestFit) {
-        requestFit = false;
-        //TODO: find a smoother way to fit while elements are still moving
-        setTimeout(fitView, 100);
-        setTimeout(fitView, 250);
-        setTimeout(fitView, 500);
-      }
-    });
-    controller.addEventListener<SelectionEventListener>(SELECTION_EVENT, ids => {
-      setSelectedIds(ids);
-      setSearchOpen(false);
-    });
-  }
+  //fit view to elements
+  const fitView = React.useCallback(() => {
+    if (controller && controller.hasGraph()) {
+      controller.getGraph().fit(FIT_PADDING);
+    } else {
+      console.error('fitView called before controller graph');
+    }
+  }, [controller]);
+
+  const onLayoutEnd = React.useCallback(() => {
+    if (requestFit) {
+      requestFit = false;
+      //TODO: find a smoother way to fit while elements are still moving
+      setTimeout(fitView, 100);
+      setTimeout(fitView, 250);
+      setTimeout(fitView, 500);
+    }
+  }, [fitView]);
+
+  //get options with updated time range and max edge value
+  const getNodeOptions = React.useCallback(() => {
+    let rangeInSeconds: number;
+    if (typeof range === 'number') {
+      rangeInSeconds = range;
+    } else {
+      rangeInSeconds = (range.from - range.to) / 1000;
+    }
+    const maxEdgeValue = _.isEmpty(metrics)
+      ? 0
+      : metrics.reduce((prev, current) => (prev.total > current.total ? prev : current)).total;
+    return { ...options, rangeInSeconds, maxEdgeValue } as TopologyOptions;
+  }, [metrics, options, range]);
+
+  //update graph details level
+  const setDetailsLevel = React.useCallback(() => {
+    if (controller && controller.hasGraph()) {
+      controller.getGraph().setDetailsLevelThresholds({
+        low: options.lowScale,
+        medium: options.medScale
+      });
+    }
+  }, [controller, options.lowScale, options.medScale]);
+
+  //reset graph and model
+  const resetGraph = React.useCallback(() => {
+    if (controller) {
+      const model: Model = {
+        graph: {
+          id: 'g1',
+          type: 'graph',
+          layout: layout
+        }
+      };
+      controller.fromModel(model, false);
+      setDetailsLevel();
+    }
+  }, [controller, layout, setDetailsLevel]);
 
   //update details on low / med scale change
   React.useEffect(() => {
     setDetailsLevel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lowScale, medScale]);
+  }, [controller, options.lowScale, options.medScale, setDetailsLevel]);
+
+  //update model merging existing nodes / edges
+  const updateModel = React.useCallback(() => {
+    if (!controller) {
+      return;
+    } else if (!controller.hasGraph()) {
+      resetGraph();
+    }
+
+    const currentModel = controller.toModel();
+    const mergedModel = generateDataModel(metrics, getNodeOptions(), filters, currentModel.nodes, currentModel.edges);
+    controller.fromModel(mergedModel);
+  }, [controller, filters, getNodeOptions, metrics, resetGraph]);
 
   /*update model on layout / options / metrics / filters change
    * reset graph and details level on specific layout / options change to force render
@@ -251,26 +233,139 @@ const NetflowTopology: React.FC<{
   React.useEffect(() => {
     if (prevLayout !== layout || prevFilters !== filters || prevOptions !== options) {
       resetGraph();
-      setDetailsLevel();
       requestFit = true;
     }
-    updateModel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout, options, metrics, filters, t]);
 
-  React.useEffect(() => {
     //clear existing elements on filter change
-    if (controller.hasGraph()) {
+    if (controller && controller.hasGraph() && prevFilters !== filters) {
       controller.getElements().forEach(e => {
         if (e.getType() !== 'graph') {
           controller.removeElement(e);
         }
       });
     }
-    //refresh filter event listeners on state change
-    controller.removeEventListener(FILTER_EVENT, manageFilters);
-    controller.addEventListener(FILTER_EVENT, manageFilters);
-  }, [filters, manageFilters]);
+    updateModel();
+  }, [controller, filters, layout, options, prevFilters, prevLayout, prevOptions, resetGraph, updateModel]);
+
+  useEventListener(FILTER_EVENT, onFilter);
+  useEventListener(GRAPH_LAYOUT_END_EVENT, onLayoutEnd);
+  useEventListener<SelectionEventListener>(SELECTION_EVENT, onSelect);
+
+  return (
+    <>
+      <TopologyView
+        controlBar={
+          <TopologyControlBar
+            controlButtons={createTopologyControlButtons({
+              ...defaultControlButtonsOptions,
+              customButtons: [
+                {
+                  id: 'options',
+                  icon: <CogIcon />,
+                  tooltip: t('More options'),
+                  callback: () => {
+                    toggleTopologyOptions();
+                  }
+                },
+                {
+                  id: 'topology-search-element',
+                  icon: isSearchOpen ? <TimesIcon /> : <SearchIcon />,
+                  tooltip: t('Search element'),
+                  callback: () => {
+                    setSearchOpen(!isSearchOpen);
+                    lastNodeIdsFound = [];
+                    setSearchValue('');
+                    setSearchValidated(ValidatedOptions.default);
+                  }
+                }
+              ],
+              zoomInCallback: () => {
+                controller && controller.getGraph().scaleBy(ZOOM_IN);
+              },
+              zoomOutCallback: () => {
+                controller && controller.getGraph().scaleBy(ZOOM_OUT);
+              },
+              fitToScreenCallback: fitView,
+              resetViewCallback: () => {
+                if (controller) {
+                  controller.getGraph().reset();
+                  controller.getGraph().layout();
+                }
+              },
+              //TODO: enable legend with display icons and colors
+              legend: false
+            })}
+          />
+        }
+      >
+        <VisualizationSurface state={{ selectedIds }} />
+      </TopologyView>
+      <Popover
+        id="topology-search-popover"
+        isVisible={isSearchOpen}
+        position={'right'}
+        hideOnOutsideClick
+        showClose={false}
+        bodyContent={
+          <InputGroup>
+            <TextInput
+              autoFocus
+              type="search"
+              aria-label="search"
+              onKeyPress={e => e.key === 'Enter' && onSearch(searchValue)}
+              onChange={v => {
+                lastNodeIdsFound = [];
+                setSearchResultCount('');
+                setSearchValidated(ValidatedOptions.default);
+                setSearchValue(v);
+              }}
+              value={searchValue}
+              validated={searchValidated}
+            />
+            {!_.isEmpty(searchResultCount) ? (
+              <TextInput value={searchResultCount} isDisabled id="topology-search-result-count" />
+            ) : (
+              <></>
+            )}
+            <Button
+              id="search-topology-element-button"
+              variant="control"
+              aria-label="search button for element"
+              onClick={() => onSearch(searchValue)}
+            >
+              <SearchIcon />
+            </Button>
+          </InputGroup>
+        }
+        reference={() => document.getElementById('topology-search-element')!}
+      />
+    </>
+  );
+};
+
+const NetflowTopology: React.FC<{
+  loading?: boolean;
+  error?: string;
+  range: number | TimeRange;
+  metrics: TopologyMetrics[];
+  options: TopologyOptions;
+  layout: LayoutName;
+  filters: Filter[];
+  setFilters: (v: Filter[]) => void;
+  toggleTopologyOptions: () => void;
+}> = ({ loading, error, range, metrics, layout, options, filters, setFilters, toggleTopologyOptions }) => {
+  const { t } = useTranslation('plugin__network-observability-plugin');
+  const [controller, setController] = React.useState<Visualization>();
+
+  //create controller on startup and register factories
+  React.useEffect(() => {
+    const c = new Visualization();
+    c.registerLayoutFactory(layoutFactory);
+    c.registerComponentFactory(componentFactory);
+    c.registerComponentFactory(stylesComponentFactory);
+    setController(c);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (error) {
     return (
@@ -281,7 +376,7 @@ const NetflowTopology: React.FC<{
         <EmptyStateBody>{error}</EmptyStateBody>
       </EmptyState>
     );
-  } else if (_.isEmpty(metrics) && loading) {
+  } else if (!controller || (_.isEmpty(metrics) && loading)) {
     return (
       <Bullseye data-test="loading-contents">
         <Spinner size="xl" />
@@ -290,89 +385,14 @@ const NetflowTopology: React.FC<{
   } else {
     return (
       <VisualizationProvider controller={controller}>
-        <TopologyView
-          controlBar={
-            <TopologyControlBar
-              controlButtons={createTopologyControlButtons({
-                ...defaultControlButtonsOptions,
-                customButtons: [
-                  {
-                    id: 'options',
-                    icon: <CogIcon />,
-                    tooltip: t('More options'),
-                    callback: () => {
-                      toggleTopologyOptions();
-                    }
-                  },
-                  {
-                    id: 'topology-search-element',
-                    icon: isSearchOpen ? <TimesIcon /> : <SearchIcon />,
-                    tooltip: t('Search element'),
-                    callback: () => {
-                      setSearchOpen(!isSearchOpen);
-                      lastNodeIdsFound = [];
-                      setSearchValue('');
-                      setSearchValidated(ValidatedOptions.default);
-                    }
-                  }
-                ],
-                zoomInCallback: () => {
-                  controller.getGraph().scaleBy(ZOOM_IN);
-                },
-                zoomOutCallback: () => {
-                  controller.getGraph().scaleBy(ZOOM_OUT);
-                },
-                fitToScreenCallback: fitView,
-                resetViewCallback: () => {
-                  controller.getGraph().reset();
-                  controller.getGraph().layout();
-                },
-                //TODO: enable legend with display icons and colors
-                legend: false
-              })}
-            />
-          }
-        >
-          <VisualizationSurface state={{ selectedIds }} />
-        </TopologyView>
-        <Popover
-          id="topology-search-popover"
-          isVisible={isSearchOpen}
-          position={'right'}
-          hideOnOutsideClick
-          showClose={false}
-          bodyContent={
-            <InputGroup>
-              <TextInput
-                autoFocus
-                type="search"
-                aria-label="search"
-                onKeyPress={e => e.key === 'Enter' && searchElement()}
-                onChange={v => {
-                  lastNodeIdsFound = [];
-                  setSearchResultCount('');
-                  setSearchValidated(ValidatedOptions.default);
-                  setSearchValue(v);
-                }}
-                value={searchValue}
-                validated={searchValidated}
-              />
-              {!_.isEmpty(searchResultCount) ? (
-                <TextInput value={searchResultCount} isDisabled id="topology-search-result-count" />
-              ) : (
-                <></>
-              )}
-              <Button
-                id="search-topology-element-button"
-                variant="control"
-                aria-label="search button for element"
-                onClick={() => searchElement()}
-              >
-                <SearchIcon />
-              </Button>
-            </InputGroup>
-          }
-          reference={() => document.getElementById('topology-search-element')!}
+        <TopologyContent
+          range={range}
+          metrics={metrics}
+          layout={layout}
+          options={options}
+          filters={filters}
+          setFilters={setFilters}
+          toggleTopologyOptions={toggleTopologyOptions}
         />
       </VisualizationProvider>
     );
