@@ -9,7 +9,7 @@ import (
 const (
 	topologyDefaultLimit = "100"
 	topologyDefaultRange = "300"
-	topologyMetrics      = "SrcK8S_Name,SrcK8S_Type,SrcK8S_OwnerName,SrcK8S_OwnerType,SrcK8S_Namespace,SrcAddr,DstK8S_Name,DstK8S_Type,DstK8S_OwnerName,DstK8S_OwnerType,DstK8S_Namespace,DstAddr"
+	topologyMetrics      = "SrcK8S_Name,SrcK8S_Type,SrcK8S_OwnerName,SrcK8S_OwnerType,SrcK8S_Namespace,SrcAddr,SrcK8S_HostIP,DstK8S_Name,DstK8S_Type,DstK8S_OwnerName,DstK8S_OwnerType,DstK8S_Namespace,DstAddr,DstK8S_HostIP"
 	metricFunctionKey    = "function"
 	metricTypeKey        = "type"
 )
@@ -134,7 +134,7 @@ func (q *TopologyQueryBuilder) URLQuery() (string, error) {
 	if len(jsonPart) > 0 {
 		jsonPart = "|" + jsonPart
 	}
-	if len(q.topology.dataField) > 0 {
+	if q.topology.function != "rate" && len(q.topology.dataField) > 0 {
 		jsonPart = fmt.Sprintf(`%s|unwrap %s`, jsonPart, q.topology.dataField)
 	}
 	//TODO: check if step should be configurable. 60s is forced to help calculations on front end side

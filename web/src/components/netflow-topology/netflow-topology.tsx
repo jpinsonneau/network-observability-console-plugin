@@ -5,13 +5,12 @@ import {
   EmptyStateBody,
   EmptyStateVariant,
   InputGroup,
-  Popover,
   Spinner,
   TextInput,
   Title,
   ValidatedOptions
 } from '@patternfly/react-core';
-import { CogIcon, SearchIcon, TimesIcon } from '@patternfly/react-icons';
+import { CogIcon, ExportIcon, SearchIcon, TimesIcon } from '@patternfly/react-icons';
 import {
   createTopologyControlButtons,
   defaultControlButtonsOptions,
@@ -30,6 +29,7 @@ import {
 import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { saveSvgAsPng } from 'save-svg-as-png';
 import { TopologyMetrics } from '../../api/loki';
 import {
   generateDataModel,
@@ -83,10 +83,15 @@ const TopologyContent: React.FC<{
     setSelectedIds(ids);
     setSearchOpen(false);
   }, []);
-
   //search element by label or secondaryLabel
   const onSearch = (searchValue: string) => {
-    if (_.isEmpty(searchValue)) {
+    if (!isSearchOpen) {
+      setSearchOpen(true);
+      return;
+    } else if (_.isEmpty(searchValue)) {
+      if (isSearchOpen) {
+        setSearchOpen(false);
+      }
       return;
     }
 
@@ -246,8 +251,12 @@ const TopologyContent: React.FC<{
       requestFit = true;
     }
 
-    //clear existing elements on filter change
-    if (controller && controller.hasGraph() && prevFilters !== filters) {
+    //clear existing elements on filter / group change
+    if (
+      controller &&
+      controller.hasGraph() &&
+      (prevFilters !== filters || prevOptions?.groupTypes !== options.groupTypes)
+    ) {
       controller.getElements().forEach(e => {
         if (e.getType() !== 'graph') {
           controller.removeElement(e);
@@ -262,94 +271,88 @@ const TopologyContent: React.FC<{
   useEventListener<SelectionEventListener>(SELECTION_EVENT, onSelect);
 
   return (
-    <>
-      <TopologyView
-        controlBar={
-          <TopologyControlBar
-            controlButtons={createTopologyControlButtons({
-              ...defaultControlButtonsOptions,
-              customButtons: [
-                {
-                  id: 'options',
-                  icon: <CogIcon />,
-                  tooltip: t('More options'),
-                  callback: () => {
-                    toggleTopologyOptions();
-                  }
-                },
-                {
-                  id: 'topology-search-element',
-                  icon: isSearchOpen ? <TimesIcon /> : <SearchIcon />,
-                  tooltip: t('Search element'),
-                  callback: () => {
-                    setSearchOpen(!isSearchOpen);
-                    lastNodeIdsFound = [];
-                    setSearchValue('');
-                    setSearchValidated(ValidatedOptions.default);
-                  }
-                }
-              ],
-              zoomInCallback: () => {
-                controller && controller.getGraph().scaleBy(ZOOM_IN);
-              },
-              zoomOutCallback: () => {
-                controller && controller.getGraph().scaleBy(ZOOM_OUT);
-              },
-              fitToScreenCallback: fitView,
-              resetViewCallback: () => {
-                if (controller) {
-                  controller.getGraph().reset();
-                  controller.getGraph().layout();
+    <TopologyView
+      controlBar={
+        <TopologyControlBar
+          controlButtons={createTopologyControlButtons({
+            ...defaultControlButtonsOptions,
+            customButtons: [
+              {
+                id: 'export',
+                icon: <ExportIcon />,
+                tooltip: t('Export'),
+                callback: () => {
+                  const svg = document.getElementsByClassName('pf-topology-visualization-surface__svg')[0];
+                  saveSvgAsPng(svg, 'topology.png', {
+                    backgroundColor: '#fff',
+                    encoderOptions: 0
+                  });
                 }
               },
-              //TODO: enable legend with display icons and colors
-              legend: false
-            })}
+              {
+                id: 'options',
+                icon: <CogIcon />,
+                tooltip: t('More options'),
+                callback: () => {
+                  toggleTopologyOptions();
+                }
+              }
+            ],
+            zoomInCallback: () => {
+              controller && controller.getGraph().scaleBy(ZOOM_IN);
+            },
+            zoomOutCallback: () => {
+              controller && controller.getGraph().scaleBy(ZOOM_OUT);
+            },
+            fitToScreenCallback: fitView,
+            resetViewCallback: () => {
+              if (controller) {
+                controller.getGraph().reset();
+                controller.getGraph().layout();
+              }
+            },
+            //TODO: enable legend with display icons and colors
+            legend: false
+          })}
+        />
+      }
+    >
+      <VisualizationSurface state={{ selectedIds }} />
+      <div id="topology-search-container">
+        <InputGroup>
+          <TextInput
+            id="search-topology-element-input"
+            className={isSearchOpen ? 'search' : 'search-hidden'}
+            placeholder={t('Search item by label')}
+            autoFocus
+            type="search"
+            aria-label="search"
+            onKeyPress={e => e.key === 'Enter' && onSearch(searchValue)}
+            onChange={v => {
+              lastNodeIdsFound = [];
+              setSearchResultCount('');
+              setSearchValidated(ValidatedOptions.default);
+              setSearchValue(v);
+            }}
+            value={searchValue}
+            validated={searchValidated}
           />
-        }
-      >
-        <VisualizationSurface state={{ selectedIds }} />
-      </TopologyView>
-      <Popover
-        id="topology-search-popover"
-        isVisible={isSearchOpen}
-        position={'right'}
-        hideOnOutsideClick
-        showClose={false}
-        bodyContent={
-          <InputGroup>
-            <TextInput
-              autoFocus
-              type="search"
-              aria-label="search"
-              onKeyPress={e => e.key === 'Enter' && onSearch(searchValue)}
-              onChange={v => {
-                lastNodeIdsFound = [];
-                setSearchResultCount('');
-                setSearchValidated(ValidatedOptions.default);
-                setSearchValue(v);
-              }}
-              value={searchValue}
-              validated={searchValidated}
-            />
-            {!_.isEmpty(searchResultCount) ? (
-              <TextInput value={searchResultCount} isDisabled id="topology-search-result-count" />
-            ) : (
-              <></>
-            )}
-            <Button
-              id="search-topology-element-button"
-              variant="control"
-              aria-label="search button for element"
-              onClick={() => onSearch(searchValue)}
-            >
-              <SearchIcon />
-            </Button>
-          </InputGroup>
-        }
-        reference={() => document.getElementById('topology-search-element')!}
-      />
-    </>
+          {isSearchOpen && !_.isEmpty(searchResultCount) ? (
+            <TextInput value={searchResultCount} isDisabled id="topology-search-result-count" />
+          ) : (
+            <></>
+          )}
+          <Button
+            id="search-topology-element-button"
+            variant="plain"
+            aria-label="search button for element"
+            onClick={() => onSearch(searchValue)}
+          >
+            {isSearchOpen && _.isEmpty(searchValue) ? <TimesIcon /> : <SearchIcon />}
+          </Button>
+        </InputGroup>
+      </div>
+    </TopologyView>
   );
 };
 

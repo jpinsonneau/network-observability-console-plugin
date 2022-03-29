@@ -10,6 +10,7 @@ import {
   NodeStatus
 } from '@patternfly/react-topology';
 import _ from 'lodash';
+import { elementPerMinText, roundTwoDigits } from '../utils/count';
 import { TopologyMetrics } from '../api/loki';
 import { bytesPerSeconds } from '../utils/bytes';
 import { Filter } from '../utils/filters';
@@ -27,9 +28,11 @@ export enum LayoutName {
 
 export enum TopologyGroupTypes {
   NONE = 'none',
+  HOSTS = 'hosts',
   NAMESPACES = 'namespaces',
   OWNERS = 'owners',
-  ALL = 'all'
+  NAMESPACES_OWNERS = 'namespaces+owners',
+  HOSTS_OWNERS = 'hosts+owners'
 }
 
 export enum TopologyMetricFunctions {
@@ -84,6 +87,7 @@ export const generateNode = (
   type: string,
   name: string,
   addr: string,
+  host: string,
   options: TopologyOptions,
   filters: Filter[]
 ): NodeModel => {
@@ -102,6 +106,7 @@ export const generateNode = (
       type,
       name,
       addr,
+      host,
       isFiltered: filters.some(f => f.values.some(fv => fv.v === `${type}.${namespace}.${name}` || fv.v === addr)),
       labelPosition: LabelPosition.bottom,
       //TODO: get badge and color using console ResourceIcon
@@ -109,7 +114,9 @@ export const generateNode = (
       //badgeColor: options.nodeBadges && type ? getModel(type)?.color : undefined,
       badgeClassName: options.nodeBadges && type ? `co-m-resource-icon co-m-resource-${type.toLowerCase()}` : undefined,
       showDecorators: true,
-      secondaryLabel: [TopologyGroupTypes.OWNERS, TopologyGroupTypes.NONE].includes(options.groupTypes)
+      secondaryLabel: [TopologyGroupTypes.HOSTS, TopologyGroupTypes.OWNERS, TopologyGroupTypes.NONE].includes(
+        options.groupTypes
+      )
         ? namespace
         : undefined,
       showContextMenu: options.contextMenus,
@@ -139,13 +146,13 @@ export const getAnimationSpeed = (n: number, total: number) => {
 
 export const getTagStatus = (n: number, total: number) => {
   if (total) {
-    const step = total / 3;
-    if (n > step * 2) {
-      return NodeStatus.danger;
-    } else if (n > step) {
+    const step = total / 5;
+    if (n > step * 3) {
       return NodeStatus.warning;
-    } else {
+    } else if (n > step * 2) {
       return NodeStatus.info;
+    } else {
+      return NodeStatus.default;
     }
   } else {
     return NodeStatus.default;
@@ -159,7 +166,7 @@ export const getEdgeStyle = (count: number) => {
 export const getEdgeTag = (count: number, options: TopologyOptions) => {
   if (options.edgeTags && count) {
     if (options.metricFunction === TopologyMetricFunctions.RATE) {
-      return `${count}%`;
+      return `${roundTwoDigits(count)}%`;
     } else {
       switch (options.metricType) {
         case TopologyMetricTypes.BYTES:
@@ -173,9 +180,9 @@ export const getEdgeTag = (count: number, options: TopologyOptions) => {
           switch (options.metricFunction) {
             case TopologyMetricFunctions.MAX:
             case TopologyMetricFunctions.AVG:
-              return `${count}/min`;
+              return elementPerMinText(count);
             default:
-              return count;
+              return roundTwoDigits(count);
           }
       }
     }
@@ -222,11 +229,23 @@ export const generateDataModel = (
   const opts = { ...DefaultOptions, ...options };
 
   //refresh existing items
-  nodes = nodes.map(node => ({
-    ...node,
-    //update options and filter indicators
-    ...generateNode(node.data.namespace, node.data.type, node.data.name, node.data.addr, opts, filters)
-  }));
+  nodes = nodes.map(node =>
+    node.type === 'group'
+      ? node
+      : {
+          ...node,
+          //update options and filter indicators
+          ...generateNode(
+            node.data.namespace,
+            node.data.type,
+            node.data.name,
+            node.data.addr,
+            node.data.host,
+            opts,
+            filters
+          )
+        }
+  );
   edges = edges.map(edge => ({
     ...edge,
     //update options and reset counter
@@ -251,9 +270,10 @@ export const generateDataModel = (
           collapsible: true,
           collapsedWidth: 75,
           collapsedHeight: 75,
+          showContextMenu: true,
           truncateLength: options.truncateLabels
             ? //match node label length according to badge
-            options.nodeBadges
+              options.nodeBadges
               ? DEFAULT_NODE_TRUNCATE_LENGTH + 2
               : DEFAULT_NODE_TRUNCATE_LENGTH - 3
             : undefined
@@ -273,12 +293,17 @@ export const generateDataModel = (
     return group;
   }
 
-  function addNode(namespace: string, type: string, name: string, addr: string, parent?: NodeModel) {
+  function addNode(namespace: string, type: string, name: string, addr: string, host: string, parent?: NodeModel) {
     let node = nodes.find(
-      n => n.data.type === type && n.data.namespace === namespace && n.data.name === name && n.data.addr === addr
+      n =>
+        n.data.type === type &&
+        n.data.namespace === namespace &&
+        n.data.name === name &&
+        n.data.addr === addr &&
+        n.data.host === host
     );
     if (!node) {
-      node = generateNode(namespace, type, name, addr, opts, filters);
+      node = generateNode(namespace, type, name, addr, host, opts, filters);
       nodes.push(node);
     }
     if (parent) {
@@ -293,9 +318,10 @@ export const generateDataModel = (
   }
 
   function addEdge(sourceId: string, targetId: string, count: number) {
-    let edge = edges.find(e =>
-      (e.data.sourceId === sourceId && e.data.targetId === targetId) ||
-      (e.data.sourceId === targetId && e.data.targetId === sourceId)
+    let edge = edges.find(
+      e =>
+        (e.data.sourceId === sourceId && e.data.targetId === targetId) ||
+        (e.data.sourceId === targetId && e.data.targetId === sourceId)
     );
     if (edge) {
       //update style and datas
@@ -303,11 +329,19 @@ export const generateDataModel = (
       edge.edgeStyle = getEdgeStyle(totalCount);
       edge.animationSpeed = getAnimationSpeed(totalCount, options.maxEdgeValue);
       edge.data = {
-        ...edge.data, tag: getEdgeTag(totalCount, options), count: totalCount,
+        ...edge.data,
+        tag: getEdgeTag(totalCount, options),
+        tagStatus: getTagStatus(totalCount, options.maxEdgeValue),
+        count: totalCount
       };
-      //show bidirectionnal if src / dst are inverted
-      if (edge.data.sourceId === targetId) {
-        edge.data.startTerminalType = EdgeTerminalType.directional;
+      if (totalCount) {
+        if (edge.data.sourceId === sourceId) {
+          //show directionnal arrow
+          edge.data.endTerminalType = EdgeTerminalType.directional;
+        } else {
+          //show bidirectionnal arrow if src / dst are inverted
+          edge.data.startTerminalType = EdgeTerminalType.directional;
+        }
       }
     } else {
       edge = generateEdge(sourceId, targetId, count, opts);
@@ -322,23 +356,38 @@ export const generateDataModel = (
     const namespace = m[`${prefix}K8S_Namespace`];
     const ownerType = m[`${prefix}K8S_OwnerType`];
     const ownerName = m[`${prefix}K8S_OwnerName`];
+    const host = m[`${prefix}K8S_HostIP`];
     const type = m[`${prefix}K8S_Type`];
     const name = m[`${prefix}K8S_Name`];
     const addr = m[`${prefix}Addr`];
 
-    const srcNamespaceGroup =
-      [TopologyGroupTypes.ALL, TopologyGroupTypes.NAMESPACES].includes(options.groupTypes) && !_.isEmpty(namespace)
-        ? addGroup(namespace, 'Namespace')
+    const hostGroup =
+      [TopologyGroupTypes.HOSTS_OWNERS, TopologyGroupTypes.HOSTS].includes(options.groupTypes) && !_.isEmpty(host)
+        ? addGroup(host, 'Node', undefined, true)
         : undefined;
-    const srcOwnerGroup =
-      [TopologyGroupTypes.ALL, TopologyGroupTypes.OWNERS].includes(options.groupTypes) &&
-        !_.isEmpty(ownerType) &&
-        !_.isEmpty(ownerName)
-        ? addGroup(ownerName, ownerType, srcNamespaceGroup, srcNamespaceGroup === undefined)
+    const namespaceGroup =
+      [TopologyGroupTypes.NAMESPACES_OWNERS, TopologyGroupTypes.NAMESPACES].includes(options.groupTypes) &&
+      !_.isEmpty(namespace)
+        ? addGroup(namespace, 'Namespace', hostGroup)
         : undefined;
-    const srcNode = addNode(namespace, type, name, addr, srcOwnerGroup ? srcOwnerGroup : srcNamespaceGroup);
+    const ownerGroup =
+      [TopologyGroupTypes.NAMESPACES_OWNERS, TopologyGroupTypes.HOSTS_OWNERS, TopologyGroupTypes.OWNERS].includes(
+        options.groupTypes
+      ) &&
+      !_.isEmpty(ownerType) &&
+      !_.isEmpty(ownerName)
+        ? addGroup(ownerName, ownerType, namespaceGroup ? namespaceGroup : hostGroup, namespaceGroup === undefined)
+        : undefined;
+    const node = addNode(
+      namespace,
+      type,
+      name,
+      addr,
+      host,
+      ownerGroup ? ownerGroup : namespaceGroup ? namespaceGroup : hostGroup
+    );
 
-    return srcNode;
+    return node;
   }
 
   datas.forEach(d => {
@@ -350,5 +399,7 @@ export const generateDataModel = (
     }
   });
 
+  //remove empty groups
+  nodes = nodes.filter(n => n.type !== 'group' || (n.children && n.children.length));
   return { nodes, edges };
 };

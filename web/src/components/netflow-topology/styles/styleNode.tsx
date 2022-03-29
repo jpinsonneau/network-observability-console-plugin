@@ -95,7 +95,7 @@ const renderPopoverDecorator = (
   element: Node,
   quadrant: TopologyQuadrant,
   icon: React.ReactNode,
-  data: { name?: string; type?: string; namespace?: string; addr?: string },
+  data: { name?: string; type?: string; namespace?: string; addr?: string; host?: string },
   getShapeDecoratorCenter?: (
     quadrant: TopologyQuadrant,
     node: Node,
@@ -135,12 +135,16 @@ const renderPopoverDecorator = (
             <FlexItem>
               <FlexItem>{t('Address')}</FlexItem>
             </FlexItem>
+            <FlexItem>
+              <FlexItem>{t('Host')}</FlexItem>
+            </FlexItem>
           </Flex>
           <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsNone' }}>
             <FlexItem className={data.type ? '' : 'text-muted'}>{data.type || t('n/a')}</FlexItem>
             <FlexItem className={data.namespace ? '' : 'text-muted'}>{data.namespace || t('n/a')}</FlexItem>
             <FlexItem className={data.name ? '' : 'text-muted'}>{data.name || t('n/a')}</FlexItem>
             <FlexItem className={data.addr ? '' : 'text-muted'}>{data.addr || t('n/a')}</FlexItem>
+            <FlexItem className={data.host ? '' : 'text-muted'}>{data.host || t('n/a')}</FlexItem>
           </Flex>
         </Flex>
       }
