@@ -1,20 +1,16 @@
-import * as React from 'react';
 import {
   DefaultEdge,
-  Edge,
-  WithContextMenuProps,
-  WithSelectionProps,
-  observer,
-  ScaleDetailsLevel
+  Edge, observer,
+  ScaleDetailsLevel, WithSelectionProps
 } from '@patternfly/react-topology';
 import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetailsLevel';
+import * as React from 'react';
 
 type StyleEdgeProps = {
   element: Edge;
-} & WithContextMenuProps &
-  WithSelectionProps;
+} & WithSelectionProps;
 
-const StyleEdge: React.FC<StyleEdgeProps> = ({ element, onContextMenu, contextMenuOpen, ...rest }) => {
+const StyleEdge: React.FC<StyleEdgeProps> = ({ element, ...rest }) => {
   const data = element.getData();
   const detailsLevel = useDetailsLevel();
 
@@ -36,8 +32,6 @@ const StyleEdge: React.FC<StyleEdgeProps> = ({ element, onContextMenu, contextMe
       element={element}
       {...rest}
       {...passedData}
-      onContextMenu={data?.showContextMenu ? onContextMenu : undefined}
-      contextMenuOpen={contextMenuOpen}
     />
   );
 };

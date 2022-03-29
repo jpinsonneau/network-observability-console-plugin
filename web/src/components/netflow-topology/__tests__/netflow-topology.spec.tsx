@@ -1,8 +1,9 @@
 import { EmptyState, EmptyStateBody, Spinner } from '@patternfly/react-core';
 import { shallow } from 'enzyme';
 import * as React from 'react';
+import { QueryOptions } from '../../../model/query-options';
 import { TopologyMetrics } from '../../../api/loki';
-import { DefaultOptions, LayoutName, TopologyMetricFunctions, TopologyMetricTypes } from '../../../model/topology';
+import { DefaultOptions, LayoutName } from '../../../model/topology';
 import { DEFAULT_TIME_RANGE } from '../../../utils/router';
 import NetflowTopology from '../netflow-topology';
 
@@ -11,8 +12,8 @@ describe('<NetflowTopology />', () => {
     error: undefined as string | undefined,
     loading: false,
     range: DEFAULT_TIME_RANGE,
-    metricFunction: TopologyMetricFunctions.AVG,
-    metricType: TopologyMetricTypes.BYTES,
+    queryOptions: {} as QueryOptions,
+    setQueryOptions: jest.fn(),
     metrics: [] as TopologyMetrics[],
     layout: LayoutName.Cola,
     options: DefaultOptions,

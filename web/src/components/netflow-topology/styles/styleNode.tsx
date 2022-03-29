@@ -1,13 +1,7 @@
+import { ResourceLink } from '@openshift-console/dynamic-plugin-sdk';
 import { Flex, FlexItem, Popover } from '@patternfly/react-core';
 import {
-  FilterIcon,
-  TimesIcon,
-  CubeIcon,
-  ServiceIcon,
-  InfoCircleIcon,
-  ThumbtackIcon,
-  QuestionCircleIcon,
-  OutlinedHddIcon
+  CubeIcon, FilterIcon, InfoCircleIcon, OutlinedHddIcon, QuestionCircleIcon, ServiceIcon, ThumbtackIcon, TimesIcon
 } from '@patternfly/react-icons';
 import {
   Decorator,
@@ -16,20 +10,15 @@ import {
   getDefaultShapeDecoratorCenter,
   Node,
   NodeShape,
-  observer,
-  ScaleDetailsLevel,
+  observer, Point, ScaleDetailsLevel,
   ShapeProps,
-  TopologyQuadrant,
-  WithContextMenuProps,
-  WithDragNodeProps,
-  WithSelectionProps,
-  Point
+  TopologyQuadrant, WithDragNodeProps,
+  WithSelectionProps
 } from '@patternfly/react-topology';
 import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetailsLevel';
-import * as React from 'react';
-import { ResourceLink } from '@openshift-console/dynamic-plugin-sdk';
-import { useTranslation } from 'react-i18next';
 import { TFunction } from 'i18next';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const FILTER_EVENT = 'filter';
 export enum DataTypes {
@@ -45,9 +34,7 @@ type StyleNodeProps = {
   showStatusDecorator?: boolean;
   regrouping?: boolean;
   dragging?: boolean;
-} & WithContextMenuProps &
-  WithDragNodeProps &
-  WithSelectionProps;
+} & WithDragNodeProps & WithSelectionProps;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getTypeIcon = (dataType?: string): React.ComponentClass<any, any> => {
@@ -280,8 +267,6 @@ const renderDecorators = (
 
 const StyleNode: React.FC<StyleNodeProps> = ({
   element,
-  onContextMenu,
-  contextMenuOpen,
   showLabel,
   dragging,
   regrouping,
@@ -324,8 +309,6 @@ const StyleNode: React.FC<StyleNodeProps> = ({
       showLabel={detailsLevel === ScaleDetailsLevel.high && showLabel}
       showStatusBackground={detailsLevel === ScaleDetailsLevel.low}
       showStatusDecorator={detailsLevel === ScaleDetailsLevel.high && passedData.showStatusDecorator}
-      onContextMenu={data.showContextMenu ? onContextMenu : undefined}
-      contextMenuOpen={contextMenuOpen}
       attachments={
         detailsLevel === ScaleDetailsLevel.high &&
         renderDecorators(t, element, data, isPinned, setPinned, isFiltered, setFiltered, rest.getShapeDecoratorCenter)

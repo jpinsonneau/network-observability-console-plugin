@@ -12,7 +12,7 @@ import {
 import _ from 'lodash';
 import { elementPerMinText, roundTwoDigits } from '../utils/count';
 import { TopologyMetrics } from '../api/loki';
-import { bytesPerSeconds } from '../utils/bytes';
+import { bytesPerSeconds, humanFileSize } from '../utils/bytes';
 import { Filter } from '../utils/filters';
 import { kindToAbbr } from '../utils/label';
 import { DEFAULT_TIME_RANGE } from '../utils/router';
@@ -51,7 +51,6 @@ export interface TopologyOptions {
   rangeInSeconds: number;
   maxEdgeValue: number;
   nodeBadges?: boolean;
-  contextMenus?: boolean;
   edges?: boolean;
   edgeTags?: boolean;
   startCollapsed?: boolean;
@@ -66,7 +65,6 @@ export interface TopologyOptions {
 export const DefaultOptions: TopologyOptions = {
   rangeInSeconds: DEFAULT_TIME_RANGE,
   nodeBadges: true,
-  contextMenus: false,
   edges: true,
   edgeTags: true,
   maxEdgeValue: 0,
@@ -119,7 +117,6 @@ export const generateNode = (
       )
         ? namespace
         : undefined,
-      showContextMenu: options.contextMenus,
       truncateLength: options.truncateLabels ? DEFAULT_NODE_TRUNCATE_LENGTH : undefined
     }
   };
@@ -164,17 +161,20 @@ export const getEdgeStyle = (count: number) => {
 };
 
 export const getEdgeTag = (count: number, options: TopologyOptions) => {
-  if (options.edgeTags && count) {
+  const roundCount = roundTwoDigits(count);
+  if (options.edgeTags && roundCount) {
     if (options.metricFunction === TopologyMetricFunctions.RATE) {
-      return `${roundTwoDigits(count)}%`;
+      return `${roundCount}%`;
     } else {
       switch (options.metricType) {
         case TopologyMetricTypes.BYTES:
-          //divide by real time range for sum, else use default step = 60s
-          return bytesPerSeconds(
-            count,
-            options.metricFunction === TopologyMetricFunctions.SUM ? options.rangeInSeconds : 60
-          );
+          if (options.metricFunction === TopologyMetricFunctions.SUM) {
+            return humanFileSize(count, true, 0);
+          } else {
+            //get speed using default step = 60s
+            return bytesPerSeconds(count, 60);
+          }
+
         case TopologyMetricTypes.PACKETS:
         default:
           switch (options.metricFunction) {
@@ -182,7 +182,7 @@ export const getEdgeTag = (count: number, options: TopologyOptions) => {
             case TopologyMetricFunctions.AVG:
               return elementPerMinText(count);
             default:
-              return roundTwoDigits(count);
+              return roundCount;
           }
       }
     }
@@ -270,7 +270,6 @@ export const generateDataModel = (
           collapsible: true,
           collapsedWidth: 75,
           collapsedHeight: 75,
-          showContextMenu: true,
           truncateLength: options.truncateLabels
             ? //match node label length according to badge
               options.nodeBadges

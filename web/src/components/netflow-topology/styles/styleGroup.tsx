@@ -1,15 +1,13 @@
-import * as React from 'react';
+import { CubesIcon } from '@patternfly/react-icons';
 import {
   DefaultGroup,
   Node,
   observer,
   ScaleDetailsLevel,
-  ShapeProps,
-  WithContextMenuProps,
-  WithSelectionProps
+  ShapeProps, WithSelectionProps
 } from '@patternfly/react-topology';
-import { CubesIcon } from '@patternfly/react-icons';
 import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetailsLevel';
+import * as React from 'react';
 
 const ICON_PADDING = 20;
 
@@ -25,13 +23,10 @@ type StyleGroupProps = {
   onCollapseChange?: (group: Node, collapsed: boolean) => void;
   getCollapsedShape?: (node: Node) => React.FC<ShapeProps>;
   collapsedShadowOffset?: number; // defaults to 10
-} & WithContextMenuProps &
-  WithSelectionProps;
+} & WithSelectionProps;
 
 const StyleGroup: React.FC<StyleGroupProps> = ({
   element,
-  onContextMenu,
-  contextMenuOpen,
   collapsedWidth = 75,
   collapsedHeight = 75,
   ...rest
@@ -62,8 +57,6 @@ const StyleGroup: React.FC<StyleGroupProps> = ({
 
   return (
     <DefaultGroup
-      onContextMenu={data.showContextMenu ? onContextMenu : undefined}
-      contextMenuOpen={contextMenuOpen}
       element={element}
       collapsedWidth={collapsedWidth}
       collapsedHeight={collapsedHeight}

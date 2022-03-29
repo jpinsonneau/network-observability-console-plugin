@@ -26,8 +26,6 @@ import { QueryOptions } from '../model/query-options';
 import {
   DefaultOptions,
   LayoutName,
-  TopologyMetricFunctions,
-  TopologyMetricTypes,
   TopologyOptions
 } from '../model/topology';
 import { Column, getDefaultColumns } from '../utils/columns';
@@ -339,8 +337,8 @@ export const NetflowTraffic: React.FC<{
             loading={loading}
             error={error}
             range={range}
-            metricFunction={queryOptions.metricFunction as TopologyMetricFunctions}
-            metricType={queryOptions.metricType as TopologyMetricTypes}
+            queryOptions={queryOptions}
+            setQueryOptions={setQueryOptions}
             metrics={metrics}
             layout={layout}
             options={topologyOptions}
