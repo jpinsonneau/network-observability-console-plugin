@@ -264,46 +264,44 @@ const TopologyContent: React.FC<{
     controller.fromModel(mergedModel);
   }, [controller, filters, searchValue, getOptions, metrics, resetGraph]);
 
-  /*update model on layout / options / metrics / filters change
-   * reset graph and details level on specific layout / options change to force render
-   */
-  React.useEffect(() => {
-    if (
-      prevLayout !== layout ||
-      prevFilters !== filters ||
-      prevOptions !== options ||
-      prevQueryOptions !== queryOptions
-    ) {
-      resetGraph();
-      requestFit = true;
-    }
-
-    //clear existing elements on filter / group change
-    if (
-      controller &&
-      controller.hasGraph() &&
-      (prevFilters !== filters || prevOptions?.groupTypes !== options.groupTypes)
-    ) {
+  //remove all elements except graph
+  const clearGraph = React.useCallback(() => {
+    if (controller && controller.hasGraph()) {
       controller.getElements().forEach(e => {
         if (e.getType() !== 'graph') {
           controller.removeElement(e);
         }
       });
     }
+  }, [controller]);
+
+  //update model on layout / options / metrics / filters change
+  React.useEffect(() => {
+    //update graph on layout / display change
+    if (prevLayout !== layout || prevOptions !== options) {
+      resetGraph();
+      requestFit = true;
+    }
+    //clear existing elements on group type change
+    if (prevOptions?.groupTypes !== options.groupTypes) {
+      clearGraph();
+      requestFit = true;
+    }
+    //then update model
     updateModel();
-  }, [
-    controller,
-    filters,
-    layout,
-    options,
-    prevFilters,
-    prevLayout,
-    prevOptions,
-    prevQueryOptions,
-    queryOptions,
-    resetGraph,
-    updateModel
-  ]);
+  }, [controller, metrics, filters, layout, options, prevLayout, prevOptions, resetGraph, updateModel, clearGraph]);
+
+  //clear existing elements on query change before getting new metrics
+  React.useEffect(() => {
+    if (
+      prevFilters !== filters ||
+      prevQueryOptions?.match !== queryOptions.match ||
+      prevQueryOptions.limit > queryOptions.limit
+    ) {
+      clearGraph();
+      requestFit = true;
+    }
+  }, [controller, filters, prevFilters, clearGraph, prevQueryOptions, queryOptions]);
 
   //refresh UI selected items
   React.useEffect(() => {
