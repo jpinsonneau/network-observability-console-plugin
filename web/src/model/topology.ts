@@ -355,6 +355,7 @@ export const generateDataModel = (
     const namespace = m[`${prefix}K8S_Namespace`];
     const ownerType = m[`${prefix}K8S_OwnerType`];
     const ownerName = m[`${prefix}K8S_OwnerName`];
+    //TODO: enrich Host Name to use ResourceLink in element-panel
     const host = m[`${prefix}K8S_HostIP`];
     const type = m[`${prefix}K8S_Type`];
     const name = m[`${prefix}K8S_Name`];

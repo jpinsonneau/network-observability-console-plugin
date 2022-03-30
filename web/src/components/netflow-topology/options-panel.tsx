@@ -15,7 +15,7 @@ import { GroupDropdown } from '../dropdowns/group-dropdown';
 import { LayoutDropdown } from '../dropdowns/layout-dropdown';
 import './options-panel.css';
 
-export type RecordDrawerProps = {
+export type OptionsDrawerProps = {
   layout: LayoutName;
   setLayout: (l: LayoutName) => void;
   options: TopologyOptions;
@@ -24,7 +24,7 @@ export type RecordDrawerProps = {
   id?: string;
 };
 
-export const OptionsPanel: React.FC<RecordDrawerProps> = ({ id, layout, setLayout, options, setOptions, onClose }) => {
+export const OptionsPanel: React.FC<OptionsDrawerProps> = ({ id, layout, setLayout, options, setOptions, onClose }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
 
   const setGroupType = (groupTypes: TopologyGroupTypes) => {

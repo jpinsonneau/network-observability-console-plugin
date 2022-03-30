@@ -4,7 +4,8 @@ import {
   Node,
   observer,
   ScaleDetailsLevel,
-  ShapeProps, WithSelectionProps
+  ShapeProps,
+  WithSelectionProps
 } from '@patternfly/react-topology';
 import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetailsLevel';
 import * as React from 'react';
@@ -25,12 +26,7 @@ type StyleGroupProps = {
   collapsedShadowOffset?: number; // defaults to 10
 } & WithSelectionProps;
 
-const StyleGroup: React.FC<StyleGroupProps> = ({
-  element,
-  collapsedWidth = 75,
-  collapsedHeight = 75,
-  ...rest
-}) => {
+const StyleGroup: React.FC<StyleGroupProps> = ({ element, collapsedWidth = 75, collapsedHeight = 75, ...rest }) => {
   const data = element.getData();
   const detailsLevel = useDetailsLevel();
 

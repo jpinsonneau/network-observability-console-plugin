@@ -23,11 +23,7 @@ import { Record } from '../api/ipfix';
 import { TopologyMetrics } from '../api/loki';
 import { getFlows, getTopology as getTopologyMetrics } from '../api/routes';
 import { QueryOptions } from '../model/query-options';
-import {
-  DefaultOptions,
-  LayoutName,
-  TopologyOptions
-} from '../model/topology';
+import { DefaultOptions, LayoutName, TopologyOptions } from '../model/topology';
 import { Column, getDefaultColumns } from '../utils/columns';
 import { TimeRange } from '../utils/datetime';
 import { getHTTPErrorDetails } from '../utils/errors';
@@ -64,6 +60,8 @@ import NetflowTable from './netflow-table/netflow-table';
 import NetflowTopology from './netflow-topology/netflow-topology';
 import OptionsPanel from './netflow-topology/options-panel';
 import './netflow-traffic.css';
+import { GraphElement } from '@patternfly/react-topology';
+import ElementPanel from './netflow-topology/element-panel';
 
 export type ViewId = 'table' | 'topology';
 
@@ -102,11 +100,22 @@ export const NetflowTraffic: React.FC<{
   const [interval, setInterval] = useLocalStorage<number | undefined>(LOCAL_STORAGE_REFRESH_KEY);
   const isInit = React.useRef(true);
   const [selectedRecord, setSelectedRecord] = React.useState<Record | undefined>(undefined);
+  const [selectedElement, setSelectedElement] = React.useState<GraphElement | undefined>(undefined);
 
-  const onSelect = (record?: Record) => {
+  const onRecordSelect = (record?: Record) => {
     setTRModalOpen(false);
     setColModalOpen(false);
     setSelectedRecord(record);
+    setShowTopologyOptions(false);
+    setSelectedElement(undefined);
+  };
+
+  const onElementSelect = (element?: GraphElement) => {
+    setTRModalOpen(false);
+    setColModalOpen(false);
+    setSelectedRecord(undefined);
+    setShowTopologyOptions(false);
+    setSelectedElement(element);
   };
 
   const getQueryArguments = React.useCallback(() => {
@@ -140,7 +149,7 @@ export const NetflowTraffic: React.FC<{
           getTopologyMetrics(qa)
             .then(setMetrics)
             .catch(err => {
-              setFlows([]);
+              setMetrics([]);
               const errorMessage = getHTTPErrorDetails(err);
               setError(errorMessage);
             })
@@ -297,7 +306,7 @@ export const NetflowTraffic: React.FC<{
           setFilters={setFilters}
           setRange={setRange}
           setQueryOptions={setQueryOptions}
-          onClose={() => onSelect(undefined)}
+          onClose={() => onRecordSelect(undefined)}
         />
       );
     } else if (isShowTopologyOptions) {
@@ -309,6 +318,16 @@ export const NetflowTraffic: React.FC<{
           options={topologyOptions}
           setOptions={setTopologyOptions}
           onClose={() => setShowTopologyOptions(false)}
+        />
+      );
+    } else if (selectedElement) {
+      return (
+        <ElementPanel
+          id="elementPanel"
+          element={selectedElement}
+          metrics={metrics}
+          queryOptions={queryOptions}
+          onClose={() => onElementSelect(undefined)}
         />
       );
     } else {
@@ -326,7 +345,7 @@ export const NetflowTraffic: React.FC<{
             flows={flows}
             selectedRecord={selectedRecord}
             size={size}
-            onSelect={onSelect}
+            onSelect={onRecordSelect}
             clearFilters={clearFilters}
             columns={columns.filter(col => col.isSelected)}
           />
@@ -345,6 +364,8 @@ export const NetflowTraffic: React.FC<{
             filters={filters}
             setFilters={setFilters}
             toggleTopologyOptions={() => setShowTopologyOptions(!isShowTopologyOptions)}
+            selected={selectedElement}
+            onSelect={onElementSelect}
           />
         );
       default:
@@ -390,7 +411,7 @@ export const NetflowTraffic: React.FC<{
       </FiltersToolbar>
       <Drawer
         id="drawer"
-        isExpanded={selectedRecord !== undefined || isShowTopologyOptions}
+        isExpanded={selectedRecord !== undefined || selectedElement !== undefined || isShowTopologyOptions}
         isInline={isShowTopologyOptions}
       >
         <DrawerContent id="drawerContent" panelContent={panelContent()}>

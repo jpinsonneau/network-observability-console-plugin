@@ -1,11 +1,13 @@
 import {
-  ComponentFactory, GraphComponent,
+  ComponentFactory,
+  GraphComponent,
   graphDropTargetSpec,
   GraphElement,
   groupDropTargetSpec,
   ModelKind,
   nodeDragSourceSpec,
-  NODE_DRAG_TYPE, withDndDrop,
+  NODE_DRAG_TYPE,
+  withDndDrop,
   withDragNode,
   withPanZoom,
   withSelection

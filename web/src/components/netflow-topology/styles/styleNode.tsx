@@ -1,7 +1,14 @@
 import { ResourceLink } from '@openshift-console/dynamic-plugin-sdk';
 import { Flex, FlexItem, Popover } from '@patternfly/react-core';
 import {
-  CubeIcon, FilterIcon, InfoCircleIcon, OutlinedHddIcon, QuestionCircleIcon, ServiceIcon, ThumbtackIcon, TimesIcon
+  CubeIcon,
+  FilterIcon,
+  InfoCircleIcon,
+  OutlinedHddIcon,
+  QuestionCircleIcon,
+  ServiceIcon,
+  ThumbtackIcon,
+  TimesIcon
 } from '@patternfly/react-icons';
 import {
   Decorator,
@@ -10,9 +17,12 @@ import {
   getDefaultShapeDecoratorCenter,
   Node,
   NodeShape,
-  observer, Point, ScaleDetailsLevel,
+  observer,
+  Point,
+  ScaleDetailsLevel,
   ShapeProps,
-  TopologyQuadrant, WithDragNodeProps,
+  TopologyQuadrant,
+  WithDragNodeProps,
   WithSelectionProps
 } from '@patternfly/react-topology';
 import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetailsLevel';
@@ -34,7 +44,8 @@ type StyleNodeProps = {
   showStatusDecorator?: boolean;
   regrouping?: boolean;
   dragging?: boolean;
-} & WithDragNodeProps & WithSelectionProps;
+} & WithDragNodeProps &
+  WithSelectionProps;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getTypeIcon = (dataType?: string): React.ComponentClass<any, any> => {
@@ -265,13 +276,7 @@ const renderDecorators = (
   );
 };
 
-const StyleNode: React.FC<StyleNodeProps> = ({
-  element,
-  showLabel,
-  dragging,
-  regrouping,
-  ...rest
-}) => {
+const StyleNode: React.FC<StyleNodeProps> = ({ element, showLabel, dragging, regrouping, ...rest }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
   const data = element.getData();
   //TODO: check if we can have intelligent pin on view change
