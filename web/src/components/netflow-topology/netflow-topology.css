@@ -21,10 +21,14 @@
 
 #topology-search-container {
   position: absolute;
-  bottom: 4rem;
-  left: 3rem;
+  top: 1rem;
+  left: 1rem;
   max-width: 300px;
   background: white;
+}
+
+span.pf-topology-control-bar {
+  left: 0;
 }
 
 #topology-search-container:hover {
@@ -32,6 +36,6 @@
   box-shadow: 0 0.25rem 0.5rem 0rem rgba(3, 3, 3, 0.12), 0 0 0.25rem 0 rgba(3, 3, 3, 0.06);
 }
 
-.search-hidden {
-  display: none;
+g.topology.shadowed {
+  opacity: 0.5;
 }

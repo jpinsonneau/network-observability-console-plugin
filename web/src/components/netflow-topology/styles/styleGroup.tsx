@@ -52,16 +52,18 @@ const StyleGroup: React.FC<StyleGroupProps> = ({ element, collapsedWidth = 75, c
   };
 
   return (
-    <DefaultGroup
-      element={element}
-      collapsedWidth={collapsedWidth}
-      collapsedHeight={collapsedHeight}
-      showLabel={[ScaleDetailsLevel.medium, ScaleDetailsLevel.high].includes(detailsLevel)}
-      {...rest}
-      {...passedData}
-    >
-      {element.isCollapsed() ? renderIcon() : null}
-    </DefaultGroup>
+    <g className={`topology ${data.shadowed ? 'shadowed' : ''}`}>
+      <DefaultGroup
+        element={element}
+        collapsedWidth={collapsedWidth}
+        collapsedHeight={collapsedHeight}
+        showLabel={[ScaleDetailsLevel.medium, ScaleDetailsLevel.high].includes(detailsLevel)}
+        {...rest}
+        {...passedData}
+      >
+        {element.isCollapsed() ? renderIcon() : null}
+      </DefaultGroup>
+    </g>
   );
 };
 

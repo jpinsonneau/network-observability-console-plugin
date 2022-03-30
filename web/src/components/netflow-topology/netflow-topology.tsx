@@ -10,7 +10,7 @@ import {
   Title,
   ValidatedOptions
 } from '@patternfly/react-core';
-import { CogIcon, ExportIcon, SearchIcon, TimesIcon } from '@patternfly/react-icons';
+import { CogIcon, ExportIcon, SearchIcon } from '@patternfly/react-icons';
 import {
   createTopologyControlButtons,
   defaultControlButtonsOptions,
@@ -31,8 +31,8 @@ import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { saveSvgAsPng } from 'save-svg-as-png';
-import { QueryOptions } from '../../model/query-options';
 import { TopologyMetrics } from '../../api/loki';
+import { QueryOptions } from '../../model/query-options';
 import { generateDataModel, LayoutName, TopologyOptions } from '../../model/topology';
 import { ColumnsId } from '../../utils/columns';
 import { TimeRange } from '../../utils/datetime';
@@ -85,17 +85,13 @@ const TopologyContent: React.FC<{
   const prevFilters = usePrevious(filters);
 
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
-  const [isSearchOpen, setSearchOpen] = React.useState<boolean>(false);
   const [searchValue, setSearchValue] = React.useState<string>('');
   const [searchValidated, setSearchValidated] = React.useState<ValidatedOptions>();
   const [searchResultCount, setSearchResultCount] = React.useState<string>('');
 
   const onSelectIds = React.useCallback(
-    (ids: string[], closeSearch = true) => {
+    (ids: string[]) => {
       setSelectedIds(ids);
-      if (closeSearch) {
-        setSearchOpen(false);
-      }
       onSelect(ids.length ? controller.getElementById(ids[0]) : undefined);
     },
     [controller, onSelect]
@@ -103,13 +99,7 @@ const TopologyContent: React.FC<{
 
   //search element by label or secondaryLabel
   const onSearch = (searchValue: string) => {
-    if (!isSearchOpen) {
-      setSearchOpen(true);
-      return;
-    } else if (_.isEmpty(searchValue)) {
-      if (isSearchOpen) {
-        setSearchOpen(false);
-      }
+    if (_.isEmpty(searchValue)) {
       return;
     }
 
@@ -123,7 +113,7 @@ const TopologyContent: React.FC<{
       const nodeFound = !_.isEmpty(nodeModelsFound) ? controller.getNodeById(nodeModelsFound![0].id) : undefined;
       if (nodeFound) {
         const id = nodeFound.getId();
-        onSelectIds([id], false);
+        onSelectIds([id]);
         lastNodeIdsFound.push(id);
         setSearchResultCount(`${lastNodeIdsFound.length}/${lastNodeIdsFound.length + nodeModelsFound!.length - 1}`);
         const bounds = controller.getGraph().getBounds();
@@ -135,7 +125,7 @@ const TopologyContent: React.FC<{
       } else {
         lastNodeIdsFound = [];
         setSearchResultCount('');
-        onSelectIds([], false);
+        onSelectIds([]);
         setSearchValidated(ValidatedOptions.error);
       }
     } else {
@@ -263,9 +253,16 @@ const TopologyContent: React.FC<{
     }
 
     const currentModel = controller.toModel();
-    const mergedModel = generateDataModel(metrics, getOptions(), filters, currentModel.nodes, currentModel.edges);
+    const mergedModel = generateDataModel(
+      metrics,
+      getOptions(),
+      filters,
+      searchValue,
+      currentModel.nodes,
+      currentModel.edges
+    );
     controller.fromModel(mergedModel);
-  }, [controller, filters, getOptions, metrics, resetGraph]);
+  }, [controller, filters, searchValue, getOptions, metrics, resetGraph]);
 
   /*update model on layout / options / metrics / filters change
    * reset graph and details level on specific layout / options change to force render
@@ -373,8 +370,8 @@ const TopologyContent: React.FC<{
         <InputGroup>
           <TextInput
             id="search-topology-element-input"
-            className={isSearchOpen ? 'search' : 'search-hidden'}
-            placeholder={t('Search item by label')}
+            className={'search'}
+            placeholder={t('Find in view')}
             autoFocus
             type="search"
             aria-label="search"
@@ -388,7 +385,7 @@ const TopologyContent: React.FC<{
             value={searchValue}
             validated={searchValidated}
           />
-          {isSearchOpen && !_.isEmpty(searchResultCount) ? (
+          {!_.isEmpty(searchResultCount) ? (
             <TextInput value={searchResultCount} isDisabled id="topology-search-result-count" />
           ) : (
             <></>
@@ -399,7 +396,7 @@ const TopologyContent: React.FC<{
             aria-label="search button for element"
             onClick={() => onSearch(searchValue)}
           >
-            {isSearchOpen && _.isEmpty(searchValue) ? <TimesIcon /> : <SearchIcon />}
+            <SearchIcon />
           </Button>
         </InputGroup>
       </div>

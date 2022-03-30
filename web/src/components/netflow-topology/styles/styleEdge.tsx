@@ -23,7 +23,11 @@ const StyleEdge: React.FC<StyleEdgeProps> = ({ element, ...rest }) => {
     return newData;
   }, [data, detailsLevel]);
 
-  return <DefaultEdge element={element} {...rest} {...passedData} />;
+  return (
+    <g className={`topology ${data.shadowed ? 'shadowed' : ''}`}>
+      <DefaultEdge element={element} {...rest} {...passedData} />
+    </g>
+  );
 };
 
 export default observer(StyleEdge);

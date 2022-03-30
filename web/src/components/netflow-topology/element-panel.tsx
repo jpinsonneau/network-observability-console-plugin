@@ -161,12 +161,9 @@ export const ElementPanel: React.FC<ElementDrawerProps> = ({ id, element, metric
             }`;
       }
 
-      let legendData = elementMetrics.map(m => ({
+      const legendData = elementMetrics.map(m => ({
         name: getName(m)
       }));
-      if (legendData.length > 4) {
-        legendData = [];
-      }
 
       return (
         <div id={`${id}-chart`}>
@@ -181,13 +178,13 @@ export const ElementPanel: React.FC<ElementDrawerProps> = ({ id, element, metric
             }
             legendData={legendData}
             legendOrientation="vertical"
-            legendPosition="bottom"
+            legendPosition="bottom-left"
             legendAllowWrap={true}
             //TODO: fix refresh on selection change to enable animation
             //animate={true}
             //TODO: check if time scale could be interesting (buggy with current strings)
             scale={{ x: 'linear', y: 'sqrt' }}
-            height={300}
+            height={300 + legendData.length * 25}
             domainPadding={{ x: 0, y: 0 }}
             padding={{
               bottom: legendData.length * 25 + 50,

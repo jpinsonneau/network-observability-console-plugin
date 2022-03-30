@@ -4,7 +4,7 @@ export const roundTwoDigits = (count: number) => {
 
 export const elementPerMinText = (count: number): string => {
   if (count < 10000) {
-    return `${count}/min`;
+    return `${roundTwoDigits(count)}/min`;
   } else {
     return `${roundTwoDigits(count / 60)}/sec`;
   }

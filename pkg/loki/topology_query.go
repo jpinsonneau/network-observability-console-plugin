@@ -81,9 +81,9 @@ func (q *TopologyQueryBuilder) AddParam(key, value string) error {
 	}
 	switch key {
 	case startTimeKey:
-		q.topology.startTime = value
+		q.addURLParam(startParam, value)
 	case endTimeTimeKey:
-		q.topology.endTime = value
+		q.addURLParam(endParam, value)
 	case timeRangeKey:
 		start, err := timeRangeToStart(value)
 		if err != nil {
