@@ -91,9 +91,11 @@ const TopologyContent: React.FC<{
   const [searchResultCount, setSearchResultCount] = React.useState<string>('');
 
   const onSelectIds = React.useCallback(
-    (ids: string[]) => {
+    (ids: string[], closeSearch = true) => {
       setSelectedIds(ids);
-      setSearchOpen(false);
+      if (closeSearch) {
+        setSearchOpen(false);
+      }
       onSelect(ids.length ? controller.getElementById(ids[0]) : undefined);
     },
     [controller, onSelect]
@@ -121,7 +123,7 @@ const TopologyContent: React.FC<{
       const nodeFound = !_.isEmpty(nodeModelsFound) ? controller.getNodeById(nodeModelsFound![0].id) : undefined;
       if (nodeFound) {
         const id = nodeFound.getId();
-        setSelectedIds([id]);
+        onSelectIds([id], false);
         lastNodeIdsFound.push(id);
         setSearchResultCount(`${lastNodeIdsFound.length}/${lastNodeIdsFound.length + nodeModelsFound!.length - 1}`);
         const bounds = controller.getGraph().getBounds();
@@ -133,7 +135,7 @@ const TopologyContent: React.FC<{
       } else {
         lastNodeIdsFound = [];
         setSearchResultCount('');
-        setSelectedIds([]);
+        onSelectIds([], false);
         setSearchValidated(ValidatedOptions.error);
       }
     } else {
