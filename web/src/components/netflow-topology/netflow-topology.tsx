@@ -45,6 +45,7 @@ import './netflow-topology.css';
 import { FILTER_EVENT } from './styles/styleNode';
 
 let requestFit = false;
+let requestFitNextUpdate = false;
 let lastNodeIdsFound: string[] = [];
 
 const ZOOM_IN = 4 / 3;
@@ -133,6 +134,14 @@ const TopologyContent: React.FC<{
     }
   };
 
+  //update search value and clear indicators
+  const onChangeSearch = (v = '') => {
+    lastNodeIdsFound = [];
+    setSearchResultCount('');
+    setSearchValidated(ValidatedOptions.default);
+    setSearchValue(v);
+  }
+
   const onFilter = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
@@ -176,6 +185,7 @@ const TopologyContent: React.FC<{
       setFilters(result.filter(f => !_.isEmpty(f.values)));
       setQueryOptions({ ...queryOptions, match: 'any' });
       setSelectedIds([data.id]);
+      onChangeSearch();
     },
     [filters, queryOptions, setFilters, setQueryOptions]
   );
@@ -190,14 +200,19 @@ const TopologyContent: React.FC<{
   }, [controller]);
 
   const onLayoutEnd = React.useCallback(() => {
+    //fit view to new loaded elements
     if (requestFit) {
       requestFit = false;
-      //TODO: find a smoother way to fit while elements are still moving
-      setTimeout(fitView, 100);
-      setTimeout(fitView, 250);
-      setTimeout(fitView, 500);
+      if([LayoutName.Concentric, LayoutName.Dagre, LayoutName.Grid].includes(layout)){
+        fitView();
+      } else {
+        //TODO: find a smoother way to fit while elements are still moving
+        setTimeout(fitView, 100);
+        setTimeout(fitView, 250);
+        setTimeout(fitView, 500);
+      }
     }
-  }, [fitView]);
+  }, [fitView, layout]);
 
   //get options with updated time range and max edge value
   const getOptions = React.useCallback(() => {
@@ -254,7 +269,7 @@ const TopologyContent: React.FC<{
     if (!controller) {
       return;
     } else if (!controller.hasGraph()) {
-      resetGraph();
+      console.error("updateModel called while controller has no graph")
     }
 
     const currentModel = controller.toModel();
@@ -267,13 +282,16 @@ const TopologyContent: React.FC<{
       currentModel.edges
     );
     controller.fromModel(mergedModel);
-  }, [controller, filters, searchValue, getOptions, metrics, resetGraph]);
+  }, [controller, filters, searchValue, getOptions, metrics]);
 
   //update model on layout / options / metrics / filters change
   React.useEffect(() => {
     //update graph on layout / display change
-    if (prevLayout !== layout || prevOptions !== options) {
+    if (!controller.hasGraph() || prevLayout !== layout || prevOptions !== options) {
       resetGraph();
+      requestFit = true;
+    } else if(requestFitNextUpdate){
+      requestFitNextUpdate = false;
       requestFit = true;
     }
     //then update model
@@ -295,7 +313,6 @@ const TopologyContent: React.FC<{
           }
         });
       }
-      requestFit = true;
     } else if (
       prevQueryOptions?.metricFunction !== queryOptions.metricFunction ||
       prevQueryOptions?.metricType !== queryOptions.metricType
@@ -307,6 +324,8 @@ const TopologyContent: React.FC<{
         }
       });
     }
+    //request fit after next model update
+    requestFitNextUpdate = true;
   }, [controller, filters, prevFilters, prevQueryOptions, queryOptions]);
 
   //refresh UI selected items
@@ -380,12 +399,7 @@ const TopologyContent: React.FC<{
             type="search"
             aria-label="search"
             onKeyPress={e => e.key === 'Enter' && onSearch(searchValue)}
-            onChange={v => {
-              lastNodeIdsFound = [];
-              setSearchResultCount('');
-              setSearchValidated(ValidatedOptions.default);
-              setSearchValue(v);
-            }}
+            onChange={onChangeSearch}
             value={searchValue}
             validated={searchValidated}
           />
