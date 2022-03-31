@@ -140,7 +140,7 @@ const TopologyContent: React.FC<{
     setSearchResultCount('');
     setSearchValidated(ValidatedOptions.default);
     setSearchValue(v);
-  }
+  };
 
   const onFilter = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -203,7 +203,7 @@ const TopologyContent: React.FC<{
     //fit view to new loaded elements
     if (requestFit) {
       requestFit = false;
-      if([LayoutName.Concentric, LayoutName.Dagre, LayoutName.Grid].includes(layout)){
+      if ([LayoutName.Concentric, LayoutName.Dagre, LayoutName.Grid].includes(layout)) {
         fitView();
       } else {
         //TODO: find a smoother way to fit while elements are still moving
@@ -269,7 +269,7 @@ const TopologyContent: React.FC<{
     if (!controller) {
       return;
     } else if (!controller.hasGraph()) {
-      console.error("updateModel called while controller has no graph")
+      console.error('updateModel called while controller has no graph');
     }
 
     const currentModel = controller.toModel();
@@ -290,7 +290,7 @@ const TopologyContent: React.FC<{
     if (!controller.hasGraph() || prevLayout !== layout || prevOptions !== options) {
       resetGraph();
       requestFit = true;
-    } else if(requestFitNextUpdate){
+    } else if (requestFitNextUpdate) {
       requestFitNextUpdate = false;
       requestFit = true;
     }
