@@ -3,7 +3,6 @@ package loki
 import (
 	"fmt"
 	"strconv"
-	"time"
 )
 
 const (
@@ -16,8 +15,6 @@ const (
 
 type Topology struct {
 	limit     string
-	startTime string
-	endTime   string
 	timeRange string
 	function  string
 	dataField string
@@ -85,11 +82,6 @@ func (q *TopologyQueryBuilder) AddParam(key, value string) error {
 	case endTimeTimeKey:
 		q.addURLParam(endParam, value)
 	case timeRangeKey:
-		start, err := timeRangeToStart(value)
-		if err != nil {
-			return err
-		}
-		q.topology.startTime = start
 		return q.addParamTime(value)
 	case limitKey:
 		q.topology.limit = value
@@ -101,14 +93,6 @@ func (q *TopologyQueryBuilder) AddParam(key, value string) error {
 		return q.Query.AddParam(key, value)
 	}
 	return nil
-}
-
-func timeRangeToStart(value string) (string, error) {
-	r, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return "", err
-	}
-	return strconv.FormatInt(time.Now().Unix()-r, 10), nil
 }
 
 // PrepareToSubmit returns a new TopologyQueryBuilder that already handles the special behavior of some attributes

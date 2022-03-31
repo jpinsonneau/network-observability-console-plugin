@@ -296,6 +296,16 @@ const TopologyContent: React.FC<{
         });
       }
       requestFit = true;
+    } else if (
+      prevQueryOptions?.metricFunction !== queryOptions.metricFunction ||
+      prevQueryOptions?.metricType !== queryOptions.metricType
+    ) {
+      //remove edge tags on metrics change
+      controller.getElements().forEach(e => {
+        if (e.getType() === 'edge') {
+          e.setData({ ...e.getData(), tag: undefined });
+        }
+      });
     }
   }, [controller, filters, prevFilters, prevQueryOptions, queryOptions]);
 
