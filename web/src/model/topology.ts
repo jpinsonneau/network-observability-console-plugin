@@ -235,11 +235,14 @@ export const generateDataModel = (
   edges: EdgeModel[] = []
 ): Model => {
   const opts = { ...DefaultOptions, ...options };
+  //ensure each child to have single parent
+  const childIds: string[] = [];
 
   //refresh existing items
   nodes = nodes.map(node =>
     node.type === 'group'
-      ? node
+      ? //clear group children
+        { ...node, children: [] }
       : {
           ...node,
           //update options and filter indicators
@@ -290,12 +293,9 @@ export const generateDataModel = (
       nodes.push(group);
     }
 
-    if (parent) {
-      if (group.id !== parent.id) {
-        parent.children!.push(group.id);
-      } else {
-        console.error('group parent id must be different than child id !', group.id);
-      }
+    if (parent && !childIds.includes(group.id)) {
+      parent.children!.push(group.id);
+      childIds.push(group.id);
     }
 
     return group;
@@ -314,12 +314,9 @@ export const generateDataModel = (
       node = generateNode(namespace, type, name, addr, host, opts, filters, searchValue);
       nodes.push(node);
     }
-    if (parent) {
-      if (parent.id !== node.id) {
-        parent.children!.push(node.id);
-      } else {
-        console.error('node parent id must be different than child id !', node.id);
-      }
+    if (parent && !childIds.includes(node.id)) {
+      parent.children!.push(node.id);
+      childIds.push(node.id);
     }
 
     return node;

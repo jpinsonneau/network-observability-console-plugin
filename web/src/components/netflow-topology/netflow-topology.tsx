@@ -164,7 +164,12 @@ const TopologyContent: React.FC<{
       }
 
       if (data.isFiltered) {
-        filter!.values.push({ v: value! });
+        //replace filter for kubeobject
+        if (colId === ColumnsId.kubeobject) {
+          filter!.values = [{ v: value! }];
+        } else {
+          filter!.values.push({ v: value });
+        }
       } else {
         filter!.values = filter!.values.filter(v => v.v !== value);
       }
@@ -264,17 +269,6 @@ const TopologyContent: React.FC<{
     controller.fromModel(mergedModel);
   }, [controller, filters, searchValue, getOptions, metrics, resetGraph]);
 
-  //remove all elements except graph
-  const clearGraph = React.useCallback(() => {
-    if (controller && controller.hasGraph()) {
-      controller.getElements().forEach(e => {
-        if (e.getType() !== 'graph') {
-          controller.removeElement(e);
-        }
-      });
-    }
-  }, [controller]);
-
   //update model on layout / options / metrics / filters change
   React.useEffect(() => {
     //update graph on layout / display change
@@ -282,14 +276,9 @@ const TopologyContent: React.FC<{
       resetGraph();
       requestFit = true;
     }
-    //clear existing elements on group type change
-    if (prevOptions?.groupTypes !== options.groupTypes) {
-      clearGraph();
-      requestFit = true;
-    }
     //then update model
     updateModel();
-  }, [controller, metrics, filters, layout, options, prevLayout, prevOptions, resetGraph, updateModel, clearGraph]);
+  }, [controller, metrics, filters, layout, options, prevLayout, prevOptions, resetGraph, updateModel]);
 
   //clear existing elements on query change before getting new metrics
   React.useEffect(() => {
@@ -298,10 +287,17 @@ const TopologyContent: React.FC<{
       prevQueryOptions?.match !== queryOptions.match ||
       prevQueryOptions.limit > queryOptions.limit
     ) {
-      clearGraph();
+      //remove all elements except graph
+      if (controller && controller.hasGraph()) {
+        controller.getElements().forEach(e => {
+          if (e.getType() !== 'graph') {
+            controller.removeElement(e);
+          }
+        });
+      }
       requestFit = true;
     }
-  }, [controller, filters, prevFilters, clearGraph, prevQueryOptions, queryOptions]);
+  }, [controller, filters, prevFilters, prevQueryOptions, queryOptions]);
 
   //refresh UI selected items
   React.useEffect(() => {
