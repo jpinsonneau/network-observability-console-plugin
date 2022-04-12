@@ -29,6 +29,8 @@ import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetail
 import { TFunction } from 'i18next';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { usePrevious } from '../../../utils/previous-hook';
+import { HOVER_EVENT } from '../netflow-topology';
 
 export const FILTER_EVENT = 'filter';
 export enum DataTypes {
@@ -282,6 +284,8 @@ const StyleNode: React.FC<StyleNodeProps> = ({ element, showLabel, dragging, reg
   //TODO: check if we can have intelligent pin on view change
   const [isPinned, setPinned] = React.useState<boolean>(false);
   const [isFiltered, setFiltered] = React.useState<boolean>(data.isFiltered === true);
+  const [isHovered, setHovered] = React.useState<boolean>(false);
+  const previousHovered = usePrevious(isHovered);
   const detailsLevel = useDetailsLevel();
 
   const passedData = React.useMemo(() => {
@@ -304,8 +308,22 @@ const StyleNode: React.FC<StyleNodeProps> = ({ element, showLabel, dragging, reg
     }
   }
 
+  React.useEffect(() => {
+    if (previousHovered !== isHovered) {
+      element.getController().fireEvent(HOVER_EVENT, {
+        ...data,
+        id: element.getId(),
+        isHovered
+      });
+    }
+  }, [data, element, isHovered, previousHovered]);
+
   return (
-    <g className={`topology ${data.shadowed ? 'shadowed' : ''}`}>
+    <g
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`topology ${data.shadowed ? 'shadowed' : ''} ${data.hovered ? 'node-hovered' : ''}`}
+    >
       <DefaultNode
         element={element}
         {...updatedRest}

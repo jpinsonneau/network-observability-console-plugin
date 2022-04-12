@@ -44,6 +44,8 @@ import layoutFactory from './layouts/layoutFactory';
 import './netflow-topology.css';
 import { FILTER_EVENT } from './styles/styleNode';
 
+export const HOVER_EVENT = 'hover';
+
 let requestFit = false;
 let requestFitNextUpdate = false;
 let lastNodeIdsFound: string[] = [];
@@ -86,6 +88,7 @@ const TopologyContent: React.FC<{
   const prevFilters = usePrevious(filters);
 
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [hoveredId, setHoveredId] = React.useState<string>('');
   const [searchValue, setSearchValue] = React.useState<string>('');
   const [searchValidated, setSearchValidated] = React.useState<ValidatedOptions>();
   const [searchResultCount, setSearchResultCount] = React.useState<string>('');
@@ -190,6 +193,14 @@ const TopologyContent: React.FC<{
     [filters, queryOptions, setFilters, setQueryOptions]
   );
 
+  const onHover = React.useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (data: any) => {
+      setHoveredId(data.isHovered ? data.id : '');
+    },
+    []
+  );
+
   //fit view to elements
   const fitView = React.useCallback(() => {
     if (controller && controller.hasGraph()) {
@@ -278,11 +289,12 @@ const TopologyContent: React.FC<{
       getOptions(),
       filters,
       searchValue,
+      hoveredId,
       currentModel.nodes,
       currentModel.edges
     );
     controller.fromModel(mergedModel);
-  }, [controller, filters, searchValue, getOptions, metrics]);
+  }, [controller, filters, searchValue, hoveredId, getOptions, metrics]);
 
   //update model on layout / options / metrics / filters change
   React.useEffect(() => {
@@ -338,6 +350,7 @@ const TopologyContent: React.FC<{
   }, [selected, selectedIds]);
 
   useEventListener(FILTER_EVENT, onFilter);
+  useEventListener(HOVER_EVENT, onHover);
   useEventListener(GRAPH_LAYOUT_END_EVENT, onLayoutEnd);
   useEventListener<SelectionEventListener>(SELECTION_EVENT, onSelectIds);
 

@@ -88,7 +88,8 @@ export const generateNode = (
   host: string,
   options: TopologyOptions,
   filters: Filter[],
-  searchValue: string
+  searchValue: string,
+  hoveredId: string
 ): NodeModel => {
   const id = `${type}.${namespace}.${name}.${addr}`;
   const label = name ? name : addr;
@@ -98,6 +99,7 @@ export const generateNode = (
     ? namespace
     : undefined;
   const shadowed = !_.isEmpty(searchValue) && !(label.includes(searchValue) || secondaryLabel?.includes(searchValue));
+  const hovered = !_.isEmpty(hoveredId) && hoveredId.includes(id);
   return {
     id,
     type: 'node',
@@ -114,6 +116,7 @@ export const generateNode = (
       addr,
       host,
       shadowed,
+      hovered,
       isFiltered: filters.some(f => f.values.some(fv => fv.v === `${type}.${namespace}.${name}` || fv.v === addr)),
       labelPosition: LabelPosition.bottom,
       //TODO: get badge and color using console ResourceIcon
@@ -201,8 +204,11 @@ export const generateEdge = (
   targetId: string,
   count: number,
   options: TopologyOptions,
-  shadowed = false
+  shadowed = false,
+  hoveredId: string
 ): EdgeModel => {
+  const id = `${sourceId}.${targetId}`;
+  const hovered = !_.isEmpty(hoveredId) && id.includes(hoveredId);
   return {
     id: `${sourceId}.${targetId}`,
     type: 'edge',
@@ -214,6 +220,7 @@ export const generateEdge = (
       sourceId,
       targetId,
       shadowed,
+      hovered,
       //edges are directed from src to dst. It will become bidirectionnal if inverted pair is found
       startTerminalType: EdgeTerminalType.none,
       startTerminalStatus: NodeStatus.default,
@@ -231,6 +238,7 @@ export const generateDataModel = (
   options: TopologyOptions,
   filters: Filter[],
   searchValue: string,
+  hoveredId: string,
   nodes: NodeModel[] = [],
   edges: EdgeModel[] = []
 ): Model => {
@@ -254,14 +262,15 @@ export const generateDataModel = (
             node.data.host,
             opts,
             filters,
-            searchValue
+            searchValue,
+            hoveredId
           )
         }
   );
   edges = edges.map(edge => ({
     ...edge,
     //update options and reset counter
-    ...generateEdge(edge.source!, edge.target!, 0, opts)
+    ...generateEdge(edge.source!, edge.target!, 0, opts, false, hoveredId)
   }));
 
   function addGroup(name: string, type: string, parent?: NodeModel, secondaryLabelPadding = false) {
@@ -311,7 +320,7 @@ export const generateDataModel = (
         n.data.host === host
     );
     if (!node) {
-      node = generateNode(namespace, type, name, addr, host, opts, filters, searchValue);
+      node = generateNode(namespace, type, name, addr, host, opts, filters, searchValue, hoveredId);
       nodes.push(node);
     }
     if (parent && !childIds.includes(node.id)) {
@@ -350,7 +359,7 @@ export const generateDataModel = (
         }
       }
     } else {
-      edge = generateEdge(sourceId, targetId, count, opts, shadowed);
+      edge = generateEdge(sourceId, targetId, count, opts, shadowed, hoveredId);
       edges.push(edge);
     }
 
