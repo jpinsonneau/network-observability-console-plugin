@@ -8,7 +8,7 @@ import {
   GridLayout,
   ConcentricLayout
 } from '@patternfly/react-topology';
-import { LayoutName } from '../../../model/topology';
+import { LayoutName } from '../../../../model/topology';
 
 const layoutFactory: LayoutFactory = (type: LayoutName, graph: Graph): Layout | undefined => {
   switch (type) {

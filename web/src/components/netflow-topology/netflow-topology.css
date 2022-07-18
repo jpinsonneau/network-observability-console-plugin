@@ -62,3 +62,14 @@ g.topology.edge-highlighted>.pf-topology-connector-arrow {
 .topology-icon > text {
   fill: white;
 }
+
+.three-d-text-content {
+  padding-top: 10px;
+  transform: translate3d(100%, 0, 0);
+  text-align: left;
+  background: #202035;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  user-select: none;
+}

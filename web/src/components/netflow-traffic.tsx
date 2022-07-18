@@ -140,7 +140,7 @@ export const NetflowTraffic: React.FC<{
     DefaultOptions
   );
   const [metrics, setMetrics] = React.useState<TopologyMetrics[]>([]);
-  const [isShowTopologyOptions, setShowTopologyOptions] = React.useState<boolean>(false);
+  const [isShowTopologyOptions, setShowTopologyOptions] = React.useState<boolean>(topologyOptions.layout === '3d');
   const [isShowQuerySummary, setShowQuerySummary] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | undefined>();
   const [size, setSize] = useLocalStorage<Size>(LOCAL_STORAGE_SIZE_KEY, 'm');

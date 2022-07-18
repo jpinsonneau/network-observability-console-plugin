@@ -13,6 +13,8 @@ export const LayoutDropdown: React.FC<{
 
   const getLayoutDisplay = (layoutName: LayoutName) => {
     switch (layoutName) {
+      case LayoutName.ThreeD:
+        return t('3d');
       case LayoutName.Cola:
         return t('Cola');
       case LayoutName.ColaNoForce:

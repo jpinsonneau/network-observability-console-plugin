@@ -20,7 +20,7 @@ import {
   observer
 } from '@patternfly/react-topology';
 import DefaultConnectorTag from '@patternfly/react-topology/dist/esm/components/edges/DefaultConnectorTag';
-import { HOVER_EVENT } from '../netflow-topology';
+import { HOVER_EVENT } from '../topology-content';
 
 type BaseEdgeProps = {
   element: Edge;

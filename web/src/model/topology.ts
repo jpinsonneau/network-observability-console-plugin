@@ -20,6 +20,7 @@ import { TFunction } from 'i18next';
 import { K8sModel } from '@openshift-console/dynamic-plugin-sdk';
 
 export enum LayoutName {
+  ThreeD = '3d',
   Cola = 'Cola',
   ColaNoForce = 'ColaNoForce',
   Concentric = 'Concentric',
