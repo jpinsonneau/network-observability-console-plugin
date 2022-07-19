@@ -14,6 +14,15 @@ Cypress.Commands.add('openNetflowTrafficPage', () => {
   //clear local storage to ensure to be in default view = table
   cy.clearLocalStorage();
   cy.visit(c.url);
+  cy.login();
+});
+
+Cypress.Commands.add('login', () => {
+  if (c.credentials.length) {
+    const loginPassword = c.credentials.split('|');
+    cy.get('#inputUsername').type(`${loginPassword[0]}`);
+    cy.get('#inputPassword').type(`${loginPassword[1]}{enter}`);
+  }
 });
 
 Cypress.Commands.add('checkColumns', (groups = 5, cols = 9) => {
@@ -32,6 +41,15 @@ Cypress.Commands.add('checkColumns', (groups = 5, cols = 9) => {
     //Should have correct number of columns
     cy.get('thead>tr').eq(1).children().should('have.length', cols);
   }
+});
+
+Cypress.Commands.add('checkLocalStorage', (cols = 9) => {
+  const ls = JSON.parse(localStorage.getItem('network-observability-plugin-settings'));
+  console.log("localStorage", ls);
+  if (cols > 0) {
+    expect(ls['netflow-traffic-columns'].length === cols);
+  }
+  expect(ls['netflow-traffic-query-params'].length);
 });
 
 Cypress.Commands.add('openColumnsModal', () => {
