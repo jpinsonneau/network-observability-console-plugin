@@ -15,21 +15,23 @@ import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TopologyMetrics } from '../../api/loki';
-import { MetricFunction, MetricType } from '../../model/flow-query';
+import { MetricFunction, MetricType, MetricScope } from '../../model/flow-query';
+import { OverviewPanel, OverviewPanelType } from '../../utils/overview-panels';
 import LokiError from '../messages/loki-error';
 import { NetflowOverviewPanel } from './netflow-overview-panel';
-import { OverviewPanel, OverviewPanelType } from '../../utils/overview-panels';
+
 import './netflow-overview.css';
 
 export const NetflowOverview: React.FC<{
   panels: OverviewPanel[];
   metricFunction?: MetricFunction;
   metricType?: MetricType;
+  metricScope: MetricScope;
   metrics: TopologyMetrics[];
   loading?: boolean;
   error?: string;
   clearFilters: () => void;
-}> = ({ panels, metricFunction, metricType, metrics, loading, error, clearFilters }) => {
+}> = ({ panels, metricFunction, metricType, metricScope, metrics, loading, error, clearFilters }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
 
   if (error) {
@@ -80,6 +82,7 @@ export const NetflowOverview: React.FC<{
                 panel={panel}
                 metricFunction={metricFunction}
                 metricType={metricType}
+                metricScope={metricScope}
                 metrics={metrics}
                 loading={loading}
               />
