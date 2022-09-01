@@ -25,6 +25,7 @@ import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from 'react-router-dom';
+import { MetricScopeOptions } from '../model/metrics';
 import { Record } from '../api/ipfix';
 import { Stats, TopologyMetrics } from '../api/loki';
 import { getFlows, getTopology } from '../api/routes';
@@ -218,8 +219,8 @@ export const NetflowTraffic: React.FC<{
 
   const selectView = (view: ViewId) => {
     clearSelections();
-    //reporter 'both' is disabled for topology view
-    if (view === 'topology' && reporter === 'both') {
+    //reporter 'both' is only available in table view
+    if (view !== 'table' && reporter === 'both') {
       setReporter('source');
     }
     //save / restore top / limit parameter according to selected view
@@ -277,6 +278,9 @@ export const NetflowTraffic: React.FC<{
       query.scope = metricScope;
       if (selectedViewId === 'topology') {
         query.groups = topologyOptions.groupTypes !== TopologyGroupTypes.NONE ? topologyOptions.groupTypes : undefined;
+      } else if (selectedViewId === 'overview') {
+        query.scope = MetricScopeOptions.RESOURCE;
+        query.groups = undefined;
       }
     }
     return query;
@@ -682,6 +686,7 @@ export const NetflowTraffic: React.FC<{
       case 'overview':
         return (
           <NetflowOverview
+            limit={limit}
             panels={panels}
             metricFunction={metricFunction}
             metricType={metricType}

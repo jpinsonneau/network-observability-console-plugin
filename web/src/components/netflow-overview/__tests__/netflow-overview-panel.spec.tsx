@@ -12,6 +12,7 @@ import NetflowOverviewPanel from '../netflow-overview-panel';
 
 describe('<NetflowOverviewPanel />', () => {
   const props = {
+    limit: 5,
     panel: SamplePanel,
     loading: false,
     metricFunction: 'sum' as MetricFunction,

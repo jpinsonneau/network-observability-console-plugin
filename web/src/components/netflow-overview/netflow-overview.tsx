@@ -23,6 +23,7 @@ import { NetflowOverviewPanel } from './netflow-overview-panel';
 import './netflow-overview.css';
 
 export const NetflowOverview: React.FC<{
+  limit: number;
   panels: OverviewPanel[];
   metricFunction?: MetricFunction;
   metricType?: MetricType;
@@ -31,7 +32,7 @@ export const NetflowOverview: React.FC<{
   loading?: boolean;
   error?: string;
   clearFilters: () => void;
-}> = ({ panels, metricFunction, metricType, metricScope, metrics, loading, error, clearFilters }) => {
+}> = ({ limit, panels, metricFunction, metricType, metricScope, metrics, loading, error, clearFilters }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
 
   if (error) {
@@ -83,7 +84,7 @@ export const NetflowOverview: React.FC<{
                 metricFunction={metricFunction}
                 metricType={metricType}
                 metricScope={metricScope}
-                metrics={metrics}
+                metrics={metrics.sort((a, b) => b.total - a.total).slice(0, limit)}
                 loading={loading}
               />
             </FlexItem>

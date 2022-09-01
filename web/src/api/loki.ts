@@ -1,5 +1,7 @@
+import { MetricFunction, MetricType } from '../model/flow-query';
+import { humanFileSize } from '../utils/bytes';
+import { roundTwoDigits } from '../utils/count';
 import { TimeRange } from '../utils/datetime';
-import { MetricFunction } from '../model/flow-query';
 import { cyrb53 } from '../utils/hash';
 import { Fields, Labels, Record } from './ipfix';
 
@@ -91,4 +93,8 @@ export const calculateMatrixTotals = (tm: TopologyMetrics, mf: MetricFunction, r
       break;
   }
   return tm;
+};
+
+export const getMetricValue = (v: number, metricFunction?: MetricFunction, metricType?: MetricType) => {
+  return metricFunction !== 'rate' && metricType === 'bytes' ? humanFileSize(v, true, 0) : roundTwoDigits(v);
 };
