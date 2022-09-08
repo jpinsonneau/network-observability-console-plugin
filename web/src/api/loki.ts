@@ -1,3 +1,4 @@
+import { getRangeInMinutes } from '../utils/duration';
 import { MetricFunction, MetricType } from '../model/flow-query';
 import { humanFileSize } from '../utils/bytes';
 import { roundTwoDigits } from '../utils/count';
@@ -7,7 +8,7 @@ import { Fields, Labels, Record } from './ipfix';
 
 export interface AggregatedQueryResponse {
   resultType: string;
-  result: StreamResult[] | TopologyMetrics[];
+  result: StreamResult[] | Metrics[];
   stats: Stats;
 }
 
@@ -27,8 +28,9 @@ export interface RecordsResult {
   stats: Stats;
 }
 
-export interface TopologyResult {
-  metrics: TopologyMetrics[];
+export interface MetricsResult {
+  metrics: Metrics[];
+  appMetrics?: Metrics;
   stats: Stats;
 }
 
@@ -43,7 +45,8 @@ export const parseStream = (raw: StreamResult): Record[] => {
   });
 };
 
-export interface TopologyMetric {
+export interface Metric {
+  app?: string;
   DstAddr: string;
   DstK8S_Name: string;
   DstK8S_Namespace: string;
@@ -60,23 +63,16 @@ export interface TopologyMetric {
   SrcK8S_HostName: string;
 }
 
-export interface TopologyMetrics {
-  metric: TopologyMetric;
+export interface Metrics {
+  metric: Metric;
   values: (string | number)[][];
   total: number;
 }
 
 /* calculate total for selected function
- * loki will return matrix with multiple values (one per step = 60s)
+ * loki will return matrix with multiple values (one per step)
  */
-export const calculateMatrixTotals = (tm: TopologyMetrics, mf: MetricFunction, range: number | TimeRange) => {
-  let rangeInMinutes: number;
-  if (typeof range === 'number') {
-    rangeInMinutes = range / 60;
-  } else {
-    rangeInMinutes = (range.from - range.to) / (1000 * 60);
-  }
-
+export const calculateMatrixTotals = (tm: Metrics, mf: MetricFunction, range: number | TimeRange, step: number) => {
   tm.total = 0;
   switch (mf) {
     case 'max':
@@ -85,11 +81,12 @@ export const calculateMatrixTotals = (tm: TopologyMetrics, mf: MetricFunction, r
     case 'avg':
     case 'rate':
       tm.values.forEach(v => (tm.total += Number(v[1])));
-      tm.total = tm.total / rangeInMinutes;
+      tm.total = tm.total / getRangeInMinutes(range);
       break;
     case 'sum':
     default:
       tm.values.forEach(v => (tm.total += Number(v[1])));
+      tm.total = tm.total * getRangeInMinutes(step);
       break;
   }
   return tm;

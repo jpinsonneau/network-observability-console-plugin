@@ -1,71 +1,67 @@
-import { Bullseye, Divider, Panel, PanelHeader, PanelMain, PanelMainBody, Spinner } from '@patternfly/react-core';
+import { Divider, Panel, PanelHeader, PanelMain, PanelMainBody } from '@patternfly/react-core';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { OverviewPanel } from '../../utils/overview-panels';
-import { TopologyMetrics } from '../../api/loki';
-import { MetricFunction, MetricType, MetricScope } from '../../model/flow-query';
+import { Metrics } from '../../api/loki';
+import { MetricFunction, MetricScope, MetricType } from '../../model/flow-query';
 import { MetricScopeOptions } from '../../model/metrics';
-import './netflow-overview-panel.css';
+import { getOverviewPanelTitle, OverviewPanel } from '../../utils/overview-panels';
 import MetricsContent from '../metrics/metrics-content';
+import './netflow-overview-panel.css';
 
 export const NetflowOverviewPanel: React.FC<{
+  limit: number;
   panel: OverviewPanel;
+  metricStep: number;
   metricFunction?: MetricFunction;
   metricType?: MetricType;
   metricScope: MetricScope;
-  metrics: TopologyMetrics[];
+  metrics: Metrics[];
+  appMetrics?: Metrics;
   loading?: boolean;
-}> = ({ panel, metricFunction, metricType, metricScope, metrics, loading }) => {
+  doubleWidth?: boolean;
+}> = ({ limit, panel, metricStep, metricFunction, metricType, metricScope, metrics, appMetrics, loading, doubleWidth }) => {
   const { t } = useTranslation('plugin__network-observability-plugin');
 
   const getContent = React.useCallback(() => {
-    if (loading) {
-      return (
-        <Bullseye data-test="loading-overview-panel">
-          <Spinner size="xl" />
-        </Bullseye>
-      );
-    } else {
-      //TODO: put content here
-      switch (panel.id) {
-        case 'overview':
-          return 'Large overview content';
-        case 'total_timeseries':
-          return 'Total time series';
-        case 'bar':
-        case 'donut':
-        case 'top_timeseries':
-          return (
-            <MetricsContent
-              id={panel.id}
-              sizePx={600}
-              metricFunction={metricFunction}
-              metricType={metricType}
-              metrics={metrics}
-              scope={metricScope as MetricScopeOptions}
-              showDonut={panel.id === 'donut'}
-              showBar={panel.id === 'bar'}
-              showArea={panel.id === 'top_timeseries'}
-              showScatter={panel.id === 'top_timeseries'}
-              smallerTexts={panel.id === 'donut'}
-              doubleWidth={panel.id === 'top_timeseries'}
-            />
-          );
-        case 'sankey':
-          return 'Sankey content';
-        case 'packets_dropped':
-          return 'Packets dropped content';
-        case 'inbound_flows_region':
-          return 'Inbound flows by region content';
-        default:
-          return t('Error: Unknown panel type');
-      }
+    //TODO: put content here
+    switch (panel.id) {
+      case 'overview':
+        return 'Large overview content';
+      case 'total_timeseries':
+      case 'top_bar':
+      case 'top_donut':
+      case 'top_timeseries':
+        return (
+          <MetricsContent
+            id={panel.id}
+            sizePx={600}
+            metricStep={metricStep}
+            metricFunction={metricFunction}
+            metricType={metricType}
+            metrics={panel.id === 'total_timeseries' ? (appMetrics ? [appMetrics] : []) : metrics}
+            scope={panel.id === 'total_timeseries' ? MetricScopeOptions.APP : (metricScope as MetricScopeOptions)}
+            showDonut={panel.id === 'top_donut'}
+            showBar={panel.id === 'top_bar'}
+            showArea={panel.id.endsWith('_timeseries')}
+            showScatter={panel.id.endsWith('_timeseries')}
+            smallerTexts={panel.id === 'top_donut'}
+            doubleWidth={doubleWidth}
+          />
+        );
+      case 'top_sankey':
+        return 'Sankey content';
+      case 'packets_dropped':
+        return 'Packets dropped content';
+      case 'inbound_flows_region':
+        return 'Inbound flows by region content';
+      default:
+        return t('Error: Unknown panel type');
     }
-  }, [loading, panel.id, metricFunction, metricType, metrics, metricScope, t]);
+  }, [panel.id, metricStep, metricFunction, metricType, appMetrics, metrics, metricScope, doubleWidth, t]);
 
   return (
     <Panel variant="raised">
-      <PanelHeader>{panel.title}</PanelHeader>
+      <PanelHeader>{getOverviewPanelTitle(t, panel.id, limit.toString())}</PanelHeader>
       <Divider />
       <PanelMain>
         <PanelMainBody className={panel.id !== 'overview' ? 'overview-panel-body' : 'overview-panel-body-small'}>

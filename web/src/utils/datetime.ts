@@ -41,6 +41,19 @@ export const getTimeRangeOptions = (t: TFunction) => {
   };
 };
 
+export const getStepOptions = (t: TFunction) => {
+  return {
+    '1m': t('1 minute frame'),
+    '5m': t('5 minutes frame'),
+    '15m': t('15 minutes frame'),
+    '30m': t('30 minutes frame'),
+    '1h': t('1 hour frame'),
+    '6h': t('6 hours frame'),
+    '12h': t('12 hours frame'),
+    '1d': t('1 day frame')
+  };
+};
+
 export const getFormattedDate = (date: Date, format = 'llll') => {
   return moment(date).format(format);
 };

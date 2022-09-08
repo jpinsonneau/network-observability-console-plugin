@@ -18,7 +18,7 @@ import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { getBuildInfo, getLimits, getMetrics, getLokiReady } from '../../api/routes';
+import { getLokiBuildInfo, getLimits, getLokiStatusMetrics, getLokiStatusReady } from '../../api/routes';
 import { getHTTPErrorDetails } from '../../utils/errors';
 import './loki-error.css';
 
@@ -50,7 +50,7 @@ export const LokiError: React.FC<Props> = ({ title, error }) => {
       switch (type) {
         case LokiInfo.Build:
           setInfoName(t('Build info'));
-          getBuildInfo()
+          getLokiBuildInfo()
             .then(data => setInfo(JSON.stringify(data, null, 2)))
             .catch(err => {
               setInfo(getHTTPErrorDetails(err));
@@ -72,7 +72,7 @@ export const LokiError: React.FC<Props> = ({ title, error }) => {
           break;
         case LokiInfo.Metrics:
           setInfoName(t('Metrics'));
-          getMetrics()
+          getLokiStatusMetrics()
             .then(data => setInfo(data))
             .catch(err => {
               setInfo(getHTTPErrorDetails(err));
@@ -93,7 +93,7 @@ export const LokiError: React.FC<Props> = ({ title, error }) => {
   );
 
   React.useEffect(() => {
-    getLokiReady()
+    getLokiStatusReady()
       .then(() => {
         setReady('');
       })
@@ -144,7 +144,9 @@ export const LokiError: React.FC<Props> = ({ title, error }) => {
                   </Text>
                 </>
               )}
-              {(error.includes('deadline exceeded') || error.includes('maximum of series')) && (
+              {(error.includes('deadline exceeded') ||
+                error.includes('maximum of series') ||
+                error.includes('too many outstanding requests')) && (
                 <>
                   <Text component={TextVariants.blockquote}>
                     {t(
@@ -155,6 +157,19 @@ export const LokiError: React.FC<Props> = ({ title, error }) => {
                   <Text component={TextVariants.blockquote}>
                     {t('Reduce limit and time range to decrease the number of results')}
                   </Text>
+                  <Text component={TextVariants.blockquote}>
+                    {t('Increase time step to decrease the number of parallel queries')}
+                  </Text>
+                  {error.includes('too many outstanding requests') && (
+                    <Text component={TextVariants.blockquote}>
+                      {
+                        // eslint-disable-next-line max-len
+                        t(
+                          'Ensure Loki config contains "parallelise_shardable_queries: true" and "max_outstanding_requests_per_tenant: 2048"'
+                        )
+                      }
+                    </Text>
+                  )}
                 </>
               )}
               {(error.includes('time range exceeds') || error.includes('maximum resolution')) && (

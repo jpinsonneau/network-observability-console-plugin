@@ -1,4 +1,5 @@
 import * as _ from 'lodash';
+import { TimeRange } from './datetime';
 
 // Conversions between units and milliseconds
 const s = 1000;
@@ -12,6 +13,14 @@ type KeyOfUnits = keyof typeof units;
 // precompile regexp
 const wordsRegexp = /\s+/;
 const durationRegexp = /^(\d+)([wdhms])$/;
+
+export const getRangeInMinutes = (range: number | TimeRange) => {
+  if (typeof range === 'number') {
+    return range / 60;
+  } else {
+    return (range.from - range.to) / m;
+  }
+};
 
 // Converts a duration like "1h 10m 23s" to milliseconds or throws an error if the duration could not be
 // parsed
@@ -64,10 +73,28 @@ export const getDateStringInSeconds = (date: Date): string => {
   return (date.getTime() / s).toString();
 };
 
+export const getDateMsInMinutes = (time: number): number => {
+  return time / m;
+};
+
 export const getDateMsInSeconds = (time: number): number => {
   return time / s;
 };
 
 export const getDateSInMiliseconds = (time: number): number => {
   return time * s;
+};
+
+export const getDateSInMinutes = (time: number): number => {
+  return time / 60;
+};
+
+export const isStepDurationOutsideRange = (range: number | TimeRange, step: string): boolean => {
+  const rangeInMinutes = getRangeInMinutes(range);
+  return getDateMsInMinutes(parseDuration(step)) >= rangeInMinutes;
+};
+
+export const isStepSecondsOutsideRange = (range: number | TimeRange, step: number): boolean => {
+  const rangeInMinutes = getRangeInMinutes(range);
+  return getDateSInMinutes(step) >= rangeInMinutes;
 };

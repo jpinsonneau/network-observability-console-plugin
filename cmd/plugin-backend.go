@@ -36,7 +36,7 @@ var (
 	lokiSkipTLS    = flag.Bool("loki-skip-tls", false, "Skip TLS checks for loki HTTPS connection")
 	lokiMock       = flag.Bool("loki-mock", false, "Fake loki results using saved mocks")
 	ingressMatcher = flag.String("ingress-matcher", ".*-ingress$", "Regex matching ingress namespace")
-	logLevel       = flag.String("loglevel", "info", "log level (default: info)")
+	logLevel       = flag.String("loglevel", "trace", "log level (default: info)")
 	frontendConfig = flag.String("frontend-config", "", "path to the console plugin config file")
 	versionFlag    = flag.Bool("v", false, "print version")
 	log            = logrus.WithField("module", "main")
