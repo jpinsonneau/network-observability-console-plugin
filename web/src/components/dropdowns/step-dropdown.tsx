@@ -20,7 +20,7 @@ export type StepDropdownProps = {
 
 export const StepDropdown: React.FC<StepDropdownProps> = ({ id, range, step, setStep }) => {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
-  const { t } = useTranslation('plugin__network-observability-plugin');
+  const { t } = useTranslation('plugin__netobserv-plugin');
 
   const isDisabled = React.useCallback(
     (v: string) => {

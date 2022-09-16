@@ -19,8 +19,19 @@ export const NetflowOverviewPanel: React.FC<{
   appMetrics?: Metrics;
   loading?: boolean;
   doubleWidth?: boolean;
-}> = ({ limit, panel, metricStep, metricFunction, metricType, metricScope, metrics, appMetrics, loading, doubleWidth }) => {
-  const { t } = useTranslation('plugin__network-observability-plugin');
+}> = ({
+  limit,
+  panel,
+  metricStep,
+  metricFunction,
+  metricType,
+  metricScope,
+  metrics,
+  appMetrics,
+  loading,
+  doubleWidth
+}) => {
+  const { t } = useTranslation('plugin__netobserv-plugin');
 
   const getContent = React.useCallback(() => {
     //TODO: put content here
