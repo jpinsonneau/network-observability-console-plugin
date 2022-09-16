@@ -81,6 +81,14 @@ export const MetricsContent: React.FC<{
     }, [metricFunction, metricStep, metricType, t]);
 
     const chart = React.useCallback(() => {
+      function truncate(input: string) {
+        const length = doubleWidth ? 32 : showDonut ? 12 : 16;
+        if (input.length > length) {
+          return input.substring(0, length / 2) + '…' + input.substring(input.length - length / 2);
+        }
+        return input;
+      }
+
       function getName(m: Metrics) {
         switch (scope) {
           case MetricScopeOptions.APP:
@@ -104,14 +112,14 @@ export const MetricsContent: React.FC<{
           case MetricScopeOptions.OWNER:
             let srcOwner = t('Unknown');
             if (m.metric.SrcK8S_Namespace && m.metric.SrcK8S_OwnerName) {
-              srcOwner = `${m.metric.SrcK8S_Namespace}.${m.metric.SrcK8S_OwnerName}`;
+              srcOwner = `${truncate(m.metric.SrcK8S_Namespace)}.${truncate(m.metric.SrcK8S_OwnerName)}`;
             } else if (m.metric.SrcK8S_OwnerName) {
               srcOwner = m.metric.SrcK8S_OwnerName;
             }
 
             let dstOwner = t('Unknown');
             if (m.metric.DstK8S_Namespace && m.metric.DstK8S_OwnerName) {
-              dstOwner = `${m.metric.DstK8S_Namespace}.${m.metric.DstK8S_OwnerName}`;
+              dstOwner = `${truncate(m.metric.DstK8S_Namespace)}.${truncate(m.metric.DstK8S_OwnerName)}`;
             } else if (m.metric.DstK8S_OwnerName) {
               dstOwner = m.metric.DstK8S_OwnerName;
             }
@@ -124,14 +132,14 @@ export const MetricsContent: React.FC<{
           default:
             let src = m.metric.SrcAddr;
             if (m.metric.SrcK8S_Namespace && m.metric.SrcK8S_Name) {
-              src = `${m.metric.SrcK8S_Namespace}.${m.metric.SrcK8S_Name}`;
+              src = `${truncate(m.metric.SrcK8S_Namespace)}.${truncate(m.metric.SrcK8S_Name)}`;
             } else if (m.metric.SrcK8S_Name) {
               src = m.metric.SrcK8S_Name;
             }
 
             let dst = m.metric.DstAddr;
             if (m.metric.DstK8S_Namespace && m.metric.DstK8S_Name) {
-              dst = `${m.metric.DstK8S_Namespace}.${m.metric.DstK8S_Name}`;
+              dst = `${truncate(m.metric.DstK8S_Namespace)}.${truncate(m.metric.DstK8S_Name)}`;
             } else if (m.metric.DstK8S_Name) {
               dst = m.metric.DstK8S_Name;
             }
@@ -141,10 +149,6 @@ export const MetricsContent: React.FC<{
                 : `${t('From')} ${src}`
               : `${src} -> ${dst}`;
         }
-      }
-
-      function getPercentValue(m: Metrics) {
-        return `${((m.total / total) * 100).toFixed(2)}%`;
       }
 
       const total = metrics.reduce((prev, cur) => prev + cur.total, 0);
@@ -197,11 +201,12 @@ export const MetricsContent: React.FC<{
               legendPosition="right"
               legendAllowWrap={true}
               legendComponent={legentComponent}
-              labels={({ datum }) => `${datum.x}: ${datum.y}`}
+              labels={({ datum }) => datum.x}
 
               width={doubleWidth ? 1000 : 500}
               height={350}
-              data={metrics.sort((a, b) => a.total - b.total).map((m: Metrics) => ({ x: getPercentValue(m), y: m.total }))}
+              data={metrics.sort((a, b) => a.total - b.total)
+                .map((m: Metrics) => ({ x: `${((m.total / total) * 100).toFixed(2)}%`, y: m.total }))}
               padding={{
                 bottom: 20,
                 left: 20,
