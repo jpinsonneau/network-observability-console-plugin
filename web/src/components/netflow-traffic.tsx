@@ -6,6 +6,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerContentBody,
+  DrawerPanelContent,
   Dropdown,
   DropdownGroup,
   DropdownItem,
@@ -47,6 +48,7 @@ import {
   FlowQuery,
   groupFiltersMatchAll,
   groupFiltersMatchAny,
+  filterByHashId,
   Match,
   MetricFunction,
   MetricScope,
@@ -130,6 +132,7 @@ import FlowsQuerySummary from './query-summary/flows-query-summary';
 import { SearchComponent, SearchEvent, SearchHandle } from './search/search';
 import './netflow-traffic.css';
 import { TruncateLength } from './dropdowns/truncate-dropdown';
+import { verticalDefaultSize, verticalMinSize, verticalMaxSize } from '../utils/panel';
 
 export type ViewId = 'overview' | 'table' | 'topology';
 
@@ -161,7 +164,8 @@ export const NetflowTraffic: React.FC<{
   const [isViewOptionOverflowMenuOpen, setViewOptionOverflowMenuOpen] = React.useState(false);
   const [isFullScreen, setFullScreen] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
-  const [flows, setFlows] = React.useState<Record[]>([]);
+  const [flowConnections, setFlowConnections] = React.useState<Record[]>([]);
+  const [flowLogs, setFlowLogs] = React.useState<Record[]>([]);
   const [stats, setStats] = React.useState<Stats | undefined>(undefined);
   const [appStats, setAppStats] = React.useState<Stats | undefined>(undefined);
   const [overviewTruncateLength, setOverviewTruncateLength] = useLocalStorage<TruncateLength>(
@@ -234,10 +238,10 @@ export const NetflowTraffic: React.FC<{
   const updateTableFilters = React.useCallback(
     (f: Filter[]) => {
       setFilters(f);
-      setFlows([]);
+      setFlowConnections([]);
       setWarningMessage(undefined);
     },
-    [setFilters, setFlows, setWarningMessage]
+    [setFilters, setFlowConnections, setWarningMessage]
   );
 
   const resetDefaultFilters = React.useCallback(() => {
@@ -306,7 +310,8 @@ export const NetflowTraffic: React.FC<{
     const query: FlowQuery = {
       filters: groupedFilters,
       limit: LIMIT_VALUES.includes(limit) ? limit : LIMIT_VALUES[0],
-      reporter: reporter
+      reporter: reporter,
+      recordType: 'newConnection',
     };
     if (range) {
       if (typeof range === 'number') {
@@ -368,11 +373,11 @@ export const NetflowTraffic: React.FC<{
         manageWarnings(
           getFlows(fq)
             .then(result => {
-              setFlows(result.records);
+              setFlowConnections(result.records);
               setStats(result.stats);
             })
             .catch(err => {
-              setFlows([]);
+              setFlowConnections([]);
               setError(getHTTPErrorDetails(err));
               setWarningMessage(undefined);
             })
@@ -415,7 +420,7 @@ export const NetflowTraffic: React.FC<{
             })
             .finally(() => {
               //clear flows
-              setFlows([]);
+              setFlowConnections([]);
               setLoading(false);
               setLastRefresh(new Date());
             })
@@ -441,6 +446,28 @@ export const NetflowTraffic: React.FC<{
     }
     tick();
   }, [forcedFilters, tick]);
+
+  // update related logs on selectedRecord
+  React.useEffect(() => {
+    if (selectedRecord && selectedRecord.fields._HashId) {
+      const hashIdFilter = filterByHashId(selectedRecord.fields._HashId);
+      getFlows({
+        filters: hashIdFilter,
+        limit: LIMIT_VALUES.includes(limit) ? limit : LIMIT_VALUES[0],
+        reporter: reporter,
+        recordType: 'flowLog',
+      })
+        .then(result => {
+          setFlowLogs(result.records);
+        })
+        .catch(err => {
+          setFlowLogs([]);
+          //setError(getHTTPErrorDetails(err));
+        })
+    } else {
+      setFlowLogs([]);
+    }
+  }, [buildFlowQuery, limit, reporter, selectedRecord]);
 
   // Rewrite URL params on state change
   React.useEffect(() => {
@@ -805,7 +832,7 @@ export const NetflowTraffic: React.FC<{
       return (
         <SummaryPanel
           id="summaryPanel"
-          flows={flows}
+          flows={flowConnections}
           metrics={metrics}
           appMetrics={totalMetric}
           metricType={metricType}
@@ -849,6 +876,8 @@ export const NetflowTraffic: React.FC<{
 
   const pageContent = () => {
     let content: JSX.Element | null = null;
+    let extraContent: JSX.Element | null = null;
+
     switch (selectedViewId) {
       case 'overview':
         content = (
@@ -867,21 +896,54 @@ export const NetflowTraffic: React.FC<{
         );
         break;
       case 'table':
+        if (!_.isEmpty(flowLogs)) {
+          extraContent = (
+            <DrawerPanelContent
+              className="drawer-panel-content"
+              isResizable defaultSize={verticalDefaultSize} minSize={verticalMinSize} maxSize={verticalMaxSize}>
+              <NetflowTable
+                id="extra-table"
+                compactHeaders={true}
+                loading={false}
+                error={undefined}
+                flows={flowLogs}
+                selectedRecord={undefined}
+                size={size}
+                onSelect={(record) => {
+                  console.log("selected flow", record);
+                }}
+                columns={columns.filter(col => col.isSelected)}
+                setColumns={(v: Column[]) => setColumns(v.concat(columns.filter(col => !col.isSelected)))}
+                columnSizes={columnSizes}
+                setColumnSizes={setColumnSizes}
+                isDark={isDarkTheme}
+              />
+            </DrawerPanelContent>
+          );
+        }
+
         content = (
-          <NetflowTable
-            loading={loading}
-            error={error}
-            flows={flows}
-            selectedRecord={selectedRecord}
-            size={size}
-            onSelect={onRecordSelect}
-            columns={columns.filter(col => col.isSelected)}
-            setColumns={(v: Column[]) => setColumns(v.concat(columns.filter(col => !col.isSelected)))}
-            columnSizes={columnSizes}
-            setColumnSizes={setColumnSizes}
-            filterActionLinks={filterLinks()}
-            isDark={isDarkTheme}
-          />
+          <Drawer id="extra-drawer" className="drawer" isExpanded={extraContent !== null} position="bottom">
+            <DrawerContent id="extra-drawer-content" className="drawer-content" panelContent={extraContent}>
+              <DrawerContentBody id="extra-drawer-body" className="drawer-body">
+                <NetflowTable
+                  id="table"
+                  loading={loading}
+                  error={error}
+                  flows={flowConnections}
+                  selectedRecord={selectedRecord}
+                  size={size}
+                  onSelect={onRecordSelect}
+                  columns={columns.filter(col => col.isSelected)}
+                  setColumns={(v: Column[]) => setColumns(v.concat(columns.filter(col => !col.isSelected)))}
+                  columnSizes={columnSizes}
+                  setColumnSizes={setColumnSizes}
+                  filterActionLinks={filterLinks()}
+                  isDark={isDarkTheme}
+                />
+              </DrawerContentBody>
+            </DrawerContent>
+          </Drawer>
         );
         break;
       case 'topology':
@@ -916,7 +978,7 @@ export const NetflowTraffic: React.FC<{
       <Flex id="page-content-flex" direction={{ default: 'column' }}>
         <FlexItem flex={{ default: 'flex_1' }}>{content}</FlexItem>
         <FlexItem>
-          {_.isEmpty(flows) ? (
+          {_.isEmpty(flowConnections) ? (
             <MetricsQuerySummary
               metrics={metrics}
               appMetrics={totalMetric}
@@ -927,7 +989,7 @@ export const NetflowTraffic: React.FC<{
             />
           ) : (
             <FlowsQuerySummary
-              flows={flows}
+              flows={flowConnections}
               stats={stats}
               lastRefresh={lastRefresh}
               range={range}
@@ -1078,11 +1140,12 @@ export const NetflowTraffic: React.FC<{
       )}
       <Drawer
         id="drawer"
+        className="drawer"
         isInline
         isExpanded={selectedRecord !== undefined || selectedElement !== undefined || isShowQuerySummary}
       >
-        <DrawerContent id="drawerContent" panelContent={panelContent()}>
-          <DrawerContentBody id="drawerBody">{pageContent()}</DrawerContentBody>
+        <DrawerContent id="drawer-content" className="drawer-content" panelContent={panelContent()}>
+          <DrawerContentBody id="drawer-body" className="drawer-body">{pageContent()}</DrawerContentBody>
         </DrawerContent>
       </Drawer>
       <TimeRangeModal

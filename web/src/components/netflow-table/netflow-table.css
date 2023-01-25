@@ -1,3 +1,8 @@
-#table-container>.pf-c-table tbody>tr>* {
+.table-container {
+  height: 100%;
+  overflow: scroll;
+}
+
+.table-container>.pf-c-table tbody>tr>* {
   vertical-align: top;
 }

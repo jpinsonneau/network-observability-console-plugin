@@ -23,7 +23,7 @@ import {
 import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { defaultSize, maxSize, minSize } from '../../utils/panel';
+import { horizontalDefaultSize, horizontalMaxSize, horizontalMinSize } from '../../utils/panel';
 import { defaultTimeRange, flowdirToReporter } from '../../utils/router';
 import { Record } from '../../api/ipfix';
 import { Column, ColumnGroup, ColumnsId, getColumnGroups } from '../../utils/columns';
@@ -219,9 +219,9 @@ export const RecordPanel: React.FC<RecordDrawerProps> = ({
       id={id}
       className="drawer-panel-content"
       isResizable
-      defaultSize={defaultSize}
-      minSize={minSize}
-      maxSize={maxSize}
+      defaultSize={horizontalDefaultSize}
+      minSize={horizontalMinSize}
+      maxSize={horizontalMaxSize}
     >
       <DrawerHead id={`${id}-drawer-head`} data-test-id="drawer-head" className="drawer-head">
         <Text data-test-id="drawer-head-text" component={TextVariants.h2}>

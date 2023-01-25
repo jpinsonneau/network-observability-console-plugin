@@ -44,7 +44,7 @@ func NewTopologyQuery(cfg *Config, start, end, limit, rateInterval, step, metric
 	}
 
 	return &TopologyQueryBuilder{
-		FlowQueryBuilder: NewFlowQueryBuilder(cfg, start, end, limit, reporter),
+		FlowQueryBuilder: NewFlowQueryBuilder(cfg, start, end, limit, reporter, constants.RecordTypeLog),
 		topology: &Topology{
 			rateInterval: rateInterval,
 			step:         step,
