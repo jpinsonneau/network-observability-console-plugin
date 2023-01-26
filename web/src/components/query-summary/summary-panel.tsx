@@ -17,7 +17,7 @@ import {
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import _ from 'lodash';
-import { defaultSize, maxSize, minSize } from '../../utils/panel';
+import { horizontalDefaultSize, horizontalMaxSize, horizontalMinSize } from '../../utils/panel';
 import { compareStrings } from '../../utils/base-compare';
 import { Record } from '../../api/ipfix';
 import { TimeRange } from '../../utils/datetime';
@@ -341,9 +341,9 @@ export const SummaryPanel: React.FC<{
       data-test={id}
       id={id}
       isResizable
-      defaultSize={defaultSize}
-      minSize={minSize}
-      maxSize={maxSize}
+      defaultSize={horizontalDefaultSize}
+      minSize={horizontalMinSize}
+      maxSize={horizontalMaxSize}
     >
       <DrawerHead>
         <Text component={TextVariants.h2}>{t('Query summary')}</Text>

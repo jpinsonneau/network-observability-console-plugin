@@ -28,6 +28,8 @@ import {
 import { LokiError } from '../messages/loki-error';
 
 const NetflowTable: React.FC<{
+  id?: string;
+  compactHeaders?: boolean;
   flows: Record[];
   selectedRecord?: Record;
   columns: Column[];
@@ -38,9 +40,11 @@ const NetflowTable: React.FC<{
   onSelect: (record?: Record) => void;
   loading?: boolean;
   error?: string;
-  filterActionLinks: JSX.Element;
+  filterActionLinks?: JSX.Element;
   isDark?: boolean;
 }> = ({
+  id = "table",
+  compactHeaders = false,
   flows,
   selectedRecord,
   columns,
@@ -48,7 +52,7 @@ const NetflowTable: React.FC<{
   columnSizes,
   setColumnSizes,
   error,
-  loading,
+  loading = false,
   size,
   onSelect,
   filterActionLinks,
@@ -86,7 +90,7 @@ const NetflowTable: React.FC<{
    * this fix a bug in PF TableComposable when refresh occurs after scroll
    * without rebuilding the entire table */
   React.useEffect(() => {
-    const tbody = document.getElementById('table-body');
+    const tbody = document.getElementById(`${id}-body`);
     if (tbody) {
       const children = Array.from(tbody.children);
       for (let i = 0; i < children.length; i++) {
@@ -97,7 +101,7 @@ const NetflowTable: React.FC<{
         }
       }
     }
-  }, [lastRender]);
+  }, [id, lastRender]);
 
   //reset sort index & directions to default on columns update
   React.useEffect(() => {
@@ -133,27 +137,33 @@ const NetflowTable: React.FC<{
 
   //update table container height on window resize
   const handleResize = React.useCallback(() => {
-    const container = document.getElementById('table-container');
+    const container = document.getElementById(`${id}-container`);
     if (container) {
       setContainerHeight(container.clientHeight);
     }
-  }, []);
+  }, [id]);
 
   const handleScroll = React.useCallback(() => {
     const rowHeight = getRowHeight();
-    const container = document.getElementById('table-container');
-    const header = container?.children[0].children[0];
-    if (container && header) {
-      const position = container.scrollTop - header.clientHeight;
+    const container = document.getElementById(`${id}-container`);
+    const header = document.getElementById(`${id}-header`);
+    if (container) {
+      const position = container.scrollTop - (header?.clientHeight || 0);
       //updates only when position moved more than one row height
       if (scrollPosition < position - rowHeight || scrollPosition > position + rowHeight) {
         setScrollPosition(position);
       }
     }
-  }, [getRowHeight, scrollPosition]);
+
+    if(id=== "extra-table"){
+      const mainContainer = document.getElementById(`table-container`);
+      mainContainer?.scrollTo({left: container?.scrollLeft})
+    }
+
+  }, [getRowHeight, id, scrollPosition]);
 
   React.useEffect(() => {
-    const container = document.getElementById('table-container');
+    const container = document.getElementById(`${id}-container`);
     if (container && container.getAttribute('listener') !== 'true') {
       container.addEventListener('scroll', handleScroll);
       window.addEventListener('resize', handleResize);
@@ -161,7 +171,7 @@ const NetflowTable: React.FC<{
 
     handleScroll();
     handleResize();
-  }, [handleResize, handleScroll, loading]);
+  }, [handleResize, handleScroll, id, loading]);
 
   // sort function
   const getSortedFlows = React.useCallback(() => {
@@ -254,16 +264,17 @@ const NetflowTable: React.FC<{
   }
 
   return (
-    <div id="table-container">
+    <div id={`${id}-container`} className="table-container">
       <TableComposable
-        data-test="table-composable"
+        data-test={`${id}-composable`}
         aria-label="Netflow table"
         variant="compact"
         style={{ minWidth: `${width}em` }}
         isStickyHeader
       >
-        <NetflowTableHeader
-          data-test="table-header"
+        {<NetflowTableHeader
+          compactHeaders={compactHeaders}
+          data-test={`${id}-header`}
           onSort={onSort}
           sortDirection={activeSortDirection}
           sortId={activeSortId}
@@ -273,8 +284,8 @@ const NetflowTable: React.FC<{
           setColumnSizes={setColumnSizes}
           tableWidth={width}
           isDark={isDark}
-        />
-        <Tbody id="table-body" data-test="table-body">
+        />}
+        <Tbody id={`${id}-body`} data-test={`${id}-body`}>
           {getBody()}
         </Tbody>
       </TableComposable>
