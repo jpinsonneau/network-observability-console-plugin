@@ -6,8 +6,10 @@ import { compareIPs } from '../utils/ip';
 import { comparePorts } from '../utils/port';
 import { compareProtocols } from '../utils/protocol';
 import { compareNumbers, compareStrings } from './base-compare';
+import { getFormattedDate, timeMSFormatter } from './datetime';
 
 export enum ColumnsId {
+  time = 'Time',
   starttime = 'StartTime',
   endtime = 'EndTime',
   type = 'K8S_Type',
@@ -685,29 +687,8 @@ export const getSrcDstColumns = (t: TFunction, withConcatenatedFields = true): C
   }
 };
 
-export const getExtraColumns = (t: TFunction): Column[] => {
+export const getExtraCountColumns = (t: TFunction): Column[] => {
   return [
-    {
-      id: ColumnsId.proto,
-      name: t('Protocol'),
-      tooltip: t('The value of the protocol number in the IP packet header'),
-      fieldName: 'Proto',
-      quickFilter: 'protocol',
-      isSelected: false,
-      value: f => f.fields.Proto,
-      sort: (a, b, col) => compareProtocols(col.value(a) as number, col.value(b) as number),
-      width: 10
-    },
-    {
-      id: ColumnsId.flowdir,
-      name: t('Direction'),
-      tooltip: t('The direction of the Flow observed at the Observation Point.'),
-      fieldName: 'FlowDirection',
-      isSelected: false,
-      value: f => f.labels.FlowDirection,
-      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
-      width: 10
-    },
     {
       id: ColumnsId.bytes,
       name: t('Bytes'),
@@ -728,6 +709,11 @@ export const getExtraColumns = (t: TFunction): Column[] => {
       sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
       width: 5
     },
+  ];
+}
+
+export const getExtraTimeColumns = (t:TFunction): Column[] => {
+  return [
     {
       id: ColumnsId.duration,
       name: t('Duration'),
@@ -757,6 +743,34 @@ export const getExtraColumns = (t: TFunction): Column[] => {
       width: 5
     }
   ];
+}
+
+export const getExtraColumns = (t: TFunction): Column[] => {
+  return [
+    {
+      id: ColumnsId.proto,
+      name: t('Protocol'),
+      tooltip: t('The value of the protocol number in the IP packet header'),
+      fieldName: 'Proto',
+      quickFilter: 'protocol',
+      isSelected: false,
+      value: f => f.fields.Proto,
+      sort: (a, b, col) => compareProtocols(col.value(a) as number, col.value(b) as number),
+      width: 10
+    },
+    {
+      id: ColumnsId.flowdir,
+      name: t('Direction'),
+      tooltip: t('The direction of the Flow observed at the Observation Point.'),
+      fieldName: 'FlowDirection',
+      isSelected: false,
+      value: f => f.labels.FlowDirection,
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 10
+    },
+    ...getExtraCountColumns(t),
+    ...getExtraTimeColumns(t),
+  ];
 };
 
 export const getDefaultColumns = (t: TFunction, withCommonFields = true, withConcatenatedFields = true): Column[] => {
@@ -781,7 +795,6 @@ export const getDefaultColumns = (t: TFunction, withCommonFields = true, withCon
         // eslint-disable-next-line max-len
         'Time of the last packet observed per flow. This is what is used in queries to select flows in an interval.'
       ),
-      fieldName: 'TimeFlowEndMs',
       isSelected: true,
       value: f => f.fields.TimeFlowEndMs,
       sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
@@ -799,4 +812,23 @@ export const getDefaultColumns = (t: TFunction, withCommonFields = true, withCon
   } else {
     return [...timeCols, ...getSrcDstColumns(t, withConcatenatedFields), ...getExtraColumns(t)];
   }
+};
+
+export const getFlowColumns = (t: TFunction): Column[] => {
+  return [
+    {
+      id: ColumnsId.time,
+      name: t('Time'),
+      fieldName: 'TimeFlowStartMs',
+      isSelected: false,
+      value: f => [
+        getFormattedDate(new Date(f.fields.TimeFlowStartMs), timeMSFormatter),
+        getFormattedDate(new Date(f.fields.TimeFlowEndMs), timeMSFormatter)
+      ],
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 20
+    },
+    ...getExtraCountColumns(t),
+    ...getExtraTimeColumns(t),
+  ];
 };

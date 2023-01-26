@@ -17,6 +17,8 @@ export type ResizedElement = {
 };
 
 export const NetflowTableHeader: React.FC<{
+  id?: string;
+  compactHeaders?: boolean;
   onSort: (id: ColumnsId, direction: SortByDirection) => void;
   sortId: ColumnsId;
   sortDirection: SortByDirection;
@@ -26,7 +28,7 @@ export const NetflowTableHeader: React.FC<{
   setColumnSizes: (v: ColumnSizeMap) => void;
   tableWidth: number;
   isDark?: boolean;
-}> = ({ onSort, sortId, sortDirection, columns, setColumns, columnSizes, setColumnSizes, tableWidth, isDark }) => {
+}> = ({ id = "table", compactHeaders = false, onSort, sortId, sortDirection, columns, setColumns, columnSizes, setColumnSizes, tableWidth, isDark }) => {
   const resizedElement = React.useRef<ResizedElement>();
   const draggedElement = React.useRef<HTMLElement>();
 
@@ -127,10 +129,10 @@ export const NetflowTableHeader: React.FC<{
       return (
         <Th
           className={`netobserv-header nested ${isDark ? 'dark' : ''}`}
-          data-test={`nested-th-${nh.title || 'empty'}`}
+          data-test={`${id}-nested-th-${nh.title || 'empty'}`}
           data-index={columns.indexOf(nh.columns[0])}
-          key={`nested-${nh.title}-${headersState.nestedHeaders.indexOf(nh)}`}
-          id={`nested-${headersState.nestedHeaders.indexOf(nh)}`}
+          key={`${id}-nested-${nh.title}-${headersState.nestedHeaders.indexOf(nh)}`}
+          id={`${id}-nested-${headersState.nestedHeaders.indexOf(nh)}`}
           hasRightBorder={_.last(headersState.nestedHeaders) !== nh}
           colSpan={nh.columns.length}
           draggable
@@ -152,7 +154,7 @@ export const NetflowTableHeader: React.FC<{
         </Th>
       );
     },
-    [columns, headersState.nestedHeaders, isDark, onDragStart, onDrop]
+    [columns, headersState.nestedHeaders, id, isDark, onDragStart, onDrop]
   );
 
   const getTableHeader = React.useCallback(
@@ -229,8 +231,8 @@ export const NetflowTableHeader: React.FC<{
   }, [columns]);
 
   return (
-    <Thead data-test="thead" hasNestedHeader={headersState.useNested}>
-      {headersState.useNested && <Tr>{headersState.nestedHeaders.map(nh => getNestedTableHeader(nh))}</Tr>}
+    <Thead id={`${id}-header`} data-test="thead" hasNestedHeader={headersState.useNested}>
+      {!compactHeaders && headersState.useNested && <Tr>{headersState.nestedHeaders.map(nh => getNestedTableHeader(nh))}</Tr>}
       <Tr data-test="thead-tr">{headersState.headers.map(c => getTableHeader(c))}</Tr>
     </Thead>
   );

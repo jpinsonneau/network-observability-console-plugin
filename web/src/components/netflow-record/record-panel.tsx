@@ -23,7 +23,7 @@ import {
 import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { defaultSize, maxSize, minSize } from '../../utils/panel';
+import { horizontalDefaultSize, horizontalMaxSize, horizontalMinSize } from '../../utils/panel';
 import { defaultTimeRange, flowdirToReporter } from '../../utils/router';
 import { Record } from '../../api/ipfix';
 import { Column, ColumnGroup, ColumnsId, getColumnGroups } from '../../utils/columns';
@@ -36,6 +36,7 @@ import './record-panel.css';
 
 export type RecordDrawerProps = {
   record: Record;
+  flowsContent?: JSX.Element;
   columns: Column[];
   filters: Filter[];
   range: number | TimeRange;
@@ -50,6 +51,7 @@ export type RecordDrawerProps = {
 export const RecordPanel: React.FC<RecordDrawerProps> = ({
   id,
   record,
+  flowsContent,
   columns,
   filters,
   range,
@@ -219,13 +221,13 @@ export const RecordPanel: React.FC<RecordDrawerProps> = ({
       id={id}
       className="drawer-panel-content"
       isResizable
-      defaultSize={defaultSize}
-      minSize={minSize}
-      maxSize={maxSize}
+      defaultSize={horizontalDefaultSize}
+      minSize={horizontalMinSize}
+      maxSize={horizontalMaxSize}
     >
       <DrawerHead id={`${id}-drawer-head`} data-test-id="drawer-head" className="drawer-head">
         <Text data-test-id="drawer-head-text" component={TextVariants.h2}>
-          {t('Flow information')}
+          {t('Connection information')}
         </Text>
         <DrawerActions>
           <DrawerCloseButton data-test-id="drawer-close-button" className="drawer-close-button" onClick={onClose} />
@@ -300,6 +302,9 @@ export const RecordPanel: React.FC<RecordDrawerProps> = ({
                 {JSON.stringify(record, null, 2)}
               </ClipboardCopy>
             </TextContent>
+          </Tab>
+          <Tab className="drawer-tab" eventKey={'flows'} title={<TabTitleText>{t('Flows')}</TabTitleText>}>
+            {flowsContent}
           </Tab>
         </Tabs>
       </DrawerPanelBody>

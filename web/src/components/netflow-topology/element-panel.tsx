@@ -18,7 +18,7 @@ import {
 import { BaseEdge, BaseNode } from '@patternfly/react-topology';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { defaultSize, maxSize, minSize } from '../../utils/panel';
+import { horizontalDefaultSize, horizontalMaxSize, horizontalMinSize } from '../../utils/panel';
 import { MetricType } from '../../model/flow-query';
 import { TopologyMetrics } from '../../api/loki';
 import { Filter } from '../../model/filters';
@@ -147,9 +147,9 @@ export const ElementPanel: React.FC<{
       id={id}
       className="drawer-panel-content"
       isResizable
-      defaultSize={defaultSize}
-      minSize={minSize}
-      maxSize={maxSize}
+      defaultSize={horizontalDefaultSize}
+      minSize={horizontalMinSize}
+      maxSize={horizontalMaxSize}
     >
       <DrawerHead id={`${id}-drawer-head`} data-test-id="drawer-head" className="drawer-head">
         {titleContent()}

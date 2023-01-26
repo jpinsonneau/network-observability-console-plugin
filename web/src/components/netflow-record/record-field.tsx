@@ -148,10 +148,11 @@ export const RecordField: React.FC<{
     );
   };
 
-  const doubleContainer = (child1?: JSX.Element, child2?: JSX.Element, asChild = true) => {
+  const doubleContainer = (child1?: JSX.Element, child2?: JSX.Element, asChild = true, icon?: JSX.Element) => {
     return (
       <div className={`record-field-flex-container ${asChild ? size : ''}`}>
         <div className="record-field-content-flex" onMouseOver={e => onMouseOver(e, 'record-field-content-flex')}>
+          {icon}
           {child1 ? child1 : emptyText()}
         </div>
         <div className="record-field-content-flex" onMouseOver={e => onMouseOver(e, 'record-field-content-flex')}>
@@ -162,9 +163,10 @@ export const RecordField: React.FC<{
     );
   };
 
-  const singleContainer = (child?: JSX.Element) => {
+  const singleContainer = (child?: JSX.Element, icon?: JSX.Element) => {
     return (
       <div className={`record-field-content ${size}`} onMouseOver={e => onMouseOver(e, 'record-field-content')}>
+        {icon}
         {child ? child : emptyText()}
       </div>
     );
@@ -182,6 +184,13 @@ export const RecordField: React.FC<{
         return singleContainer(
           simpleTextWithTooltip(value !== undefined ? formatDurationAboveMillisecond(value as number) : '')
         );
+      case ColumnsId.time:
+        const icon = (<GlobeAmericasIcon className="record-field-date-icon" />);
+        if (Array.isArray(value) && value.length) {
+          return doubleContainer(simpleTextWithTooltip(String(value[0])), simpleTextWithTooltip(String(value[1])), true, icon);
+        } else {
+          return singleContainer(simpleTextWithTooltip(String(value)), icon);
+        }
       case ColumnsId.name:
         return doubleContainer(
           kubeObjContent(flow.fields.SrcK8S_Name, flow.fields.SrcK8S_Type, flow.labels.SrcK8S_Namespace),

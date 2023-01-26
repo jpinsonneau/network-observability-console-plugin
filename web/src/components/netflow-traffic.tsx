@@ -47,6 +47,7 @@ import {
   FlowQuery,
   groupFiltersMatchAll,
   groupFiltersMatchAny,
+  filterByHashId,
   Match,
   MetricFunction,
   MetricScope,
@@ -62,7 +63,7 @@ import {
   TopologyGroupTypes,
   TopologyOptions
 } from '../model/topology';
-import { Column, ColumnSizeMap, getDefaultColumns } from '../utils/columns';
+import { Column, ColumnSizeMap, getDefaultColumns, getFlowColumns } from '../utils/columns';
 import { loadConfig } from '../utils/config';
 import { ContextSingleton } from '../utils/context';
 import { computeStepInterval, TimeRange } from '../utils/datetime';
@@ -72,6 +73,8 @@ import {
   LOCAL_STORAGE_COLS_KEY,
   LOCAL_STORAGE_COLS_SIZES_KEY,
   LOCAL_STORAGE_DISABLED_FILTERS_KEY,
+  LOCAL_STORAGE_FLOW_COLS_KEY,
+  LOCAL_STORAGE_FLOW_COLS_SIZES_KEY,
   LOCAL_STORAGE_LAST_LIMIT_KEY,
   LOCAL_STORAGE_LAST_TOP_KEY,
   LOCAL_STORAGE_METRIC_FUNCTION_KEY,
@@ -161,8 +164,12 @@ export const NetflowTraffic: React.FC<{
   const [isViewOptionOverflowMenuOpen, setViewOptionOverflowMenuOpen] = React.useState(false);
   const [isFullScreen, setFullScreen] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
-  const [flows, setFlows] = React.useState<Record[]>([]);
-  const [stats, setStats] = React.useState<Stats | undefined>(undefined);
+  const [lastRefresh, setLastRefresh] = React.useState<Date | undefined>(undefined);
+  const [flowConnections, setFlowConnections] = React.useState<Record[]>([]);
+  const [flowConnectionsStats, setFlowConnectionsStats] = React.useState<Stats | undefined>(undefined);
+  const [lastFlowRefresh, setLastFlowRefresh] = React.useState<Date | undefined>(undefined);
+  const [flowLogs, setFlowLogs] = React.useState<Record[]>([]);
+  const [flowLogsStats, setFlowLogsStats] = React.useState<Stats | undefined>(undefined);
   const [appStats, setAppStats] = React.useState<Stats | undefined>(undefined);
   const [overviewTruncateLength, setOverviewTruncateLength] = useLocalStorage<TruncateLength>(
     LOCAL_STORAGE_OVERVIEW_TRUNCATE_KEY,
@@ -175,7 +182,6 @@ export const NetflowTraffic: React.FC<{
   const [metrics, setMetrics] = React.useState<TopologyMetrics[]>([]);
   const [totalMetric, setTotalMetric] = React.useState<TopologyMetrics | undefined>(undefined);
   const [isShowQuerySummary, setShowQuerySummary] = React.useState<boolean>(false);
-  const [lastRefresh, setLastRefresh] = React.useState<Date | undefined>(undefined);
   const [error, setError] = React.useState<string | undefined>();
   const [size, setSize] = useLocalStorage<Size>(LOCAL_STORAGE_SIZE_KEY, 'm');
   const [isTRModalOpen, setTRModalOpen] = React.useState(false);
@@ -217,6 +223,12 @@ export const NetflowTraffic: React.FC<{
     criteria: 'isSelected'
   });
   const [columnSizes, setColumnSizes] = useLocalStorage<ColumnSizeMap>(LOCAL_STORAGE_COLS_SIZES_KEY, {});
+  const [flowColumns, setFlowColumns] = useLocalStorage<Column[]>(LOCAL_STORAGE_FLOW_COLS_KEY, getFlowColumns(t), {
+    id: 'id',
+    criteria: 'isSelected'
+  });
+  const [flowColumnSizes, setFlowColumnSizes] = useLocalStorage<ColumnSizeMap>(LOCAL_STORAGE_FLOW_COLS_SIZES_KEY, {});
+
 
   React.useEffect(() => {
     loadConfig().then(setConfig);
@@ -234,10 +246,10 @@ export const NetflowTraffic: React.FC<{
   const updateTableFilters = React.useCallback(
     (f: Filter[]) => {
       setFilters(f);
-      setFlows([]);
+      setFlowConnections([]);
       setWarningMessage(undefined);
     },
-    [setFilters, setFlows, setWarningMessage]
+    [setFilters, setFlowConnections, setWarningMessage]
   );
 
   const resetDefaultFilters = React.useCallback(() => {
@@ -306,7 +318,8 @@ export const NetflowTraffic: React.FC<{
     const query: FlowQuery = {
       filters: groupedFilters,
       limit: LIMIT_VALUES.includes(limit) ? limit : LIMIT_VALUES[0],
-      reporter: reporter
+      reporter: reporter,
+      recordType: 'newConnection',
     };
     if (range) {
       if (typeof range === 'number') {
@@ -368,11 +381,11 @@ export const NetflowTraffic: React.FC<{
         manageWarnings(
           getFlows(fq)
             .then(result => {
-              setFlows(result.records);
-              setStats(result.stats);
+              setFlowConnections(result.records);
+              setFlowConnectionsStats(result.stats);
             })
             .catch(err => {
-              setFlows([]);
+              setFlowConnections([]);
               setError(getHTTPErrorDetails(err));
               setWarningMessage(undefined);
             })
@@ -397,7 +410,7 @@ export const NetflowTraffic: React.FC<{
             .then(results => {
               //set metrics
               setMetrics(results[0].metrics);
-              setStats(results[0].stats);
+              setFlowConnectionsStats(results[0].stats);
               //set app metrics
               if (results.length > 1) {
                 setTotalMetric(results[1].metrics[0]);
@@ -415,7 +428,7 @@ export const NetflowTraffic: React.FC<{
             })
             .finally(() => {
               //clear flows
-              setFlows([]);
+              setFlowConnections([]);
               setLoading(false);
               setLastRefresh(new Date());
             })
@@ -441,6 +454,32 @@ export const NetflowTraffic: React.FC<{
     }
     tick();
   }, [forcedFilters, tick]);
+
+  // update related logs on selectedRecord
+  React.useEffect(() => {
+    if (selectedRecord && selectedRecord.fields._HashId) {
+      const hashIdFilter = filterByHashId(selectedRecord.fields._HashId);
+      getFlows({
+        filters: hashIdFilter,
+        limit: LIMIT_VALUES.includes(limit) ? limit : LIMIT_VALUES[0],
+        reporter: reporter,
+        recordType: 'flowLog',
+      })
+        .then(result => {
+          setFlowLogs(result.records);
+          setFlowLogsStats(result.stats);
+        })
+        .catch(err => {
+          setFlowLogs([]);
+          //setError(getHTTPErrorDetails(err));
+        })
+        .finally(() => {
+          setLastFlowRefresh(new Date());
+        })
+    } else {
+      setFlowLogs([]);
+    }
+  }, [buildFlowQuery, limit, reporter, selectedRecord]);
 
   // Rewrite URL params on state change
   React.useEffect(() => {
@@ -791,6 +830,36 @@ export const NetflowTraffic: React.FC<{
         <RecordPanel
           id="recordPanel"
           record={selectedRecord}
+          flowsContent={
+            <Flex id="flow-content-flex" direction={{ default: 'column' }}>
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <NetflowTable
+                  id="flow-table"
+                  loading={false}
+                  error={undefined}
+                  flows={flowLogs}
+                  selectedRecord={undefined}
+                  size={size}
+                  onSelect={onRecordSelect}
+                  columns={flowColumns}
+                  setColumns={(v: Column[]) => setFlowColumns(v.concat(flowColumns.filter(col => !col.isSelected)))}
+                  columnSizes={flowColumnSizes}
+                  setColumnSizes={setFlowColumnSizes}
+                  filterActionLinks={undefined}
+                  isDark={isDarkTheme}
+                />
+              </FlexItem>
+              <FlexItem>
+                <FlowsQuerySummary
+                  flows={flowLogs}
+                  stats={flowLogsStats}
+                  lastRefresh={lastFlowRefresh}
+                  range={range}
+                />
+              </FlexItem>
+            </Flex>
+
+          }
           columns={getDefaultColumns(t, false, false)}
           filters={filters}
           range={range}
@@ -805,11 +874,11 @@ export const NetflowTraffic: React.FC<{
       return (
         <SummaryPanel
           id="summaryPanel"
-          flows={flows}
+          flows={flowConnections}
           metrics={metrics}
           appMetrics={totalMetric}
           metricType={metricType}
-          stats={stats}
+          stats={flowConnectionsStats}
           appStats={appStats}
           limit={limit}
           lastRefresh={lastRefresh}
@@ -849,6 +918,7 @@ export const NetflowTraffic: React.FC<{
 
   const pageContent = () => {
     let content: JSX.Element | null = null;
+
     switch (selectedViewId) {
       case 'overview':
         content = (
@@ -869,9 +939,10 @@ export const NetflowTraffic: React.FC<{
       case 'table':
         content = (
           <NetflowTable
+            id="table"
             loading={loading}
             error={error}
-            flows={flows}
+            flows={flowConnections}
             selectedRecord={selectedRecord}
             size={size}
             onSelect={onRecordSelect}
@@ -916,7 +987,7 @@ export const NetflowTraffic: React.FC<{
       <Flex id="page-content-flex" direction={{ default: 'column' }}>
         <FlexItem flex={{ default: 'flex_1' }}>{content}</FlexItem>
         <FlexItem>
-          {_.isEmpty(flows) ? (
+          {_.isEmpty(flowConnections) ? (
             <MetricsQuerySummary
               metrics={metrics}
               appMetrics={totalMetric}
@@ -927,8 +998,8 @@ export const NetflowTraffic: React.FC<{
             />
           ) : (
             <FlowsQuerySummary
-              flows={flows}
-              stats={stats}
+              flows={flowConnections}
+              stats={flowConnectionsStats}
               lastRefresh={lastRefresh}
               range={range}
               isShowQuerySummary={isShowQuerySummary}
@@ -1078,11 +1149,12 @@ export const NetflowTraffic: React.FC<{
       )}
       <Drawer
         id="drawer"
+        className="drawer"
         isInline
         isExpanded={selectedRecord !== undefined || selectedElement !== undefined || isShowQuerySummary}
       >
-        <DrawerContent id="drawerContent" panelContent={panelContent()}>
-          <DrawerContentBody id="drawerBody">{pageContent()}</DrawerContentBody>
+        <DrawerContent id="drawer-content" className="drawer-content" panelContent={panelContent()}>
+          <DrawerContentBody id="drawer-body" className="drawer-body">{pageContent()}</DrawerContentBody>
         </DrawerContent>
       </Drawer>
       <TimeRangeModal

@@ -35,11 +35,15 @@ type FlowQueryBuilder struct {
 	jsonFilters      [][]labelFilter
 }
 
-func NewFlowQueryBuilder(cfg *Config, start, end, limit string, reporter constants.Reporter) *FlowQueryBuilder {
-	// Always use app stream selector, which will apply whichever matching criteria (any or all)
+func NewFlowQueryBuilder(cfg *Config, start, end, limit string, reporter constants.Reporter, recordType constants.RecordType) *FlowQueryBuilder {
+	// Always use following stream selectors
 	labelFilters := []labelFilter{
+		// app, which will apply whichever matching criteria (any or all)
 		stringLabelFilter(constants.AppLabel, constants.AppLabelValue),
+		// _RecordType either newConnection or flowLog
+		stringLabelFilter(constants.RecordTypeLabel, string(recordType)),
 	}
+
 	extraLineFilters := []string{}
 	if reporter == constants.ReporterSource {
 		labelFilters = append(labelFilters, stringLabelFilter(fields.FlowDirection, "1"))
@@ -57,7 +61,7 @@ func NewFlowQueryBuilder(cfg *Config, start, end, limit string, reporter constan
 }
 
 func NewFlowQueryBuilderWithDefaults(cfg *Config) *FlowQueryBuilder {
-	return NewFlowQueryBuilder(cfg, "", "", "", constants.ReporterBoth)
+	return NewFlowQueryBuilder(cfg, "", "", "", constants.ReporterBoth, constants.RecordTypeLog)
 }
 
 func (q *FlowQueryBuilder) Filters(queryFilters filters.SingleQuery) error {
