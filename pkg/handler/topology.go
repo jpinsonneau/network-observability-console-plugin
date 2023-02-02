@@ -69,6 +69,7 @@ func getTopologyFlows(cfg *loki.Config, client httpclient.Caller, params url.Val
 		step = defaultStep
 	}
 	metricType := params.Get(metricTypeKey)
+	recordType := constants.RecordType(params.Get(recordTypeKey))
 	reporter := constants.Reporter(params.Get(reporterKey))
 	scope := params.Get(scopeKey)
 	groups := params.Get(groupsKey)
@@ -83,7 +84,7 @@ func getTopologyFlows(cfg *loki.Config, client httpclient.Caller, params url.Val
 		// match any, and multiple filters => run in parallel then aggregate
 		var queries []string
 		for _, group := range filterGroups {
-			query, code, err := buildTopologyQuery(cfg, group, start, end, limit, rateInterval, step, metricType, reporter, scope, groups)
+			query, code, err := buildTopologyQuery(cfg, group, start, end, limit, rateInterval, step, metricType, reporter, scope, groups, recordType)
 			if err != nil {
 				return nil, code, errors.New("Can't build query: " + err.Error())
 			}
@@ -99,7 +100,7 @@ func getTopologyFlows(cfg *loki.Config, client httpclient.Caller, params url.Val
 		if len(filterGroups) > 0 {
 			filters = filterGroups[0]
 		}
-		query, code, err := buildTopologyQuery(cfg, filters, start, end, limit, rateInterval, step, metricType, reporter, scope, groups)
+		query, code, err := buildTopologyQuery(cfg, filters, start, end, limit, rateInterval, step, metricType, reporter, scope, groups, recordType)
 		if err != nil {
 			return nil, code, err
 		}
@@ -116,8 +117,9 @@ func getTopologyFlows(cfg *loki.Config, client httpclient.Caller, params url.Val
 	return qr, http.StatusOK, nil
 }
 
-func buildTopologyQuery(cfg *loki.Config, queryFilters filters.SingleQuery, start, end, limit, rateInterval, step, metricType string, reporter constants.Reporter, scope, groups string) (string, int, error) {
-	qb, err := loki.NewTopologyQuery(cfg, start, end, limit, rateInterval, step, metricType, reporter, scope, groups)
+func buildTopologyQuery(cfg *loki.Config, queryFilters filters.SingleQuery, start, end, limit, rateInterval, step,
+	metricType string, reporter constants.Reporter, scope, groups string, recordType constants.RecordType) (string, int, error) {
+	qb, err := loki.NewTopologyQuery(cfg, start, end, limit, rateInterval, step, metricType, reporter, scope, groups, recordType)
 	if err != nil {
 		return "", http.StatusBadRequest, err
 	}

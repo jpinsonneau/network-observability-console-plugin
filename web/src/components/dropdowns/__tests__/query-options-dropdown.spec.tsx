@@ -6,6 +6,7 @@ import QueryOptionsDropdown, { QueryOptionsDropdownProps, QueryOptionsPanel } fr
 
 describe('<QueryOptionsDropdown />', () => {
   const props: QueryOptionsDropdownProps = {
+    recordType: 'allConnections',
     reporter: 'destination',
     allowReporterBoth: true,
     useTopK: false,
@@ -13,7 +14,8 @@ describe('<QueryOptionsDropdown />', () => {
     match: 'all',
     setLimit: jest.fn(),
     setMatch: jest.fn(),
-    setReporter: jest.fn()
+    setReporter: jest.fn(),
+    setRecordType: jest.fn()
   };
   it('should render component', async () => {
     const wrapper = shallow(<QueryOptionsDropdown {...props} />);
@@ -24,6 +26,7 @@ describe('<QueryOptionsDropdown />', () => {
 
 describe('<QueryOptionsPanel />', () => {
   const props: QueryOptionsDropdownProps = {
+    recordType: 'allConnections',
     reporter: 'destination',
     allowReporterBoth: true,
     useTopK: false,
@@ -31,7 +34,8 @@ describe('<QueryOptionsPanel />', () => {
     match: 'all',
     setLimit: jest.fn(),
     setMatch: jest.fn(),
-    setReporter: jest.fn()
+    setReporter: jest.fn(),
+    setRecordType: jest.fn()
   };
   beforeEach(() => {
     props.setLimit = jest.fn();

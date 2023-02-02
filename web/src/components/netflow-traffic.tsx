@@ -50,6 +50,7 @@ import {
   MetricFunction,
   MetricScope,
   MetricType,
+  RecordType,
   Reporter
 } from '../model/flow-query';
 import { MetricScopeOptions } from '../model/metrics';
@@ -94,6 +95,7 @@ import {
   getLimitFromURL,
   getMatchFromURL,
   getRangeFromURL,
+  getRecordTypeFromURL,
   getReporterFromURL,
   setURLFilters,
   setURLLimit,
@@ -176,6 +178,7 @@ export const NetflowTraffic: React.FC<{
   const [selectedViewId, setSelectedViewId] = useLocalStorage<ViewId>(LOCAL_STORAGE_VIEW_ID_KEY, 'overview');
   const [filters, setFilters] = React.useState<Filter[]>([]);
   const [match, setMatch] = React.useState<Match>(getMatchFromURL());
+  const [recordType, setRecordType] = React.useState<RecordType>(getRecordTypeFromURL());
   const [reporter, setReporter] = React.useState<Reporter>(getReporterFromURL());
   const [limit, setLimit] = React.useState<number>(
     getLimitFromURL(selectedViewId === 'table' ? LIMIT_VALUES[0] : TOP_VALUES[0])
@@ -297,7 +300,7 @@ export const NetflowTraffic: React.FC<{
     const query: FlowQuery = {
       filters: groupedFilters,
       limit: LIMIT_VALUES.includes(limit) ? limit : LIMIT_VALUES[0],
-      recordType: 'endConnection'
+      recordType: recordType,
     };
     if (range) {
       if (typeof range === 'number') {
@@ -325,18 +328,7 @@ export const NetflowTraffic: React.FC<{
       query.step = `${info.stepSeconds}s`;
     }
     return query;
-  }, [
-    forcedFilters,
-    filters,
-    match,
-    limit,
-    reporter,
-    range,
-    selectedViewId,
-    metricType,
-    metricScope,
-    topologyOptions.groupTypes
-  ]);
+  }, [forcedFilters, filters, match, limit, recordType, range, selectedViewId, reporter, metricType, metricScope, topologyOptions.groupTypes]);
 
   const manageWarnings = React.useCallback(
     (query: Promise<unknown>) => {
@@ -850,6 +842,8 @@ export const NetflowTraffic: React.FC<{
           setLimit,
           match,
           setMatch,
+          recordType,
+          setRecordType,
           reporter,
           setReporter,
           allowReporterBoth: selectedViewId === 'table',

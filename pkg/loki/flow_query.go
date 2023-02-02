@@ -55,10 +55,12 @@ func NewFlowQueryBuilder(cfg *Config, start, end, limit string, reporter constan
 	}
 
 	extraLineFilters := []string{}
-	if reporter == constants.ReporterSource {
-		labelFilters = append(labelFilters, stringLabelFilter(fields.FlowDirection, "1"))
-	} else if reporter == constants.ReporterDestination {
-		labelFilters = append(labelFilters, stringLabelFilter(fields.FlowDirection, "0"))
+	if recordType == constants.RecordTypeLog {
+		if reporter == constants.ReporterSource {
+			labelFilters = append(labelFilters, stringLabelFilter(fields.FlowDirection, "1"))
+		} else if reporter == constants.ReporterDestination {
+			labelFilters = append(labelFilters, stringLabelFilter(fields.FlowDirection, "0"))
+		}
 	}
 	return &FlowQueryBuilder{
 		config:           cfg,

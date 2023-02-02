@@ -2,11 +2,13 @@ import { Radio, Select, Tooltip } from '@patternfly/react-core';
 import { InfoAltIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Match, Reporter } from '../../model/flow-query';
+import { Match, RecordType, Reporter } from '../../model/flow-query';
 
 export const TOP_VALUES = [5, 10, 15];
 export const LIMIT_VALUES = [100, 500, 1000];
 export interface QueryOptionsDropdownProps {
+  recordType: RecordType;
+  setRecordType: (recordType: RecordType) => void;
   reporter: Reporter;
   setReporter: (reporter: Reporter) => void;
   allowReporterBoth: boolean;
@@ -17,12 +19,16 @@ export interface QueryOptionsDropdownProps {
   setMatch: (match: Match) => void;
 }
 
+type recordTypeOption = { label: string; value: RecordType };
+
 type ReporterOption = { label: string; value: Reporter };
 
 type MatchOption = { label: string; value: Match };
 
 // Exported for tests
 export const QueryOptionsPanel: React.FC<QueryOptionsDropdownProps> = ({
+  recordType,
+  setRecordType,
   reporter,
   setReporter,
   allowReporterBoth,
@@ -33,6 +39,17 @@ export const QueryOptionsPanel: React.FC<QueryOptionsDropdownProps> = ({
   setMatch
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+
+  const recordTypeOptions: recordTypeOption[] = [
+    {
+      label: t('Connection'),
+      value: 'allConnections'
+    },
+    {
+      label: t('Flow'),
+      value: 'flowLog'
+    },
+  ];
 
   const reporterOptions: ReporterOption[] = [
     {
@@ -66,6 +83,34 @@ export const QueryOptionsPanel: React.FC<QueryOptionsDropdownProps> = ({
     <>
       <div className="pf-c-select__menu-group">
         <Tooltip
+          content={t('Log type to display')}
+        >
+          <div className="pf-c-select__menu-group-title">
+            <>
+              {t('Log type')} <InfoAltIcon />
+            </>
+          </div>
+        </Tooltip>
+        {recordTypeOptions.map(opt => {
+          return (
+            <div key={`recordType-${opt.value}`}>
+              <label className="pf-c-select__menu-item">
+                <Radio
+                  isChecked={opt.value === recordType}
+                  name={`recordType-${opt.value}`}
+                  onChange={() => setRecordType(opt.value)}
+                  label={opt.label}
+                  data-test={`recordType-${opt.value}`}
+                  id={`recordType-${opt.value}`}
+                  value={opt.value}
+                />
+              </label>
+            </div>
+          );
+        })}
+      </div>
+      <div className="pf-c-select__menu-group">
+        <Tooltip
           content={t(
             // eslint-disable-next-line max-len
             'Every flow can be reported from the source node and/or the destination node. For in-cluster traffic, usually both source and destination nodes report flows, resulting in duplicated data. Cluster ingress traffic is only reported by destination nodes, and cluster egress by source nodes.'
@@ -78,7 +123,7 @@ export const QueryOptionsPanel: React.FC<QueryOptionsDropdownProps> = ({
           </div>
         </Tooltip>
         {reporterOptions.map(opt => {
-          const disabled = !allowReporterBoth && opt.value === 'both';
+          const disabled = recordType === 'allConnections' || (!allowReporterBoth && opt.value === 'both');
           return (
             <div key={`reporter-${opt.value}`}>
               <label className="pf-c-select__menu-item">
