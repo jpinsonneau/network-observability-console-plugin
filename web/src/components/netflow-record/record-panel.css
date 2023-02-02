@@ -3,7 +3,8 @@
 }
 
 .record-field-container.grouped {
-  padding-left: 2em;
+  flex: auto;
+  padding: 0 0 2em 2em;
 }
 
 .borderless-accordion>.pf-c-accordion__expanded-content-body::after,
@@ -86,4 +87,30 @@ div.record-field-popover-body,
 div.record-field-popover-footer {
   white-space: pre-line;
   word-break: break-word;
+}
+
+.record-accordion {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.record-group-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  width: auto;
+  padding: 0 0 1em 1em;
+}
+
+.record-group-content {
+  margin: 1em;
+}
+
+.record-group-accordion,
+.record-group-accordion>h3 {
+  width: 100%;
+}
+
+.drawer-flex-title {
+  align-items: baseline !important;
 }

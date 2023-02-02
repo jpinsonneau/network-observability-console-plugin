@@ -2,10 +2,9 @@ import { isModelFeatureFlag, ModelFeatureFlag, useResolvedExtensions } from '@op
 import {
   Alert,
   AlertActionCloseButton,
+  Breadcrumb,
+  BreadcrumbItem,
   Button,
-  Drawer,
-  DrawerContent,
-  DrawerContentBody,
   Dropdown,
   DropdownGroup,
   DropdownItem,
@@ -30,11 +29,11 @@ import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from 'react-router-dom';
-import { useTheme } from '../utils/theme-hook';
 import { saveSvgAsPng } from 'save-svg-as-png';
 import { Record } from '../api/ipfix';
 import { Stats, TopologyMetrics } from '../api/loki';
 import { getFlows, getTopology } from '../api/routes';
+import { Config, defaultConfig } from '../model/config';
 import {
   DisabledFilters,
   Filter,
@@ -67,7 +66,6 @@ import { loadConfig } from '../utils/config';
 import { ContextSingleton } from '../utils/context';
 import { computeStepInterval, TimeRange } from '../utils/datetime';
 import { getHTTPErrorDetails } from '../utils/errors';
-import { useK8sModelsWithColors } from '../utils/k8s-models-hook';
 import {
   LOCAL_STORAGE_COLS_KEY,
   LOCAL_STORAGE_COLS_SIZES_KEY,
@@ -105,31 +103,25 @@ import {
   setURLRange,
   setURLReporter
 } from '../utils/router';
+import { useTheme } from '../utils/theme-hook';
 import { getURLParams, hasEmptyParams, netflowTrafficPath, setURLParams } from '../utils/url';
+import DrawerComponent from './drawer/drawer-component';
 import { OverviewDisplayDropdown } from './dropdowns/overview-display-dropdown';
 import { LIMIT_VALUES, TOP_VALUES } from './dropdowns/query-options-dropdown';
 import { RefreshDropdown } from './dropdowns/refresh-dropdown';
-import { TableDisplayDropdown, Size } from './dropdowns/table-display-dropdown';
+import { Size, TableDisplayDropdown } from './dropdowns/table-display-dropdown';
 import TimeRangeDropdown from './dropdowns/time-range-dropdown';
 import { TopologyDisplayDropdown } from './dropdowns/topology-display-dropdown';
+import { TruncateLength } from './dropdowns/truncate-dropdown';
+import { FilterActionLinks } from './filters/filter-action-links';
 import { FiltersToolbar } from './filters/filters-toolbar';
 import { ColumnsModal } from './modals/columns-modal';
 import { ExportModal } from './modals/export-modal';
 import OverviewPanelsModal from './modals/overview-panels-modal';
 import TimeRangeModal from './modals/time-range-modal';
-import NetflowOverview from './netflow-overview/netflow-overview';
-import { RecordPanel } from './netflow-record/record-panel';
-import NetflowTable from './netflow-table/netflow-table';
-import ElementPanel from './netflow-topology/element-panel';
-import NetflowTopology from './netflow-topology/netflow-topology';
-import { Config, defaultConfig } from '../model/config';
-import { FilterActionLinks } from './filters/filter-action-links';
-import SummaryPanel from './query-summary/summary-panel';
-import MetricsQuerySummary from './query-summary/metrics-query-summary';
-import FlowsQuerySummary from './query-summary/flows-query-summary';
-import { SearchComponent, SearchEvent, SearchHandle } from './search/search';
+import { SelectedRecord } from './netflow-record/record-panel';
 import './netflow-traffic.css';
-import { TruncateLength } from './dropdowns/truncate-dropdown';
+import { SearchComponent, SearchEvent, SearchHandle } from './search/search';
 
 export type ViewId = 'overview' | 'table' | 'topology';
 
@@ -140,7 +132,6 @@ export const NetflowTraffic: React.FC<{
   const { push } = useHistory();
   const { t } = useTranslation('plugin__netobserv-plugin');
   const [extensions] = useResolvedExtensions<ModelFeatureFlag>(isModelFeatureFlag);
-  const k8sModels = useK8sModelsWithColors();
   //set context from extensions. Standalone will return a "dummy" flag
   ContextSingleton.setContext(extensions);
   //observe html class list
@@ -161,8 +152,9 @@ export const NetflowTraffic: React.FC<{
   const [isViewOptionOverflowMenuOpen, setViewOptionOverflowMenuOpen] = React.useState(false);
   const [isFullScreen, setFullScreen] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
-  const [flows, setFlows] = React.useState<Record[]>([]);
-  const [stats, setStats] = React.useState<Stats | undefined>(undefined);
+  const [lastRefresh, setLastRefresh] = React.useState<Date | undefined>(undefined);
+  const [flowConnections, setFlowConnections] = React.useState<Record[]>([]);
+  const [flowConnectionsStats, setFlowConnectionsStats] = React.useState<Stats | undefined>(undefined);
   const [appStats, setAppStats] = React.useState<Stats | undefined>(undefined);
   const [overviewTruncateLength, setOverviewTruncateLength] = useLocalStorage<TruncateLength>(
     LOCAL_STORAGE_OVERVIEW_TRUNCATE_KEY,
@@ -175,7 +167,6 @@ export const NetflowTraffic: React.FC<{
   const [metrics, setMetrics] = React.useState<TopologyMetrics[]>([]);
   const [totalMetric, setTotalMetric] = React.useState<TopologyMetrics | undefined>(undefined);
   const [isShowQuerySummary, setShowQuerySummary] = React.useState<boolean>(false);
-  const [lastRefresh, setLastRefresh] = React.useState<Date | undefined>(undefined);
   const [error, setError] = React.useState<string | undefined>();
   const [size, setSize] = useLocalStorage<Size>(LOCAL_STORAGE_SIZE_KEY, 'm');
   const [isTRModalOpen, setTRModalOpen] = React.useState(false);
@@ -199,7 +190,7 @@ export const NetflowTraffic: React.FC<{
   );
   const [metricType, setMetricType] = useLocalStorage<MetricType>(LOCAL_STORAGE_METRIC_TYPE_KEY, defaultMetricType);
   const [interval, setInterval] = useLocalStorage<number | undefined>(LOCAL_STORAGE_REFRESH_KEY);
-  const [selectedRecord, setSelectedRecord] = React.useState<Record | undefined>(undefined);
+  const [selectedRecords, setSelectedRecords] = React.useState<SelectedRecord[]>([]);
   const [selectedElement, setSelectedElement] = React.useState<GraphElementPeer | undefined>(undefined);
   const searchRef = React.useRef<SearchHandle>(null);
   const [searchEvent, setSearchEvent] = React.useState<SearchEvent | undefined>(undefined);
@@ -234,10 +225,10 @@ export const NetflowTraffic: React.FC<{
   const updateTableFilters = React.useCallback(
     (f: Filter[]) => {
       setFilters(f);
-      setFlows([]);
+      setFlowConnections([]);
       setWarningMessage(undefined);
     },
-    [setFilters, setFlows, setWarningMessage]
+    [setFilters, setFlowConnections, setWarningMessage]
   );
 
   const resetDefaultFilters = React.useCallback(() => {
@@ -262,7 +253,7 @@ export const NetflowTraffic: React.FC<{
     setTRModalOpen(false);
     setOverviewModalOpen(false);
     setColModalOpen(false);
-    setSelectedRecord(undefined);
+    setSelectedRecords([]);
     setShowQuerySummary(false);
     setSelectedElement(undefined);
   };
@@ -284,9 +275,9 @@ export const NetflowTraffic: React.FC<{
     setSelectedViewId(view);
   };
 
-  const onRecordSelect = (record?: Record) => {
+  const onRecordSelect = (records: SelectedRecord[]) => {
     clearSelections();
-    setSelectedRecord(record);
+    setSelectedRecords(records);
   };
 
   const onElementSelect = (element?: GraphElementPeer) => {
@@ -306,7 +297,7 @@ export const NetflowTraffic: React.FC<{
     const query: FlowQuery = {
       filters: groupedFilters,
       limit: LIMIT_VALUES.includes(limit) ? limit : LIMIT_VALUES[0],
-      reporter: reporter
+      recordType: 'endConnection'
     };
     if (range) {
       if (typeof range === 'number') {
@@ -316,7 +307,11 @@ export const NetflowTraffic: React.FC<{
         query.endTime = range.to.toString();
       }
     }
-    if (selectedViewId !== 'table') {
+
+    if (selectedViewId === 'table') {
+      query.reporter = 'both';
+    } else {
+      query.reporter = reporter;
       query.type = metricType;
       query.scope = metricScope;
       if (selectedViewId === 'topology') {
@@ -368,11 +363,11 @@ export const NetflowTraffic: React.FC<{
         manageWarnings(
           getFlows(fq)
             .then(result => {
-              setFlows(result.records);
-              setStats(result.stats);
+              setFlowConnections(result.records);
+              setFlowConnectionsStats(result.stats);
             })
             .catch(err => {
-              setFlows([]);
+              setFlowConnections([]);
               setError(getHTTPErrorDetails(err));
               setWarningMessage(undefined);
             })
@@ -397,7 +392,7 @@ export const NetflowTraffic: React.FC<{
             .then(results => {
               //set metrics
               setMetrics(results[0].metrics);
-              setStats(results[0].stats);
+              setFlowConnectionsStats(results[0].stats);
               //set app metrics
               if (results.length > 1) {
                 setTotalMetric(results[1].metrics[0]);
@@ -415,7 +410,7 @@ export const NetflowTraffic: React.FC<{
             })
             .finally(() => {
               //clear flows
-              setFlows([]);
+              setFlowConnections([]);
               setLoading(false);
               setLastRefresh(new Date());
             })
@@ -523,11 +518,7 @@ export const NetflowTraffic: React.FC<{
           eventKey={'overview'}
           title={<TabTitleText>{t('Overview')}</TabTitleText>}
         />
-        <Tab
-          className="netflow-traffic-tab"
-          eventKey={'table'}
-          title={<TabTitleText>{t('Traffic flows')}</TabTitleText>}
-        />
+        <Tab className="netflow-traffic-tab" eventKey={'table'} title={<TabTitleText>{t('Traffic')}</TabTitleText>} />
         <Tab
           className="netflow-traffic-tab"
           eventKey={'topology'}
@@ -785,161 +776,6 @@ export const NetflowTraffic: React.FC<{
     );
   };
 
-  const panelContent = () => {
-    if (selectedRecord) {
-      return (
-        <RecordPanel
-          id="recordPanel"
-          record={selectedRecord}
-          columns={getDefaultColumns(t, false, false)}
-          filters={filters}
-          range={range}
-          reporter={reporter}
-          setFilters={setFilters}
-          setRange={setRange}
-          setReporter={setReporter}
-          onClose={() => onRecordSelect(undefined)}
-        />
-      );
-    } else if (isShowQuerySummary) {
-      return (
-        <SummaryPanel
-          id="summaryPanel"
-          flows={flows}
-          metrics={metrics}
-          appMetrics={totalMetric}
-          metricType={metricType}
-          stats={stats}
-          appStats={appStats}
-          limit={limit}
-          lastRefresh={lastRefresh}
-          range={range}
-          onClose={() => setShowQuerySummary(false)}
-        />
-      );
-    } else if (selectedElement) {
-      return (
-        <ElementPanel
-          id="elementPanel"
-          element={selectedElement}
-          metrics={metrics}
-          metricType={metricType}
-          truncateLength={topologyOptions.truncateLength}
-          filters={filters}
-          setFilters={setFilters}
-          onClose={() => onElementSelect(undefined)}
-        />
-      );
-    } else {
-      return null;
-    }
-  };
-
-  const filterLinks = React.useCallback(() => {
-    const defFilters = getDefaultFilters();
-    return (
-      <FilterActionLinks
-        showClear={filters.length > 0}
-        showReset={defFilters.length > 0 && !_.isEqual(filters, defFilters)}
-        clearFilters={clearFilters}
-        resetFilters={resetDefaultFilters}
-      />
-    );
-  }, [getDefaultFilters, filters, clearFilters, resetDefaultFilters]);
-
-  const pageContent = () => {
-    let content: JSX.Element | null = null;
-    switch (selectedViewId) {
-      case 'overview':
-        content = (
-          <NetflowOverview
-            limit={limit}
-            panels={panels}
-            metricType={metricType}
-            metrics={metrics}
-            totalMetric={totalMetric}
-            loading={loading}
-            error={error}
-            isDark={isDarkTheme}
-            filterActionLinks={filterLinks()}
-            truncateLength={overviewTruncateLength}
-          />
-        );
-        break;
-      case 'table':
-        content = (
-          <NetflowTable
-            loading={loading}
-            error={error}
-            flows={flows}
-            selectedRecord={selectedRecord}
-            size={size}
-            onSelect={onRecordSelect}
-            columns={columns.filter(col => col.isSelected)}
-            setColumns={(v: Column[]) => setColumns(v.concat(columns.filter(col => !col.isSelected)))}
-            columnSizes={columnSizes}
-            setColumnSizes={setColumnSizes}
-            filterActionLinks={filterLinks()}
-            isDark={isDarkTheme}
-          />
-        );
-        break;
-      case 'topology':
-        content = (
-          <NetflowTopology
-            loading={loading}
-            k8sModels={k8sModels}
-            error={error}
-            metricFunction={metricFunction}
-            metricType={metricType}
-            metricScope={metricScope}
-            setMetricScope={setMetricScope}
-            metrics={metrics}
-            options={topologyOptions}
-            setOptions={setTopologyOptions}
-            filters={filters}
-            setFilters={setFilters}
-            selected={selectedElement}
-            onSelect={onElementSelect}
-            searchHandle={searchRef?.current}
-            searchEvent={searchEvent}
-            isDark={isDarkTheme}
-          />
-        );
-        break;
-      default:
-        content = null;
-        break;
-    }
-
-    return (
-      <Flex id="page-content-flex" direction={{ default: 'column' }}>
-        <FlexItem flex={{ default: 'flex_1' }}>{content}</FlexItem>
-        <FlexItem>
-          {_.isEmpty(flows) ? (
-            <MetricsQuerySummary
-              metrics={metrics}
-              appMetrics={totalMetric}
-              metricType={metricType}
-              lastRefresh={lastRefresh}
-              isShowQuerySummary={isShowQuerySummary}
-              toggleQuerySummary={() => onToggleQuerySummary(!isShowQuerySummary)}
-            />
-          ) : (
-            <FlowsQuerySummary
-              flows={flows}
-              stats={stats}
-              lastRefresh={lastRefresh}
-              range={range}
-              isShowQuerySummary={isShowQuerySummary}
-              toggleQuerySummary={() => onToggleQuerySummary(!isShowQuerySummary)}
-            />
-          )}
-        </FlexItem>
-      </Flex>
-    );
-  };
-
   //update data on filters changes
   React.useEffect(() => {
     setTRModalOpen(false);
@@ -975,6 +811,18 @@ export const NetflowTraffic: React.FC<{
     return t('Add more filters or decrease limit / range to improve the query performance');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match, filters]);
+
+  const filterLinks = React.useCallback(() => {
+    const defFilters = getDefaultFilters();
+    return (
+      <FilterActionLinks
+        showClear={filters.length > 0}
+        showReset={defFilters.length > 0 && !_.isEqual(filters, defFilters)}
+        clearFilters={clearFilters}
+        resetFilters={resetDefaultFilters}
+      />
+    );
+  }, [getDefaultFilters, filters, clearFilters, resetDefaultFilters]);
 
   return !_.isEmpty(extensions) ? (
     <PageSection id="pageSection" className={isTab ? 'tab' : ''}>
@@ -1076,15 +924,82 @@ export const NetflowTraffic: React.FC<{
           </ToolbarItem>
         </Toolbar>
       )}
-      <Drawer
+      {!showViewOptions && !_.isEmpty(selectedRecords) && (
+        <Toolbar data-test-id="breadcrumbs-toolbar" id="breadcrumbs-toolbar" className={isDarkTheme ? 'dark' : ''}>
+          <ToolbarItem className="flex-start">
+            <Breadcrumb id="breadcrumbs-component">
+              <BreadcrumbItem
+                key={'list'}
+                to="#"
+                onClick={e => {
+                  clearSelections();
+                  e.preventDefault();
+                }}
+              >
+                {t('Connections list')}
+              </BreadcrumbItem>
+              {selectedRecords.map((r, i) => (
+                <BreadcrumbItem
+                  key={i}
+                  to="#"
+                  isActive={i === selectedRecords.length - 1}
+                  onClick={e => {
+                    onRecordSelect(selectedRecords.slice(0, i + 1));
+                    e.preventDefault();
+                  }}
+                >
+                  {r.labels._RecordType === 'flowLog'
+                    ? `${t('Flow')} #${r.key}`
+                    : `${t('Connection')} #${r.fields._HashId}`}
+                </BreadcrumbItem>
+              ))}
+            </Breadcrumb>
+          </ToolbarItem>
+        </Toolbar>
+      )}
+      <DrawerComponent
+        appStats={appStats}
+        columns={columns}
+        columnSizes={columnSizes}
+        error={error}
+        filterLinks={filterLinks()}
+        filters={filters}
+        flowConnections={flowConnections}
+        flowConnectionsStats={flowConnectionsStats}
         id="drawer"
-        isInline
-        isExpanded={selectedRecord !== undefined || selectedElement !== undefined || isShowQuerySummary}
-      >
-        <DrawerContent id="drawerContent" panelContent={panelContent()}>
-          <DrawerContentBody id="drawerBody">{pageContent()}</DrawerContentBody>
-        </DrawerContent>
-      </Drawer>
+        isDarkTheme={isDarkTheme}
+        isShowQuerySummary={isShowQuerySummary}
+        lastRefresh={lastRefresh}
+        limit={limit}
+        contentLoading={loading}
+        metricFunction={metricFunction}
+        metrics={metrics}
+        metricScope={metricScope}
+        metricType={metricType}
+        onElementSelect={onElementSelect}
+        onRecordSelect={onRecordSelect}
+        onToggleQuerySummary={onToggleQuerySummary}
+        overviewTruncateLength={overviewTruncateLength}
+        panels={panels}
+        range={range}
+        reporter={reporter}
+        searchEvent={searchEvent}
+        searchRef={searchRef}
+        selectedElement={selectedElement}
+        selectedRecords={selectedRecords}
+        selectedViewId={selectedViewId}
+        setColumns={setColumns}
+        setColumnSizes={setColumnSizes}
+        setFilters={setFilters}
+        setMetricScope={setMetricScope}
+        setRange={setRange}
+        setReporter={setReporter}
+        setShowQuerySummary={setShowQuerySummary}
+        setTopologyOptions={setTopologyOptions}
+        size={size}
+        topologyOptions={topologyOptions}
+        totalMetric={totalMetric}
+      />
       <TimeRangeModal
         id="time-range-modal"
         isModalOpen={isTRModalOpen}

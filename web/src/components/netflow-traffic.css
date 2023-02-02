@@ -62,7 +62,7 @@ span.pf-c-button__icon.pf-m-start {
     z-index: 1;
 }
 
-#drawerContent {
+#drawer-content {
     overflow: hidden;
 }
 
@@ -115,11 +115,13 @@ span.pf-c-button__icon.pf-m-start {
     padding-right: 0;
 }
 
+#breadcrumbs-toolbar,
 #view-options-toolbar {
     z-index: 5;
     box-shadow: 0 0.125rem 0.1rem -0.0625rem rgba(3, 3, 3, 0.16);
 }
 
+#breadcrumbs-toolbar.dark,
 #view-options-toolbar.dark {
     box-shadow: 0 0.125rem 0.1rem -0.0625rem rgba(255, 255, 255, 0.16);
 }
@@ -156,10 +158,12 @@ span.pf-c-button__icon.pf-m-start {
     display: flex;
 }
 
+#breadcrumbs-component,
 #view-options-toolbar>.view-options-first {
     margin-left: 1.5rem;
 }
 
+#breadcrumbs-component,
 #view-options-toolbar>.view-options-last {
     margin-right: 1.5rem;
 }
@@ -178,4 +182,27 @@ span.pf-c-button__icon.pf-m-start {
 
 .dark-bottom-border {
     border-bottom: 1px #444548 solid;
+}
+
+#flow-content-flex {
+    height: 100%;
+    width: 100%;
+}
+
+#flow-content-flex>.loading {
+    width: 100%;
+    align-self: center;
+}
+
+#recordPanel,
+#recordPanel>.pf-c-drawer__panel-main {
+    height: 100%;
+}
+
+#recordPanel.left>.pf-c-drawer__splitter {
+    display: none;
+}
+
+#breadcrumbs-component {
+    height: 33px;
 }

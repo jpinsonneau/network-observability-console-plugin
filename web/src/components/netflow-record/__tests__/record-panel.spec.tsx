@@ -8,14 +8,19 @@ import { DrawerCloseButton } from '@patternfly/react-core';
 
 describe('<RecordPanel />', () => {
   const mocks: RecordDrawerProps = {
-    record: FlowsSample[0],
+    record: { ...FlowsSample[0], activeTab: 'details', hidden: [] },
     columns: DefaultColumns,
+    size: 's',
+    limit: 100,
+    isDarkTheme: false,
     filters: FiltersSample,
     range: 300,
     reporter: 'destination',
+    onSelect: jest.fn(),
     setFilters: jest.fn(),
     setRange: jest.fn(),
     setReporter: jest.fn(),
+    onSwitch: jest.fn(),
     onClose: jest.fn(),
     id: 'record-panel-test'
   };

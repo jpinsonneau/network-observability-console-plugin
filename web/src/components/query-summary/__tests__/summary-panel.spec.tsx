@@ -7,6 +7,7 @@ import SummaryPanel, { SummaryPanelContent } from '../summary-panel';
 
 describe('<SummaryPanel />', () => {
   const mocks = {
+    onSwitch: jest.fn(),
     onClose: jest.fn(),
     flows: FlowsSample,
     metrics: undefined,

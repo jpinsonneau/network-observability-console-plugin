@@ -5,8 +5,6 @@ import {
   AccordionExpandedContentBody,
   AccordionItem,
   AccordionToggle,
-  DrawerActions,
-  DrawerCloseButton,
   DrawerHead,
   DrawerPanelBody,
   DrawerPanelContent,
@@ -14,21 +12,30 @@ import {
   TextContent,
   TextVariants
 } from '@patternfly/react-core';
+import _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import _ from 'lodash';
-import { defaultSize, maxSize, minSize } from '../../utils/panel';
-import { compareStrings } from '../../utils/base-compare';
 import { Record } from '../../api/ipfix';
+import { Stats, TopologyMetrics } from '../../api/loki';
+import { MetricType } from '../../model/flow-query';
+import { compareStrings } from '../../utils/base-compare';
 import { TimeRange } from '../../utils/datetime';
-import { FlowsQuerySummaryContent } from './flows-query-summary';
+import { compareIPs } from '../../utils/ip';
+import {
+  horizontalDefaultSize,
+  horizontalMaxSize,
+  horizontalMinSize,
+  verticalDefaultSize,
+  verticalMaxSize,
+  verticalMinSize
+} from '../../utils/panel';
 import { comparePorts, formatPort } from '../../utils/port';
 import { formatProtocol } from '../../utils/protocol';
-import { compareIPs } from '../../utils/ip';
-import { Stats, TopologyMetrics } from '../../api/loki';
-import './summary-panel.css';
-import { MetricType } from '../../model/flow-query';
+import DefaultDrawerActions from '../drawer/drawer-actions';
+import { DrawerPosition } from '../drawer/drawer-component';
+import { FlowsQuerySummaryContent } from './flows-query-summary';
 import { MetricsQuerySummaryContent } from './metrics-query-summary';
+import './summary-panel.css';
 
 type TypeCardinality = {
   type: string;
@@ -308,6 +315,7 @@ export const SummaryPanelContent: React.FC<{
             className="summary-container-grouped"
             direction="column"
             flows={flows!}
+            type={'connections'}
             limitReached={stats?.limitReached || false}
             range={range}
             lastRefresh={lastRefresh}
@@ -322,6 +330,7 @@ export const SummaryPanelContent: React.FC<{
 };
 
 export const SummaryPanel: React.FC<{
+  onSwitch: () => void;
   onClose: () => void;
   flows: Record[] | undefined;
   metrics: TopologyMetrics[] | undefined;
@@ -332,8 +341,22 @@ export const SummaryPanel: React.FC<{
   limit: number;
   range: number | TimeRange;
   lastRefresh: Date | undefined;
+  drawerPosition?: DrawerPosition;
   id?: string;
-}> = ({ flows, metrics, appMetrics, metricType, stats, limit, range, lastRefresh, id, onClose }) => {
+}> = ({
+  flows,
+  metrics,
+  appMetrics,
+  metricType,
+  stats,
+  limit,
+  range,
+  lastRefresh,
+  drawerPosition,
+  id,
+  onSwitch,
+  onClose
+}) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
 
   return (
@@ -341,15 +364,13 @@ export const SummaryPanel: React.FC<{
       data-test={id}
       id={id}
       isResizable
-      defaultSize={defaultSize}
-      minSize={minSize}
-      maxSize={maxSize}
+      defaultSize={drawerPosition === 'right' ? horizontalDefaultSize : verticalDefaultSize}
+      minSize={drawerPosition === 'right' ? horizontalMinSize : verticalMinSize}
+      maxSize={drawerPosition === 'right' ? horizontalMaxSize : verticalMaxSize}
     >
       <DrawerHead>
         <Text component={TextVariants.h2}>{t('Query summary')}</Text>
-        <DrawerActions>
-          <DrawerCloseButton id={`${id ? id : 'summary-panel'}-close-button`} onClick={onClose} />
-        </DrawerActions>
+        <DefaultDrawerActions onSwitch={onSwitch} onClose={onClose} />
       </DrawerHead>
       <DrawerPanelBody>
         <SummaryPanelContent

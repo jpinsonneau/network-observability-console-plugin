@@ -437,6 +437,26 @@ export const getFilterDefinitions = (t: TFunction): FilterDefinition[] => {
         - ${t('A IANA name like TCP, UDP')}
         - ${t('Empty double quotes "" for undefined protocol')}`,
         encoders: { simpleEncode: simpleFiltersEncoder('Proto') }
+      },
+      /*{
+        id: 'interface',
+        name: t('Interface'),
+        category: FilterCategory.None,
+        component: FilterComponent.Text,
+        getOptions: noOption,
+        validate: rejectEmptyValue,
+        hint: t('Specify a flow interface Id.'),
+        encoders: { simpleEncode: simpleFiltersEncoder('Interface') }
+      },*/
+      {
+        id: 'id',
+        name: t('Connection Id'),
+        category: FilterCategory.None,
+        component: FilterComponent.Text,
+        getOptions: noOption,
+        validate: rejectEmptyValue,
+        hint: t('Specify a single connection Id.'),
+        encoders: { simpleEncode: simpleFiltersEncoder('_HashId') }
       }
     ];
   }

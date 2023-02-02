@@ -45,7 +45,9 @@ export type FilterId =
   | 'host_name'
   | 'src_host_name'
   | 'dst_host_name'
-  | 'protocol';
+  | 'protocol'
+  | 'interface'
+  | 'id';
 
 export interface FilterDefinition {
   id: FilterId;

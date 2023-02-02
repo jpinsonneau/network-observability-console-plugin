@@ -47,6 +47,12 @@ export const dateFormatter = new Intl.DateTimeFormat(getLanguage(), {
   year: 'numeric'
 });
 
+export const timeFormatter = new Intl.DateTimeFormat(getLanguage(), {
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric'
+});
+
 export const timeMSFormatter = new Intl.DateTimeFormat(getLanguage(), {
   hour: 'numeric',
   minute: 'numeric',

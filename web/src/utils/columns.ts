@@ -1,13 +1,15 @@
 import { TFunction } from 'i18next';
 import _ from 'lodash';
-import { FilterId } from '../model/filters';
 import { Fields, Labels, Record } from '../api/ipfix';
+import { FilterId } from '../model/filters';
 import { compareIPs } from '../utils/ip';
 import { comparePorts } from '../utils/port';
 import { compareProtocols } from '../utils/protocol';
 import { compareNumbers, compareStrings } from './base-compare';
 
 export enum ColumnsId {
+  hashid = '_HashId',
+  //time = 'Time',
   starttime = 'StartTime',
   endtime = 'EndTime',
   type = 'K8S_Type',
@@ -56,7 +58,15 @@ export enum ColumnsId {
   hostname = 'K8S_HostName',
   srchostname = 'SrcK8S_HostName',
   dsthostname = 'DstK8S_HostName',
-  flowdir = 'FlowDirection'
+  interface = 'Interface',
+  flowdir = 'FlowDirection',
+  recordtype = 'RecordType',
+  bytesab = 'Bytes_AB',
+  bytesba = 'Bytes_BA',
+  packetsab = 'Packets_AB',
+  packetsba = 'Packets_BA',
+  isfirst = 'IsFirst',
+  numflow = 'numFlowLogs'
 }
 
 export interface Column {
@@ -685,29 +695,8 @@ export const getSrcDstColumns = (t: TFunction, withConcatenatedFields = true): C
   }
 };
 
-export const getExtraColumns = (t: TFunction): Column[] => {
+export const getExtraCountColumns = (t: TFunction): Column[] => {
   return [
-    {
-      id: ColumnsId.proto,
-      name: t('Protocol'),
-      tooltip: t('The value of the protocol number in the IP packet header'),
-      fieldName: 'Proto',
-      quickFilter: 'protocol',
-      isSelected: false,
-      value: f => f.fields.Proto,
-      sort: (a, b, col) => compareProtocols(col.value(a) as number, col.value(b) as number),
-      width: 10
-    },
-    {
-      id: ColumnsId.flowdir,
-      name: t('Direction'),
-      tooltip: t('The direction of the Flow observed at the Observation Point.'),
-      fieldName: 'FlowDirection',
-      isSelected: false,
-      value: f => f.labels.FlowDirection,
-      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
-      width: 10
-    },
     {
       id: ColumnsId.bytes,
       name: t('Bytes'),
@@ -727,7 +716,12 @@ export const getExtraColumns = (t: TFunction): Column[] => {
       value: f => f.fields.Packets,
       sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
       width: 5
-    },
+    }
+  ];
+};
+
+export const getExtraTimeColumns = (t: TFunction): Column[] => {
+  return [
     {
       id: ColumnsId.duration,
       name: t('Duration'),
@@ -759,14 +753,56 @@ export const getExtraColumns = (t: TFunction): Column[] => {
   ];
 };
 
-export const getDefaultColumns = (t: TFunction, withCommonFields = true, withConcatenatedFields = true): Column[] => {
-  const timeCols: Column[] = [
+export const getExtraColumns = (t: TFunction): Column[] => {
+  return [
+    {
+      id: ColumnsId.proto,
+      name: t('Protocol'),
+      tooltip: t('The value of the protocol number in the IP packet header'),
+      fieldName: 'Proto',
+      quickFilter: 'protocol',
+      isSelected: false,
+      value: f => f.fields.Proto,
+      sort: (a, b, col) => compareProtocols(col.value(a) as number, col.value(b) as number),
+      width: 10
+    },
+    ...getExtraCountColumns(t)
+  ];
+};
+
+export const getExtraFlowColumns = (t: TFunction): Column[] => {
+  return [
+    {
+      id: ColumnsId.flowdir,
+      name: t('Direction'),
+      tooltip: t('The direction of the Flow observed at the Observation Point.'),
+      fieldName: 'FlowDirection',
+      isSelected: false,
+      value: f => f.labels.FlowDirection,
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 10
+    },
+    {
+      id: ColumnsId.interface,
+      name: t('Interface'),
+      fieldName: 'Interface',
+      //quickFilter: 'interface',
+      isSelected: false,
+      value: f => f.fields.Interface || '',
+      sort: (a, b, col) => compareStrings(col.value(a) as string, col.value(b) as string),
+      width: 10
+    }
+  ];
+};
+
+export const getTimeColumns = (t: TFunction): Column[] => {
+  return [
     {
       id: ColumnsId.starttime,
       name: t('Start Time'),
       tooltip: t(
         // eslint-disable-next-line max-len
-        'Time of the first packet observed per flow. Unlike End Time, it is not used in queries to select flows in an interval.'
+        'Time of the first packet observed per connection / flow. Unlike End Time, it is not used in queries to select flows in an interval.'
       ),
       fieldName: 'TimeFlowStartMs',
       isSelected: false,
@@ -779,24 +815,128 @@ export const getDefaultColumns = (t: TFunction, withCommonFields = true, withCon
       name: t('End Time'),
       tooltip: t(
         // eslint-disable-next-line max-len
-        'Time of the last packet observed per flow. This is what is used in queries to select flows in an interval.'
+        'Time of the last packet observed per connection / flow. This is what is used in queries to select flows in an interval.'
       ),
-      fieldName: 'TimeFlowEndMs',
       isSelected: true,
       value: f => f.fields.TimeFlowEndMs,
       sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
       width: 15
     }
   ];
+};
 
+export const getIdColumn = (t: TFunction): Column => {
+  return {
+    id: ColumnsId.hashid,
+    name: t('Connection Id'),
+    fieldName: '_HashId',
+    isSelected: false,
+    value: f => f.fields._HashId || '',
+    sort: (a, b, col) => compareStrings(col.value(a) as string, col.value(b) as string),
+    width: 15
+  };
+};
+
+export const getDefaultColumns = (t: TFunction, withCommonFields = true, withConcatenatedFields = true): Column[] => {
   if (withCommonFields) {
     return [
-      ...timeCols,
+      ...getTimeColumns(t),
+      getIdColumn(t),
       ...getSrcDstColumns(t, withConcatenatedFields),
       ...getCommonColumns(t, withConcatenatedFields),
       ...getExtraColumns(t)
     ];
   } else {
-    return [...timeCols, ...getSrcDstColumns(t, withConcatenatedFields), ...getExtraColumns(t)];
+    return [
+      ...getTimeColumns(t),
+      ...getSrcDstColumns(t, withConcatenatedFields),
+      ...getExtraColumns(t),
+      ...getExtraFlowColumns(t)
+    ];
   }
+};
+
+export const getFlowColumns = (t: TFunction): Column[] => {
+  return [
+    /*{
+      id: ColumnsId.time,
+      name: t('Time'),
+      fieldName: 'TimeFlowStartMs',
+      isSelected: false,
+      value: f => [
+        getFormattedDate(new Date(f.fields.TimeFlowStartMs), timeMSFormatter),
+        getFormattedDate(new Date(f.fields.TimeFlowEndMs), timeMSFormatter)
+      ],
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 20
+    },*/
+    ...getTimeColumns(t),
+    ...getExtraFlowColumns(t),
+    ...getExtraCountColumns(t),
+    ...getExtraTimeColumns(t)
+  ];
+};
+
+export const getConnectionColumns = (t: TFunction): Column[] => {
+  return [
+    ...getTimeColumns(t),
+    {
+      id: ColumnsId.recordtype,
+      name: t('Type'),
+      fieldName: '_RecordType',
+      isSelected: false,
+      value: f => f.labels._RecordType as string,
+      sort: (a, b, col) => compareStrings(col.value(a) as string, col.value(b) as string),
+      width: 15
+    },
+    {
+      id: ColumnsId.numflow,
+      name: t('Flows'),
+      isSelected: true,
+      value: f => f.fields.numFlowLogs || '',
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 5
+    },
+    ...getExtraCountColumns(t),
+    {
+      id: ColumnsId.bytesab,
+      name: t('Bytes AB'),
+      isSelected: true,
+      value: f => f.fields.Bytes_AB || '',
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 5
+    },
+    {
+      id: ColumnsId.bytesba,
+      name: t('Bytes BA'),
+      isSelected: true,
+      value: f => f.fields.Bytes_BA || '',
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 5
+    },
+    {
+      id: ColumnsId.packetsab,
+      name: t('Packets AB'),
+      isSelected: true,
+      value: f => f.fields.Packets_AB || '',
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 5
+    },
+    {
+      id: ColumnsId.packetsba,
+      name: t('Packets BA'),
+      isSelected: true,
+      value: f => f.fields.Packets_BA || '',
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 5
+    },
+    {
+      id: ColumnsId.isfirst,
+      name: t('Is First'),
+      isSelected: true,
+      value: f => f.fields._IsFirst || '',
+      sort: (a, b, col) => compareNumbers(col.value(a) as number, col.value(b) as number),
+      width: 5
+    }
+  ];
 };

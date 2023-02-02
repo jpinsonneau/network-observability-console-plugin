@@ -71,7 +71,7 @@
   left: 50%;
 }
 
-.record-field-tooltip-margin{
+.record-field-tooltip-margin {
   margin-top: 0.5em;
 }
 
@@ -98,4 +98,8 @@
 .record-field-date-icon {
   flex-shrink: 0;
   margin-right: 5px;
+}
+
+.record-field-flex-container>button {
+  padding: 0 1em 0 1em;
 }

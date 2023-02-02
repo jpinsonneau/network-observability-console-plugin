@@ -1,5 +1,7 @@
 #query-summary {
   padding: 1.2em;
+  max-height: 4em;
+  overflow: hidden;
 }
 
 .query-summary-warning {

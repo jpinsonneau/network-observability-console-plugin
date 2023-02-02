@@ -4,8 +4,6 @@ import {
   AccordionItem,
   AccordionToggle,
   Divider,
-  DrawerActions,
-  DrawerCloseButton,
   DrawerHead,
   DrawerPanelBody,
   DrawerPanelContent,
@@ -18,16 +16,25 @@ import {
 import { BaseEdge, BaseNode } from '@patternfly/react-topology';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { defaultSize, maxSize, minSize } from '../../utils/panel';
-import { MetricType } from '../../model/flow-query';
 import { TopologyMetrics } from '../../api/loki';
 import { Filter } from '../../model/filters';
+import { MetricType } from '../../model/flow-query';
 import { GraphElementPeer, NodeData } from '../../model/topology';
-import { ElementPanelMetrics } from './element-panel-metrics';
+import {
+  horizontalDefaultSize,
+  horizontalMaxSize,
+  horizontalMinSize,
+  verticalDefaultSize,
+  verticalMaxSize,
+  verticalMinSize
+} from '../../utils/panel';
+import DefaultDrawerActions from '../drawer/drawer-actions';
+import { DrawerPosition } from '../drawer/drawer-component';
 import { TruncateLength } from '../dropdowns/truncate-dropdown';
 import { ElementFields } from './element-fields';
-import { PeerResourceLink } from './peer-resource-link';
+import { ElementPanelMetrics } from './element-panel-metrics';
 import './element-panel.css';
+import { PeerResourceLink } from './peer-resource-link';
 
 export const ElementPanelDetailsContent: React.FC<{
   element: GraphElementPeer;
@@ -110,6 +117,7 @@ export const ElementPanelDetailsContent: React.FC<{
 };
 
 export const ElementPanel: React.FC<{
+  onSwitch: () => void;
   onClose: () => void;
   element: GraphElementPeer;
   metrics: TopologyMetrics[];
@@ -117,8 +125,9 @@ export const ElementPanel: React.FC<{
   filters: Filter[];
   setFilters: (filters: Filter[]) => void;
   truncateLength: TruncateLength;
+  drawerPosition?: DrawerPosition;
   id?: string;
-}> = ({ id, element, metrics, metricType, filters, setFilters, onClose, truncateLength }) => {
+}> = ({ id, drawerPosition, element, metrics, metricType, filters, setFilters, onSwitch, onClose, truncateLength }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const [activeTab, setActiveTab] = React.useState<string>('details');
 
@@ -147,15 +156,13 @@ export const ElementPanel: React.FC<{
       id={id}
       className="drawer-panel-content"
       isResizable
-      defaultSize={defaultSize}
-      minSize={minSize}
-      maxSize={maxSize}
+      defaultSize={drawerPosition === 'right' ? horizontalDefaultSize : verticalDefaultSize}
+      minSize={drawerPosition === 'right' ? horizontalMinSize : verticalMinSize}
+      maxSize={drawerPosition === 'right' ? horizontalMaxSize : verticalMaxSize}
     >
       <DrawerHead id={`${id}-drawer-head`} data-test-id="drawer-head" className="drawer-head">
         {titleContent()}
-        <DrawerActions>
-          <DrawerCloseButton data-test-id="drawer-close-button" className="drawer-close-button" onClick={onClose} />
-        </DrawerActions>
+        <DefaultDrawerActions onSwitch={onSwitch} onClose={onClose} />
       </DrawerHead>
       <Divider />
       <DrawerPanelBody id={`${id}-drawer-body`} className="drawer-body" data-test-id="drawer-body">

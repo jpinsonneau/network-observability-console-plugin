@@ -39,6 +39,7 @@ describe('<ElementPanel />', () => {
     metricScope: 'resource' as MetricScope,
     filters: [] as Filter[],
     setFilters: jest.fn(),
+    onSwitch: jest.fn(),
     onClose: jest.fn(),
     truncateLength: TruncateLength.M,
     id: 'element-panel-test'

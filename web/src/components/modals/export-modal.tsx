@@ -12,7 +12,9 @@ import {
   DataListItemRow,
   Text,
   TextContent,
-  TextVariants
+  TextVariants,
+  ToggleGroup,
+  ToggleGroupItem
 } from '@patternfly/react-core';
 import Modal from './modal';
 import _ from 'lodash';
@@ -58,6 +60,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       criteria: 'isSelected'
     }
   );
+  const [updatedFlowQuery, setUpdatedFlowQuery] = React.useState<FlowQuery>({
+    ...flowQuery,
+    recordType: 'allConnections'
+  });
   const [isSaveDisabled, setSaveDisabled] = React.useState<boolean>(true);
   const [isAllSelected, setAllSelected] = React.useState<boolean>(false);
   const [isExportAll, setExportAll] = React.useState<boolean>(
@@ -108,6 +114,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     setSelectedColumns(result);
   }, [selectedColumns, setSelectedColumns, isAllSelected]);
 
+  const switchRecordType = React.useCallback(() => {
+    setUpdatedFlowQuery({
+      ...updatedFlowQuery,
+      recordType: updatedFlowQuery.recordType === 'allConnections' ? 'flowLog' : 'allConnections'
+    });
+  }, [updatedFlowQuery]);
+
+  React.useEffect(() => {
+    setUpdatedFlowQuery({
+      ...flowQuery,
+      recordType: 'allConnections'
+    });
+  }, [flowQuery]);
+
   React.useEffect(() => {
     let allSelected = true;
     _.forEach(selectedColumns, (col: Column) => {
@@ -140,10 +160,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               <Chip isReadOnly={true}>{rangeText()}</Chip>
             </ChipGroup>
             <ChipGroup isClosable={false} categoryName={t('Reporter node')}>
-              <Chip isReadOnly={true}>{flowQuery.reporter}</Chip>
+              <Chip isReadOnly={true}>{updatedFlowQuery.reporter}</Chip>
             </ChipGroup>
             <ChipGroup isClosable={false} categoryName={t('Limit')}>
-              <Chip isReadOnly={true}>{flowQuery.limit}</Chip>
+              <Chip isReadOnly={true}>{updatedFlowQuery.limit}</Chip>
             </ChipGroup>
             {filters.map((filter, fIndex) => (
               <ChipGroup key={fIndex} isClosable={false} categoryName={getFilterFullName(filter.def, t)}>
@@ -171,7 +191,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               <Link
                 {...props}
                 target="_blank"
-                to={getExportFlowsURL(flowQuery, getFieldNames())}
+                to={getExportFlowsURL(updatedFlowQuery, getFieldNames())}
                 onClick={() => setModalOpen(false)}
               />
             )}
@@ -237,6 +257,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           }
         />
       </div>
+      <Text component={TextVariants.p} className="export-content-type-text">
+        {t('Content type')}
+      </Text>
+      <ToggleGroup className="export-toggle-group">
+        <ToggleGroupItem
+          text={t('Connections events')}
+          isSelected={updatedFlowQuery.recordType === 'allConnections'}
+          onChange={switchRecordType}
+        />
+        <ToggleGroupItem
+          text={t('Flows')}
+          isSelected={updatedFlowQuery.recordType === 'flowLog'}
+          onChange={switchRecordType}
+        />
+      </ToggleGroup>
     </Modal>
   );
 };
