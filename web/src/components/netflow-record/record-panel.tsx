@@ -42,6 +42,7 @@ export type RecordDrawerProps = {
   reporter: Reporter;
   type: RecordType;
   canSwitchTypes: boolean;
+  isDark?: boolean;
   setFilters: (v: Filter[]) => void;
   setRange: (r: number | TimeRange) => void;
   setReporter: (r: Reporter) => void;
@@ -59,6 +60,7 @@ export const RecordPanel: React.FC<RecordDrawerProps> = ({
   reporter,
   type,
   canSwitchTypes,
+  isDark,
   setFilters,
   setRange,
   setReporter,
@@ -225,6 +227,11 @@ export const RecordPanel: React.FC<RecordDrawerProps> = ({
     }
   }, [record.labels._RecordType, t]);
 
+  const getSortedJSON = React.useCallback(() => {
+    const flat = { ...record.fields, ...record.labels };
+    return JSON.stringify(flat, Object.keys(flat).sort(), 2);
+  }, [record]);
+
   const groups = getColumnGroups(
     columns.filter(
       c =>
@@ -318,6 +325,7 @@ export const RecordPanel: React.FC<RecordDrawerProps> = ({
                           size={'s'}
                           useLinks={true}
                           detailed={true}
+                          isDark={isDark}
                         />
                       </TextContent>
                     ))}
@@ -338,7 +346,7 @@ export const RecordPanel: React.FC<RecordDrawerProps> = ({
                 clickTip={t('Copied')}
                 variant={ClipboardCopyVariant.expansion}
               >
-                {JSON.stringify(record, null, 2)}
+                {getSortedJSON()}
               </ClipboardCopy>
             </TextContent>
           </Tab>
