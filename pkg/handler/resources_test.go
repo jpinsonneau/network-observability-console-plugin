@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/netobserv/network-observability-console-plugin/pkg/httpclient/httpclienttest"
-	"github.com/netobserv/network-observability-console-plugin/pkg/loki"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 )
 
-var testLokiConfig = loki.Config{
-	URL: &url.URL{Scheme: "http", Host: "loki"},
+var testLokiConfig = storage.Config{
+	LokiURL: &url.URL{Scheme: "http", Host: "loki"},
 	Labels: map[string]struct{}{
 		"_RecordType":      {},
 		"SrcK8S_Namespace": {},

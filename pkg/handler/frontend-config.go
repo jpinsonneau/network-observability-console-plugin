@@ -14,6 +14,7 @@ type QuickFilter struct {
 }
 
 type frontendConfig struct {
+	Storage     string   `yaml:"storage" json:"storage"`
 	RecordTypes []string `yaml:"recordTypes" json:"recordTypes"`
 	PortNaming  struct {
 		Enable    bool              `yaml:"enable,omitempty" json:"enable"`
@@ -26,6 +27,7 @@ type frontendConfig struct {
 
 func readConfigFile(filename string) (*frontendConfig, error) {
 	cfg := frontendConfig{
+		Storage:      "pinot",
 		RecordTypes:  []string{"flowLog"},
 		QuickFilters: []QuickFilter{},
 	}

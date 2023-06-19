@@ -18,6 +18,7 @@ import (
 	"github.com/netobserv/network-observability-console-plugin/pkg/loki"
 	"github.com/netobserv/network-observability-console-plugin/pkg/metrics"
 	"github.com/netobserv/network-observability-console-plugin/pkg/model"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 )
 
 type LokiError struct {
@@ -31,7 +32,7 @@ const (
 	lokiOrgIDHeader = "X-Scope-OrgID"
 )
 
-func newLokiClient(cfg *loki.Config, requestHeader http.Header, useStatusConfig bool) httpclient.Caller {
+func newLokiClient(cfg *storage.Config, requestHeader http.Header, useStatusConfig bool) httpclient.Caller {
 	headers := map[string][]string{}
 	if cfg.TenantID != "" {
 		headers[lokiOrgIDHeader] = []string{cfg.TenantID}
@@ -194,7 +195,7 @@ func fetchParallel(lokiClient httpclient.Caller, queries []string, merger loki.M
 	return codeOut, nil
 }
 
-func LokiReady(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) {
+func LokiReady(cfg *storage.Config) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lokiClient := newLokiClient(cfg, r.Header, true)
 		baseURL := strings.TrimRight(cfg.StatusURL.String(), "/")
@@ -216,7 +217,7 @@ func LokiReady(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func LokiMetrics(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) {
+func LokiMetrics(cfg *storage.Config) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lokiClient := newLokiClient(cfg, r.Header, true)
 		baseURL := strings.TrimRight(cfg.StatusURL.String(), "/")
@@ -231,7 +232,7 @@ func LokiMetrics(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func LokiBuildInfos(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) {
+func LokiBuildInfos(cfg *storage.Config) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lokiClient := newLokiClient(cfg, r.Header, true)
 		baseURL := strings.TrimRight(cfg.StatusURL.String(), "/")
@@ -246,7 +247,7 @@ func LokiBuildInfos(cfg *loki.Config) func(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func LokiConfig(cfg *loki.Config, param string) func(w http.ResponseWriter, r *http.Request) {
+func LokiConfig(cfg *storage.Config, param string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lokiClient := newLokiClient(cfg, r.Header, true)
 		baseURL := strings.TrimRight(cfg.StatusURL.String(), "/")

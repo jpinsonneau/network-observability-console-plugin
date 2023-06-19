@@ -28,8 +28,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/netobserv/network-observability-console-plugin/pkg/kubernetes/auth"
-	"github.com/netobserv/network-observability-console-plugin/pkg/loki"
 	"github.com/netobserv/network-observability-console-plugin/pkg/model"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 )
 
 const (
@@ -59,8 +59,8 @@ func TestServerRunning(t *testing.T) {
 
 	go func() {
 		Start(&Config{
-			Loki: loki.Config{
-				URL: &url.URL{Scheme: "http", Host: "localhost:3100"},
+			StorageConfig: storage.Config{
+				LokiURL: &url.URL{Scheme: "http", Host: "localhost:3100"},
 			},
 			Port: testPort,
 		}, &authM)
@@ -111,8 +111,8 @@ func TestServerUnauthorized(t *testing.T) {
 
 	go func() {
 		Start(&Config{
-			Loki: loki.Config{
-				URL: &url.URL{Scheme: "http", Host: "localhost:3100"},
+			StorageConfig: storage.Config{
+				LokiURL: &url.URL{Scheme: "http", Host: "localhost:3100"},
 			},
 			Port: testPort,
 		}, &auth.BearerTokenChecker{})
@@ -186,8 +186,8 @@ func TestSecureComm(t *testing.T) {
 		CertFile:       testServerCertFile,
 		PrivateKeyFile: testServerKeyFile,
 		Port:           testPort,
-		Loki: loki.Config{
-			URL: &url.URL{Scheme: "http", Host: "localhost:3100"},
+		StorageConfig: storage.Config{
+			LokiURL: &url.URL{Scheme: "http", Host: "localhost:3100"},
 		},
 	}
 
@@ -262,8 +262,8 @@ func TestLokiConfiguration(t *testing.T) {
 
 	// THAT is accessed behind the NOO console plugin backend
 	backendRoutes := setupRoutes(&Config{
-		Loki: loki.Config{
-			URL:     lokiURL,
+		StorageConfig: storage.Config{
+			LokiURL: lokiURL,
 			Timeout: time.Second,
 		},
 	}, authM)
@@ -304,8 +304,8 @@ func TestLokiConfigurationForTopology(t *testing.T) {
 
 	// THAT is accessed behind the NOO console plugin backend
 	backendRoutes := setupRoutes(&Config{
-		Loki: loki.Config{
-			URL:     lokiURL,
+		StorageConfig: storage.Config{
+			LokiURL: lokiURL,
 			Timeout: time.Second,
 		},
 	}, authM)
@@ -346,8 +346,8 @@ func TestLokiConfigurationForTableHistogram(t *testing.T) {
 
 	// THAT is accessed behind the NOO console plugin backend
 	backendRoutes := setupRoutes(&Config{
-		Loki: loki.Config{
-			URL:     lokiURL,
+		StorageConfig: storage.Config{
+			LokiURL: lokiURL,
 			Timeout: time.Second,
 		},
 	}, authM)
@@ -406,8 +406,8 @@ func TestLokiConfiguration_MultiTenant(t *testing.T) {
 
 	// GIVEN a NOO console plugin backend configured for HOST Multi tenant mode
 	backendRoutes := setupRoutes(&Config{
-		Loki: loki.Config{
-			URL:       lokiURL,
+		StorageConfig: storage.Config{
+			LokiURL:   lokiURL,
 			Timeout:   time.Second,
 			TenantID:  "my-organisation",
 			TokenPath: tmpDir + "/var/run/secrets/tokens/netobserv-plugin",

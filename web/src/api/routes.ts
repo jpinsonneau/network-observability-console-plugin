@@ -1,31 +1,50 @@
 import axios from 'axios';
-import { setRecordsDNSTimes } from '../utils/dns';
-import { Config, defaultConfig } from '../model/config';
+import { Config, defaultConfig, Storage } from '../model/config';
 import { buildExportQuery } from '../model/export-query';
 import { FlowQuery } from '../model/flow-query';
 import { ContextSingleton } from '../utils/context';
 import { TimeRange } from '../utils/datetime';
+import { setRecordsDNSTimes } from '../utils/dns';
 import { parseMetrics } from '../utils/metrics';
 import { AlertsResult, SilencedAlert } from './alert';
-import {
-  AggregatedQueryResponse,
-  parseStream,
-  RawTopologyMetrics,
-  RecordsResult,
-  StreamResult,
-  TopologyResult
-} from './loki';
+import { Record } from './ipfix';
 
-export const getFlows = (params: FlowQuery): Promise<RecordsResult> => {
-  return axios.get(ContextSingleton.getHost() + '/api/loki/flows', { params }).then(r => {
+import { AggregatedQueryResponse, parseStream, RawTopologyMetrics, StreamResult, TopologyResult } from './loki';
+import { parseResultTable, PinotQueryResponse, PinotStats } from './pinot';
+
+export class RecordsResult {
+  records: Record[];
+  stats: Stats;
+}
+
+export interface Stats {
+  numQueries: number;
+  limitReached: boolean;
+  // Here, more (raw) stats available in queriesStats array
+  pinotStats?: PinotStats;
+}
+
+export const getFlows = (params: FlowQuery, storage: Storage): Promise<RecordsResult> => {
+  return axios.get(ContextSingleton.getHost() + `/api/${storage}/flows`, { params }).then(r => {
     if (r.status >= 400) {
       throw new Error(`${r.statusText} [code=${r.status}]`);
     }
-    const aggQR: AggregatedQueryResponse = r.data;
-    return {
-      records: setRecordsDNSTimes((aggQR.result as StreamResult[]).flatMap(r => parseStream(r))),
-      stats: aggQR.stats
-    };
+
+    switch (storage) {
+      case 'loki':
+        const aggQR: AggregatedQueryResponse = r.data;
+        return {
+          records: setRecordsDNSTimes((aggQR.result as StreamResult[]).flatMap(r => parseStream(r))),
+          stats: aggQR.stats
+        };
+      case 'pinot':
+        const pQR: PinotQueryResponse = r.data;
+        const records = parseResultTable(pQR.resultTable);
+        return {
+          records,
+          stats: { limitReached: params.limit >= records.length, numQueries: 1, pinotStats: pQR.stats }
+        };
+    }
   });
 };
 
@@ -99,6 +118,7 @@ export const getConfig = (): Promise<Config> => {
       return defaultConfig;
     }
     return <Config>{
+      storage: r.data.storage,
       recordTypes: r.data.recordTypes,
       portNaming: {
         enable: r.data.portNaming.enable ?? defaultConfig.portNaming.enable,

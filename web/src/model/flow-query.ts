@@ -17,6 +17,7 @@ export interface FlowQuery {
   reporter?: Reporter;
   recordType: RecordType;
   packetLoss: PacketLoss;
+  page?: number;
   limit: number;
   type?: MetricType;
   scope?: MetricScope;

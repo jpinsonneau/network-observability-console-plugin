@@ -11,7 +11,7 @@ import (
 func TestQueryResponseMarshal(t *testing.T) {
 	qr := QueryResponse{
 		Data: QueryResponseData{
-			ResultType: ResultTypeStream,
+			ResultType: LokiResultTypeStream,
 			Result:     Streams{},
 		},
 	}
@@ -26,7 +26,7 @@ func TestQueryResponseUnmarshal(t *testing.T) {
 	var qr QueryResponse
 	err := json.Unmarshal([]byte(js), &qr)
 	require.NoError(t, err)
-	assert.Equal(t, ResultTypeStream, string(qr.Data.ResultType))
+	assert.Equal(t, LokiResultTypeStream, string(qr.Data.ResultType))
 	assert.NotNil(t, qr.Data.Result)
 	assert.Empty(t, qr.Data.Result)
 	var expType Streams
@@ -35,7 +35,7 @@ func TestQueryResponseUnmarshal(t *testing.T) {
 
 func TestAggregatedQueryResponseMarshal(t *testing.T) {
 	qr := AggregatedQueryResponse{
-		ResultType: ResultTypeStream,
+		ResultType: LokiResultTypeStream,
 		Result:     Streams{},
 		Stats: AggregatedStats{
 			NumQueries: 1,
@@ -52,7 +52,7 @@ func TestAggregatedQueryResponseUnmarshal(t *testing.T) {
 	var qr AggregatedQueryResponse
 	err := json.Unmarshal([]byte(js), &qr)
 	require.NoError(t, err)
-	assert.Equal(t, ResultTypeStream, string(qr.ResultType))
+	assert.Equal(t, LokiResultTypeStream, string(qr.ResultType))
 	assert.NotNil(t, qr.Result)
 	assert.Empty(t, qr.Result)
 	var expType Streams
@@ -62,7 +62,7 @@ func TestAggregatedQueryResponseUnmarshal(t *testing.T) {
 func TestQueryResponseMatrixMarshal(t *testing.T) {
 	qr := QueryResponse{
 		Data: QueryResponseData{
-			ResultType: ResultTypeMatrix,
+			ResultType: LokiResultTypeMatrix,
 			Result:     Matrix{},
 		},
 	}
@@ -77,7 +77,7 @@ func TestQueryResponseMatrixUnmarshal(t *testing.T) {
 	var qr QueryResponse
 	err := json.Unmarshal([]byte(js), &qr)
 	require.NoError(t, err)
-	assert.Equal(t, ResultTypeMatrix, string(qr.Data.ResultType))
+	assert.Equal(t, LokiResultTypeMatrix, string(qr.Data.ResultType))
 	assert.NotNil(t, qr.Data.Result)
 	assert.Empty(t, qr.Data.Result)
 	var expType Matrix
@@ -86,7 +86,7 @@ func TestQueryResponseMatrixUnmarshal(t *testing.T) {
 
 func TestAggregatedQueryResponseMatrixMarshal(t *testing.T) {
 	qr := AggregatedQueryResponse{
-		ResultType: ResultTypeMatrix,
+		ResultType: LokiResultTypeMatrix,
 		Result:     Matrix{},
 		Stats: AggregatedStats{
 			NumQueries: 1,
@@ -103,7 +103,7 @@ func TestAggregatedQueryResponseMatrixUnmarshal(t *testing.T) {
 	var qr AggregatedQueryResponse
 	err := json.Unmarshal([]byte(js), &qr)
 	require.NoError(t, err)
-	assert.Equal(t, ResultTypeMatrix, string(qr.ResultType))
+	assert.Equal(t, LokiResultTypeMatrix, string(qr.ResultType))
 	assert.NotNil(t, qr.Result)
 	assert.Empty(t, qr.Result)
 	var expType Matrix

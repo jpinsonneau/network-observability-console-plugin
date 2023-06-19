@@ -88,7 +88,7 @@ func (m *MatrixMerger) Get() *model.AggregatedQueryResponse {
 		}
 	}
 	return &model.AggregatedQueryResponse{
-		ResultType: model.ResultTypeMatrix,
+		ResultType: model.LokiResultTypeMatrix,
 		Result:     m.merged,
 		Stats: model.AggregatedStats{
 			NumQueries:   m.numQueries,

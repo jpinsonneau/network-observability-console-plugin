@@ -6,7 +6,7 @@ import { Record } from '../../api/ipfix';
 import { InfoCircleIcon } from '@patternfly/react-icons';
 import './query-summary.css';
 import { valueFormat } from '../../utils/format';
-import { Stats } from '../../api/loki';
+import { Stats } from '../../api/routes';
 import { RecordType } from '../../model/flow-query';
 import _ from 'lodash';
 
@@ -20,6 +20,7 @@ export const FlowsQuerySummaryContent: React.FC<{
   className?: string;
   isShowQuerySummary?: boolean;
   toggleQuerySummary?: () => void;
+  pagination?: React.ReactNode;
 }> = ({
   flows,
   type,
@@ -29,7 +30,8 @@ export const FlowsQuerySummaryContent: React.FC<{
   direction,
   className,
   isShowQuerySummary,
-  toggleQuerySummary
+  toggleQuerySummary,
+  pagination
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const filteredFlows = flows.filter(
@@ -116,6 +118,7 @@ export const FlowsQuerySummaryContent: React.FC<{
         </FlexItem>
       )}
       {counters()}
+      {pagination ? pagination : ''}
       <FlexItem>
         <Tooltip
           content={
@@ -150,7 +153,8 @@ export const FlowsQuerySummary: React.FC<{
   lastRefresh: Date | undefined;
   isShowQuerySummary?: boolean;
   toggleQuerySummary?: () => void;
-}> = ({ flows, stats, type, range, lastRefresh, isShowQuerySummary, toggleQuerySummary }) => {
+  pagination?: React.ReactNode;
+}> = ({ flows, stats, type, range, lastRefresh, isShowQuerySummary, toggleQuerySummary, pagination }) => {
   if (!_.isEmpty(flows) && stats) {
     return (
       <Card id="query-summary" isFlat>
@@ -163,6 +167,7 @@ export const FlowsQuerySummary: React.FC<{
           lastRefresh={lastRefresh}
           isShowQuerySummary={isShowQuerySummary}
           toggleQuerySummary={toggleQuerySummary}
+          pagination={pagination}
         />
       </Card>
     );

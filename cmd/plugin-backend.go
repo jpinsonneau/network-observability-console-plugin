@@ -12,8 +12,8 @@ import (
 
 	"github.com/netobserv/network-observability-console-plugin/pkg/kubernetes/auth"
 	"github.com/netobserv/network-observability-console-plugin/pkg/kubernetes/client"
-	"github.com/netobserv/network-observability-console-plugin/pkg/loki"
 	"github.com/netobserv/network-observability-console-plugin/pkg/server"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 )
 
 var (
@@ -28,8 +28,10 @@ var (
 	corsMethods  = flag.String("cors-methods", "", "CORS allowed methods (default: unset)")
 	corsHeaders  = flag.String("cors-headers", "Origin, X-Requested-With, Content-Type, Accept", "CORS allowed headers (default: Origin, X-Requested-With, Content-Type, Accept)")
 	corsMaxAge   = flag.String("cors-max-age", "", "CORS allowed max age (default: unset)")
+	storageType  = flag.String("storage-type", "pinot", "storage type to use (loki or pinot)")
 	// todo: default value temporarily kept to make it work with older versions of the NOO. Remove default and force setup of loki url
 	lokiURL                = flag.String("loki", "http://localhost:3100", "URL of the loki querier host")
+	pinotURL               = flag.String("pinot", "http://localhost:9000", "URL of pinot controller")
 	lokiStatusURL          = flag.String("loki-status", "", "URL for loki /ready /metrics /config endpoints. (default: loki flag value)")
 	lokiLabels             = flag.String("loki-labels", "SrcK8S_Namespace,SrcK8S_OwnerName,DstK8S_Namespace,DstK8S_OwnerName,FlowDirection", "Loki labels, comma separated")
 	lokiTimeout            = flag.Duration("loki-timeout", 30*time.Second, "Timeout of the Loki query to retrieve logs")
@@ -88,6 +90,11 @@ func main() {
 		log.Fatal("labels cannot be empty")
 	}
 
+	pURL, err := url.Parse(*pinotURL)
+	if err != nil {
+		log.WithError(err).Fatal("wrong Pinot URL")
+	}
+
 	var checkType auth.CheckType
 	if *authCheck == "auto" {
 		if *lokiForwardUserToken {
@@ -123,7 +130,7 @@ func main() {
 		CORSAllowMethods: *corsMethods,
 		CORSAllowHeaders: *corsHeaders,
 		CORSMaxAge:       *corsMaxAge,
-		Loki:             loki.NewConfig(lURL, lStatusURL, *lokiTimeout, *lokiTenantID, *lokiTokenPath, *lokiForwardUserToken, *lokiSkipTLS, *lokiCAPath, *lokiStatusSkipTLS, *lokiStatusCAPath, *lokiStatusUserCertPath, *lokiStatusUserKeyPath, *lokiMock, strings.Split(lLabels, ",")),
+		StorageConfig:    storage.NewConfig(*storageType, lURL, pURL, lStatusURL, *lokiTimeout, *lokiTenantID, *lokiTokenPath, *lokiForwardUserToken, *lokiSkipTLS, *lokiCAPath, *lokiStatusSkipTLS, *lokiStatusCAPath, *lokiStatusUserCertPath, *lokiStatusUserKeyPath, *lokiMock, strings.Split(lLabels, ",")),
 		FrontendConfig:   *frontendConfig,
 	}, checker)
 }

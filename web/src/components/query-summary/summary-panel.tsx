@@ -5,11 +5,16 @@ import {
   AccordionExpandedContentBody,
   AccordionItem,
   AccordionToggle,
+  ClipboardCopy,
+  ClipboardCopyVariant,
   DrawerActions,
   DrawerCloseButton,
   DrawerHead,
   DrawerPanelBody,
   DrawerPanelContent,
+  Tab,
+  Tabs,
+  TabTitleText,
   Text,
   TextContent,
   TextVariants
@@ -25,7 +30,8 @@ import { FlowsQuerySummaryContent } from './flows-query-summary';
 import { comparePorts, formatPort } from '../../utils/port';
 import { formatProtocol } from '../../utils/protocol';
 import { compareIPs } from '../../utils/ip';
-import { Stats, TopologyMetrics } from '../../api/loki';
+import { TopologyMetrics } from '../../api/loki';
+import { Stats } from '../../api/routes';
 import './summary-panel.css';
 import { MetricType, RecordType } from '../../model/flow-query';
 import { MetricsQuerySummaryContent } from './metrics-query-summary';
@@ -379,6 +385,7 @@ export const SummaryPanel: React.FC<{
   id?: string;
 }> = ({ flows, metrics, appMetrics, type, metricType, stats, limit, range, lastRefresh, id, onClose }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+  const [activeTab, setActiveTab] = React.useState<string>('details');
 
   return (
     <DrawerPanelContent
@@ -396,17 +403,43 @@ export const SummaryPanel: React.FC<{
         </DrawerActions>
       </DrawerHead>
       <DrawerPanelBody>
-        <SummaryPanelContent
-          flows={flows}
-          metrics={metrics}
-          appMetrics={appMetrics}
-          type={type}
-          metricType={metricType}
-          stats={stats}
-          limit={limit}
-          range={range}
-          lastRefresh={lastRefresh}
-        />
+        <Tabs
+          id="drawer-tabs"
+          activeKey={activeTab}
+          usePageInsets
+          onSelect={(e, key) => setActiveTab(key as string)}
+          role="region"
+        >
+          <Tab className="drawer-tab" eventKey={'details'} title={<TabTitleText>{t('Details')}</TabTitleText>}>
+            <SummaryPanelContent
+              flows={flows}
+              metrics={metrics}
+              appMetrics={appMetrics}
+              type={type}
+              metricType={metricType}
+              stats={stats}
+              limit={limit}
+              range={range}
+              lastRefresh={lastRefresh}
+            />
+          </Tab>
+          <Tab className="drawer-tab" eventKey={'raw'} title={<TabTitleText>{t('Raw')}</TabTitleText>}>
+            <TextContent className="record-field-container" data-test-id="drawer-json-container">
+              <Text component={TextVariants.h4}>{t('JSON')}</Text>
+              <ClipboardCopy
+                data-test-id="drawer-json-copy"
+                isCode
+                isReadOnly
+                isExpanded
+                hoverTip={t('Copy')}
+                clickTip={t('Copied')}
+                variant={ClipboardCopyVariant.expansion}
+              >
+                {JSON.stringify(stats, undefined, 2)}
+              </ClipboardCopy>
+            </TextContent>
+          </Tab>
+        </Tabs>
       </DrawerPanelBody>
     </DrawerPanelContent>
   );

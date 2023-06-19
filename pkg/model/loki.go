@@ -17,7 +17,7 @@ type QueryResponse struct {
 
 // AggregatedQueryResponse represents the modified json response to one or more logQL queries
 type AggregatedQueryResponse struct {
-	ResultType    ResultType      `json:"resultType"`
+	ResultType    LokiResultType  `json:"resultType"`
 	Result        ResultValue     `json:"result"`
 	Stats         AggregatedStats `json:"stats"`
 	IsMock        bool            `json:"isMock"`
@@ -31,40 +31,40 @@ type AggregatedStats struct {
 	QueriesStats []interface{} `json:"queriesStats"`
 }
 
-// ResultType holds the type of the result
-type ResultType string
+// LokiResultType holds the type of the result
+type LokiResultType string
 
 // ResultType values
 const (
-	ResultTypeStream = "streams"
-	ResultTypeScalar = "scalar"
-	ResultTypeVector = "vector"
-	ResultTypeMatrix = "matrix"
+	LokiResultTypeStream = "streams"
+	LokiResultTypeScalar = "scalar"
+	LokiResultTypeVector = "vector"
+	LokiResultTypeMatrix = "matrix"
 )
 
 // ResultValue interface mimics the promql.Value interface
 type ResultValue interface {
-	Type() ResultType
+	Type() LokiResultType
 }
 
 // QueryResponseData represents the http json response to a label query
 type QueryResponseData struct {
-	ResultType ResultType  `json:"resultType"`
-	Result     ResultValue `json:"result"`
-	Stats      interface{} `json:"-"`
+	ResultType LokiResultType `json:"resultType"`
+	Result     ResultValue    `json:"result"`
+	Stats      interface{}    `json:"-"`
 }
 
 // Type implements the promql.Value interface
-func (Streams) Type() ResultType { return ResultTypeStream }
+func (Streams) Type() LokiResultType { return LokiResultTypeStream }
 
 // Type implements the promql.Value interface
-func (Scalar) Type() ResultType { return ResultTypeScalar }
+func (Scalar) Type() LokiResultType { return LokiResultTypeScalar }
 
 // Type implements the promql.Value interface
-func (Vector) Type() ResultType { return ResultTypeVector }
+func (Vector) Type() LokiResultType { return LokiResultTypeVector }
 
 // Type implements the promql.Value interface
-func (Matrix) Type() ResultType { return ResultTypeMatrix }
+func (Matrix) Type() LokiResultType { return LokiResultTypeMatrix }
 
 // Streams is a slice of Stream
 type Streams []Stream
@@ -106,9 +106,9 @@ func (q *AggregatedQueryResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func unmarshalQueryResponseData(data []byte) (ResultType, ResultValue, interface{}, error) {
+func unmarshalQueryResponseData(data []byte) (LokiResultType, ResultValue, interface{}, error) {
 	unmarshal := struct {
-		Type   ResultType      `json:"resultType"`
+		Type   LokiResultType  `json:"resultType"`
 		Result json.RawMessage `json:"result"`
 		Stats  interface{}     `json:"stats"`
 	}{}
@@ -122,19 +122,19 @@ func unmarshalQueryResponseData(data []byte) (ResultType, ResultValue, interface
 
 	// unmarshal results
 	switch unmarshal.Type {
-	case ResultTypeStream:
+	case LokiResultTypeStream:
 		var s Streams
 		err = json.Unmarshal(unmarshal.Result, &s)
 		value = s
-	case ResultTypeMatrix:
+	case LokiResultTypeMatrix:
 		var m Matrix
 		err = json.Unmarshal(unmarshal.Result, &m)
 		value = m
-	case ResultTypeVector:
+	case LokiResultTypeVector:
 		var v Vector
 		err = json.Unmarshal(unmarshal.Result, &v)
 		value = v
-	case ResultTypeScalar:
+	case LokiResultTypeScalar:
 		var v Scalar
 		err = json.Unmarshal(unmarshal.Result, &v)
 		value = v

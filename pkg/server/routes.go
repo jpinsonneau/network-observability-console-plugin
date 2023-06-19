@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -29,16 +30,16 @@ func setupRoutes(cfg *Config, authChecker auth.Checker) *mux.Router {
 		})
 	})
 	api.HandleFunc("/status", handler.Status)
-	api.HandleFunc("/loki/ready", handler.LokiReady(&cfg.Loki))
-	api.HandleFunc("/loki/metrics", handler.LokiMetrics(&cfg.Loki))
-	api.HandleFunc("/loki/buildinfo", handler.LokiBuildInfos(&cfg.Loki))
-	api.HandleFunc("/loki/config/limits", handler.LokiConfig(&cfg.Loki, "limits_config"))
-	api.HandleFunc("/loki/flows", handler.GetFlows(&cfg.Loki))
-	api.HandleFunc("/loki/export", handler.ExportFlows(&cfg.Loki))
-	api.HandleFunc("/loki/topology", handler.GetTopology(&cfg.Loki))
-	api.HandleFunc("/resources/namespaces", handler.GetNamespaces(&cfg.Loki))
-	api.HandleFunc("/resources/namespace/{namespace}/kind/{kind}/names", handler.GetNames(&cfg.Loki))
-	api.HandleFunc("/resources/kind/{kind}/names", handler.GetNames(&cfg.Loki))
+	api.HandleFunc("/loki/ready", handler.LokiReady(&cfg.StorageConfig))
+	api.HandleFunc("/loki/metrics", handler.LokiMetrics(&cfg.StorageConfig))
+	api.HandleFunc("/loki/buildinfo", handler.LokiBuildInfos(&cfg.StorageConfig))
+	api.HandleFunc("/loki/config/limits", handler.LokiConfig(&cfg.StorageConfig, "limits_config"))
+	api.HandleFunc(fmt.Sprintf("/%s/flows", string(cfg.StorageConfig.Type)), handler.GetFlows(&cfg.StorageConfig))
+	api.HandleFunc("/loki/export", handler.ExportFlows(&cfg.StorageConfig))
+	api.HandleFunc("/loki/topology", handler.GetTopology(&cfg.StorageConfig))
+	api.HandleFunc("/resources/namespaces", handler.GetNamespaces(&cfg.StorageConfig))
+	api.HandleFunc("/resources/namespace/{namespace}/kind/{kind}/names", handler.GetNames(&cfg.StorageConfig))
+	api.HandleFunc("/resources/kind/{kind}/names", handler.GetNames(&cfg.StorageConfig))
 	api.HandleFunc("/frontend-config", handler.GetConfig(cfg.FrontendConfig))
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web/dist/")))

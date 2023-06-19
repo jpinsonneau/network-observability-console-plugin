@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/netobserv/network-observability-console-plugin/pkg/loki"
 	"github.com/netobserv/network-observability-console-plugin/pkg/model"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 )
 
 var timeNowArg = regexp.MustCompile(`\${timeNow-(\d+)}`)
@@ -214,7 +214,7 @@ func TestLokiFiltering(t *testing.T) {
 	emptyResponse, _ := json.Marshal(model.QueryResponse{
 		Status: "",
 		Data: model.QueryResponseData{
-			ResultType: model.ResultTypeStream,
+			ResultType: model.LokiResultTypeStream,
 			Result:     model.Streams{},
 		},
 	})
@@ -228,8 +228,10 @@ func TestLokiFiltering(t *testing.T) {
 
 	// THAT is accessed behind the NOO console plugin backend
 	backendRoutes := setupRoutes(&Config{
-		Loki: loki.NewConfig(
+		StorageConfig: storage.NewConfig(
+			"loki",
 			lokiURL,
+			nil,
 			lokiURL,
 			time.Second,
 			"",

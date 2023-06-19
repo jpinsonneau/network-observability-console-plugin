@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/netobserv/network-observability-console-plugin/pkg/kubernetes/auth"
-	"github.com/netobserv/network-observability-console-plugin/pkg/loki"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 )
 
 var slog = logrus.WithField("module", "server")
@@ -22,7 +22,7 @@ type Config struct {
 	CORSAllowMethods string
 	CORSAllowHeaders string
 	CORSMaxAge       string
-	Loki             loki.Config
+	StorageConfig    storage.Config
 	FrontendConfig   string
 }
 

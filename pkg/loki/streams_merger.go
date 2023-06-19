@@ -102,7 +102,7 @@ func (m *StreamMerger) Add(from model.QueryResponseData) (model.ResultValue, err
 
 func (m *StreamMerger) Get() *model.AggregatedQueryResponse {
 	return &model.AggregatedQueryResponse{
-		ResultType: model.ResultTypeStream,
+		ResultType: model.LokiResultTypeStream,
 		Result:     m.merged,
 		Stats: model.AggregatedStats{
 			NumQueries:   m.numQueries,

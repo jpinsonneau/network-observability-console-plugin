@@ -1,6 +1,7 @@
 import { MetricScope } from '../model/flow-query';
 import { cyrb53 } from '../utils/hash';
 import { Fields, Labels, Record } from './ipfix';
+import { Stats } from './routes';
 
 export interface AggregatedQueryResponse {
   resultType: string;
@@ -10,20 +11,9 @@ export interface AggregatedQueryResponse {
   unixTimestamp: number;
 }
 
-export interface Stats {
-  numQueries: number;
-  limitReached: boolean;
-  // Here, more (raw) stats available in queriesStats array
-}
-
 export interface StreamResult {
   stream: { [key: string]: string };
   values: string[][];
-}
-
-export class RecordsResult {
-  records: Record[];
-  stats: Stats;
 }
 
 export class TopologyResult {

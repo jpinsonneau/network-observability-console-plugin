@@ -17,6 +17,8 @@ import {
   OverflowMenuGroup,
   OverflowMenuItem,
   PageSection,
+  Pagination,
+  PaginationVariant,
   Tab,
   Tabs,
   TabTitleText,
@@ -32,7 +34,8 @@ import { useTranslation } from 'react-i18next';
 import { useHistory } from 'react-router-dom';
 import { useTheme } from '../utils/theme-hook';
 import { Record } from '../api/ipfix';
-import { DroppedTopologyMetrics, RecordsResult, Stats, TopologyMetrics, TopologyResult } from '../api/loki';
+import { DroppedTopologyMetrics, TopologyMetrics, TopologyResult } from '../api/loki';
+import { RecordsResult, Stats } from '../api/routes';
 import { getFlows, getTopology } from '../api/routes';
 import {
   DisabledFilters,
@@ -204,6 +207,7 @@ export const NetflowTraffic: React.FC<{
   const [packetLoss, setPacketLoss] = React.useState<PacketLoss>(getPacketLossFromURL());
   const [recordType, setRecordType] = React.useState<RecordType>(getRecordTypeFromURL());
   const [reporter, setReporter] = React.useState<Reporter>(getReporterFromURL());
+  const [page, setPage] = React.useState<number>(1);
   const [limit, setLimit] = React.useState<number>(
     getLimitFromURL(selectedViewId === 'table' ? LIMIT_VALUES[0] : TOP_VALUES[0])
   );
@@ -326,6 +330,7 @@ export const NetflowTraffic: React.FC<{
       match === 'any' ? groupFiltersMatchAny(enabledFilters) : groupFiltersMatchAll(enabledFilters);
     const query: FlowQuery = {
       filters: groupedFilters,
+      page,
       limit: LIMIT_VALUES.includes(limit) ? limit : LIMIT_VALUES[0],
       recordType: recordType,
       reporter: recordType === 'flowLog' ? reporter : 'both',
@@ -360,6 +365,7 @@ export const NetflowTraffic: React.FC<{
     forcedFilters,
     filters,
     match,
+    page,
     limit,
     recordType,
     reporter,
@@ -410,7 +416,7 @@ export const NetflowTraffic: React.FC<{
           tableQuery.startTime = histogramRange.from.toString();
           tableQuery.endTime = histogramRange.to.toString();
         }
-        promises.push(getFlows(tableQuery));
+        promises.push(getFlows(tableQuery, config.storage));
         if (showHistogram) {
           promises.push(getTopology({ ...fq, scope: 'app' }, range));
           promises.push(getTopology({ ...fq, scope: 'app', type: droppedType }, range));
@@ -527,7 +533,7 @@ export const NetflowTraffic: React.FC<{
         setLoading(false);
         break;
     }
-  }, [buildFlowQuery, histogramRange, manageWarnings, range, selectedViewId, showHistogram, initState]);
+  }, [buildFlowQuery, selectedViewId, histogramRange, config.storage, showHistogram, manageWarnings, range]);
 
   usePoll(tick, interval);
 
@@ -1099,6 +1105,25 @@ export const NetflowTraffic: React.FC<{
               type={recordType}
               isShowQuerySummary={isShowQuerySummary}
               toggleQuerySummary={() => onToggleQuerySummary(!isShowQuerySummary)}
+              pagination={
+                config.storage === 'pinot' ? (
+                  <FlexItem flex={{ default: 'flex_1' }}>
+                    <Pagination
+                      id="pagination"
+                      //itemCount={flows.length}
+                      page={page}
+                      perPage={limit}
+                      perPageOptions={LIMIT_VALUES.map(v => ({ title: v.toString(), value: v }))}
+                      onSetPage={(e, n) => setPage(n)}
+                      onPerPageSelect={(e, n) => {
+                        setPage(1);
+                        setLimit(n);
+                      }}
+                      variant={PaginationVariant.bottom}
+                    />
+                  </FlexItem>
+                ) : undefined
+              }
             />
           )}
         </FlexItem>
@@ -1110,6 +1135,13 @@ export const NetflowTraffic: React.FC<{
   React.useEffect(() => {
     setTRModalOpen(false);
   }, [range]);
+
+  /*React.useEffect(() => {
+    const start = (page - 1) * limit;
+    if (start >= flows.length) {
+      setPage(1);
+    }
+  }, [flows, page, limit]);*/
 
   //update page on full screen change
   React.useEffect(() => {

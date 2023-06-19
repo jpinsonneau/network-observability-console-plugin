@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/netobserv/network-observability-console-plugin/pkg/loki"
 	"github.com/netobserv/network-observability-console-plugin/pkg/metrics"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 )
 
 const (
@@ -16,7 +16,7 @@ const (
 	exportcolumnsKey = "columns"
 )
 
-func ExportFlows(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) {
+func ExportFlows(cfg *storage.Config) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lokiClient := newLokiClient(cfg, r.Header, false)
 		var code int
@@ -28,7 +28,7 @@ func ExportFlows(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) 
 		params := r.URL.Query()
 		hlog.Debugf("ExportFlows query params: %s", params)
 
-		flows, code, err := getFlows(cfg, lokiClient, params)
+		flows, code, err := getLokiFlows(cfg, lokiClient, params)
 		if err != nil {
 			writeError(w, code, err.Error())
 			return

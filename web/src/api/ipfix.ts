@@ -11,6 +11,17 @@ export interface Record {
   fields: Fields;
 }
 
+export const isLabel = (name: string) => {
+  return [
+    'SrcK8S_Namespace',
+    'DstK8S_Namespace',
+    'SrcK8S_OwnerName',
+    'DstK8S_OwnerName',
+    'FlowDirection',
+    '_RecordType'
+  ].includes(name);
+};
+
 export interface Labels {
   /** Source namespace */
   SrcK8S_Namespace?: string;

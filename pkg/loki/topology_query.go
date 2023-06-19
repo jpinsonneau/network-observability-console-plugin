@@ -3,6 +3,7 @@ package loki
 import (
 	"strings"
 
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 	"github.com/netobserv/network-observability-console-plugin/pkg/utils"
 	"github.com/netobserv/network-observability-console-plugin/pkg/utils/constants"
 )
@@ -28,7 +29,7 @@ type TopologyQueryBuilder struct {
 	topology *Topology
 }
 
-func NewTopologyQuery(cfg *Config, start, end, limit, rateInterval, step, metricType string,
+func NewTopologyQuery(cfg *storage.Config, start, end, limit, rateInterval, step, metricType string,
 	recordType constants.RecordType, reporter constants.Reporter, packetLoss constants.PacketLoss,
 	scope, groups string) (*TopologyQueryBuilder, error) {
 	l := limit

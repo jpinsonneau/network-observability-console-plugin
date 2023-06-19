@@ -1,4 +1,4 @@
-package loki
+package storage
 
 import (
 	"net/url"
@@ -7,8 +7,17 @@ import (
 	"github.com/netobserv/network-observability-console-plugin/pkg/utils"
 )
 
+type StorageType string
+
+const (
+	Loki  StorageType = "loki"
+	Pinot StorageType = "pinot"
+)
+
 type Config struct {
-	URL                *url.URL
+	Type               StorageType
+	LokiURL            *url.URL
+	PinotURL           *url.URL
 	StatusURL          *url.URL
 	Timeout            time.Duration
 	TenantID           string
@@ -25,9 +34,19 @@ type Config struct {
 	Labels           map[string]struct{}
 }
 
-func NewConfig(url *url.URL, statusURL *url.URL, timeout time.Duration, tenantID string, tokenPath string, forwardUserToken bool, skipTLS bool, capath string, statusSkipTLS bool, statusCapath string, statusUserCertPath string, statusUserKeyPath string, useMocks bool, labels []string) Config {
+func NewConfig(storageType string, lurl *url.URL, purl *url.URL, statusURL *url.URL, timeout time.Duration, tenantID string, tokenPath string, forwardUserToken bool, skipTLS bool, capath string, statusSkipTLS bool, statusCapath string, statusUserCertPath string, statusUserKeyPath string, useMocks bool, labels []string) Config {
+	var t StorageType
+	switch storageType {
+	case string(Loki):
+		t = Loki
+	default:
+		t = Pinot
+	}
+
 	return Config{
-		URL:                url,
+		Type:               t,
+		LokiURL:            lurl,
+		PinotURL:           purl,
 		StatusURL:          statusURL,
 		Timeout:            timeout,
 		TenantID:           tenantID,

@@ -11,6 +11,7 @@ import (
 	"github.com/netobserv/network-observability-console-plugin/pkg/metrics"
 	"github.com/netobserv/network-observability-console-plugin/pkg/model"
 	"github.com/netobserv/network-observability-console-plugin/pkg/model/filters"
+	"github.com/netobserv/network-observability-console-plugin/pkg/storage"
 	"github.com/netobserv/network-observability-console-plugin/pkg/utils/constants"
 )
 
@@ -25,7 +26,7 @@ const (
 	defaultStep         = "30s"
 )
 
-func GetTopology(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) {
+func GetTopology(cfg *storage.Config) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lokiClient := newLokiClient(cfg, r.Header, false)
 		var code int
@@ -45,7 +46,7 @@ func GetTopology(cfg *loki.Config) func(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func getTopologyFlows(cfg *loki.Config, client httpclient.Caller, params url.Values) (*model.AggregatedQueryResponse, int, error) {
+func getTopologyFlows(cfg *storage.Config, client httpclient.Caller, params url.Values) (*model.AggregatedQueryResponse, int, error) {
 	hlog.Debugf("GetTopology query params: %s", params)
 
 	start, err := getStartTime(params)
@@ -118,7 +119,7 @@ func getTopologyFlows(cfg *loki.Config, client httpclient.Caller, params url.Val
 	return qr, http.StatusOK, nil
 }
 
-func buildTopologyQuery(cfg *loki.Config, queryFilters filters.SingleQuery, start, end, limit, rateInterval, step, metricType string, recordType constants.RecordType, reporter constants.Reporter, packetLoss constants.PacketLoss, scope, groups string) (string, int, error) {
+func buildTopologyQuery(cfg *storage.Config, queryFilters filters.SingleQuery, start, end, limit, rateInterval, step, metricType string, recordType constants.RecordType, reporter constants.Reporter, packetLoss constants.PacketLoss, scope, groups string) (string, int, error) {
 	qb, err := loki.NewTopologyQuery(cfg, start, end, limit, rateInterval, step, metricType, recordType, reporter, packetLoss, scope, groups)
 	if err != nil {
 		return "", http.StatusBadRequest, err
