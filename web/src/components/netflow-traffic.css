@@ -236,3 +236,7 @@ span.pf-c-button__icon.pf-m-start {
     -moz-box-shadow: inset 0 -1px 0 0 #444548;
     box-shadow: inset 0 -1px 0 0 #444548;
 }
+
+.netobserv-tab-container {
+    margin-top: 1.5rem;
+}

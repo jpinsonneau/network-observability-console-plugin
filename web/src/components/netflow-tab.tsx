@@ -38,6 +38,8 @@ type HPAProps = K8sResourceCommon & {
 
 export const NetflowTab: React.FC<PageComponentProps> = ({ obj }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+  //default to 800 to allow content to be rendered in tests
+  const [containerHeight, setContainerHeight] = React.useState(800);
   const initState = React.useRef<Array<'initDone' | 'configLoading' | 'configLoaded' | 'forcedFiltersLoaded'>>([]);
   const [config, setConfig] = React.useState<Config>(defaultConfig);
   const [forcedFilters, setForcedFilters] = React.useState<Filters>();
@@ -56,6 +58,11 @@ export const NetflowTab: React.FC<PageComponentProps> = ({ obj }) => {
           initState.current.push('configLoaded');
         });
       }
+    }
+
+    const container = document.getElementById('content-scrollable');
+    if (container) {
+      setContainerHeight(container.clientHeight);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -175,7 +182,11 @@ export const NetflowTab: React.FC<PageComponentProps> = ({ obj }) => {
       </Bullseye>
     );
   } else if (forcedFilters) {
-    return <NetflowTrafficParent forcedFilters={forcedFilters} isTab={true} parentConfig={config} />;
+    return (
+      <div className="netobserv-tab-container" style={{ height: containerHeight - 190 }}>
+        <NetflowTrafficParent forcedFilters={forcedFilters} isTab={true} parentConfig={config} />
+      </div>
+    );
   } else {
     return (
       <PageSection id="pageSection" data-test="tab-page-section">
