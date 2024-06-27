@@ -1208,6 +1208,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
           allowRTTMetric={isFlowRTT()}
           allowedScopes={getAllowedScopes()}
           setMetricScope={setMetricScope}
+          ref={searchRef}
         />
       )}
       {
