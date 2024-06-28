@@ -237,6 +237,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
       }
       model.setTopologyMetricType(metricType);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [model.topologyMetricFunction, model.setTopologyMetricFunction, model.setTopologyMetricType]
   );
 
@@ -255,14 +256,14 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
   }, [model.config.columns, model.config.filters, model.config.promLabels, isPromOnly]);
 
   const getQuickFilters = React.useCallback(
-    (c = model.config) => {
+    (c: Config = model.config) => {
       return parseQuickFilters(getFilterDefs(), c.quickFilters);
     },
     [model.config, getFilterDefs]
   );
 
   const getDefaultFilters = React.useCallback(
-    (c = model.config) => {
+    (c: Config = model.config) => {
       const quickFilters = getQuickFilters(c);
       return quickFilters.filter(qf => qf.default).flatMap(qf => qf.filters);
     },
@@ -279,7 +280,8 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
       model.setMetrics(defaultNetflowMetrics);
       model.setWarningMessage(undefined);
     },
-    [model.setFilters, model.setFlows]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [model.setFilters, model.setFlows, model.setMetrics, model.setWarningMessage]
   );
 
   const resetDefaultFilters = React.useCallback(
@@ -423,6 +425,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
       }
       return Promise.all(promises);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [getFetchFunctions, model.histogramRange, model.showHistogram, model.showDuplicates, model.range]
   );
 
@@ -699,6 +702,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
 
       return Promise.all(promises);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [getSelectedPanels, getFetchFunctions, model.config.features, model.range, model.metricScope]
   );
 
@@ -765,6 +769,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
       }
       return Promise.all(promises);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [model.config.features, getFetchFunctions, model.topologyMetricType, model.topologyMetricFunction, model.range]
   );
 
@@ -881,6 +886,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
         model.setRecordType('flowLog');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model.config.recordTypes, isConnectionTracking, isFlow, model.recordType]);
 
   React.useEffect(() => {
@@ -891,6 +897,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
     ) {
       model.setDataSource('auto');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowLoki, allowProm, model.dataSource]);
 
   React.useEffect(() => {
@@ -983,6 +990,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
   React.useEffect(() => {
     model.setTRModalOpen(false);
     setURLRange(model.range, !initState.current.includes('configLoaded'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model.range]);
 
   React.useEffect(() => {
@@ -1025,6 +1033,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
     if (!forcedFilters) {
       model.setQueryParams(getURLParams().toString());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     model.filters,
     model.range,
