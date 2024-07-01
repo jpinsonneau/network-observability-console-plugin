@@ -222,6 +222,10 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
     [model.columns, model.config.features, isConnectionTracking]
   );
 
+  const getSelectedColumns = React.useCallback(() => {
+    return getAvailableColumns().filter(column => column.isSelected);
+  }, [getAvailableColumns]);
+
   const updateTopologyMetricType = React.useCallback(
     (metricType: MetricType) => {
       if (isTimeMetric(metricType)) {
@@ -1239,6 +1243,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({ forcedFilters, i
           canSwitchTypes={isFlow() && isConnectionTracking()}
           clearSelections={clearSelections}
           availableColumns={getAvailableColumns(true)}
+          selectedColumns={getSelectedColumns()}
         />
       }
       {initState.current.includes('initDone') && (
