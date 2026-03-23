@@ -184,7 +184,6 @@ describe('<FilterSearchInput />', () => {
     // Submit search by calling onSearch
     await actOn(() => {
       const input = wrapper.find(SearchInput).at(0);
-      // @ts-expect-error - SearchInput type mismatch
       input.props().onSearch(null, 'protocol=6');
     }, wrapper);
 

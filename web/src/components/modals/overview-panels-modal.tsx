@@ -1,23 +1,17 @@
 import {
   Button,
+  Content,
+  ContentVariants,
   DataList,
   DataListCell,
   DataListCheck,
   DataListControl,
-  DataListDragButton,
-  DataListItem,
   DataListItemCells,
-  DataListItemRow,
-  DragDrop,
-  Draggable,
-  Droppable,
   Flex,
   FlexItem,
-  Text,
-  TextContent,
-  TextVariants,
   Tooltip
 } from '@patternfly/react-core';
+import { DragDropSort, DragDropSortDragEndEvent, DraggableObject } from '@patternfly/react-drag-drop';
 import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -86,11 +80,11 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   }, [features]);
 
   const onDrop = React.useCallback(
-    (source, dest) => {
-      if (dest) {
+    (event: DragDropSortDragEndEvent, items: DraggableObject[], oldIndex?: number, newIndex?: number) => {
+      if (oldIndex !== undefined && newIndex !== undefined) {
         const result = [...updatedPanels];
-        const [removed] = result.splice(source.index, 1);
-        result.splice(dest.index, 0, removed);
+        const [removed] = result.splice(oldIndex, 1);
+        result.splice(newIndex, 0, removed);
         setUpdatedPanels(result);
         return true;
       }
@@ -101,17 +95,15 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
 
   const onCheck = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (event, checked) => {
-      if (event?.target?.id) {
-        const result = [...updatedPanels];
-        const selectedPanel = result.find(p => p.id === event.target.id);
-        if (selectedPanel) {
-          selectedPanel.isSelected = !selectedPanel.isSelected;
-          setUpdatedPanels(result);
-        }
+    (event: React.FormEvent<HTMLInputElement>, checked: boolean) => {
+      if (event?.target && 'id' in event.target) {
+        const panelId = (event.target as HTMLInputElement).id;
+        setUpdatedPanels(prevPanels =>
+          prevPanels.map(panel => (panel.id === panelId ? { ...panel, isSelected: checked } : panel))
+        );
       }
     },
-    [updatedPanels, setUpdatedPanels]
+    []
   );
 
   const onReset = React.useCallback(() => {
@@ -155,14 +147,10 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
 
   const onSelectAll = React.useCallback(() => {
     const allSelected = isAllSelected();
-    const result = [...updatedPanels];
-    _.forEach(result, (p: OverviewPanel) => {
-      if (isFilteredPanel(p)) {
-        p.isSelected = !allSelected;
-      }
-    });
-    setUpdatedPanels(result);
-  }, [isAllSelected, updatedPanels, isFilteredPanel]);
+    setUpdatedPanels(prevPanels =>
+      prevPanels.map(panel => (isFilteredPanel(panel) ? { ...panel, isSelected: !allSelected } : panel))
+    );
+  }, [isAllSelected, isFilteredPanel]);
 
   const onClose = React.useCallback(() => {
     setUpdatedPanels(_.cloneDeep(panels));
@@ -185,23 +173,22 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
     [filterKeys, getFilterKeys]
   );
 
-  const draggableItems = filteredPanels().map((panel, i) => {
-    const info = getOverviewPanelInfo(t, panel.id, undefined, recordType === 'flowLog' ? t('flow') : t('conversation'));
-    return (
-      <Draggable key={i} hasNoWrapper>
-        <DataListItem
-          key={'data-list-item-' + i}
-          aria-labelledby={'overview-panel-management-item' + i}
-          className="data-list-item"
-          data-test={'data-' + i}
-          id={'data-' + i}
-        >
-          <DataListItemRow key={'data-list-item-row-' + i} className="center">
+  const draggableItems: DraggableObject[] = Array.from(
+    filteredPanels().map((panel, i) => {
+      const info = getOverviewPanelInfo(
+        t,
+        panel.id,
+        undefined,
+        recordType === 'flowLog' ? t('flow') : t('conversation')
+      );
+      return {
+        id: 'data-' + i,
+        content: (
+          <>
             <DataListControl>
-              <DataListDragButton aria-label="Reorder" aria-labelledby={'overview-panel-management-item' + i} />
               <DataListCheck
                 aria-labelledby={'overview-panel-management-item-' + i}
-                checked={panel.isSelected}
+                isChecked={panel.isSelected}
                 id={panel.id}
                 onChange={onCheck}
               />
@@ -216,15 +203,14 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
                 </DataListCell>
               ]}
             />
-          </DataListItemRow>
-        </DataListItem>
-      </Draggable>
-    );
-  });
+          </>
+        )
+      };
+    })
+  );
 
   return (
     <Modal
-      data-test={id}
       id={id}
       title={t('Manage panels')}
       isOpen={isModalOpen}
@@ -232,12 +218,12 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
       onClose={() => onClose()}
       description={
         <>
-          <TextContent>
-            <Text component={TextVariants.p}>
+          <Content>
+            <Content component={ContentVariants.p}>
               {t('Selected panels will appear in the overview tab.')}&nbsp;
               {t('Click and drag the items to reorder the panels in the overview tab.')}
-            </Text>
-          </TextContent>
+            </Content>
+          </Content>
           <Flex className="popup-header-margin">
             <FlexItem flex={{ default: 'flex_4' }}>
               <Flex className="flex-gap">
@@ -250,7 +236,7 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
                         filterKeys.includes(key) ? 'selected' : 'unselected'
                       } buttonless gap pointer`}
                     >
-                      <Text component={TextVariants.p}>{key}</Text>
+                      <Content component={ContentVariants.p}>{key}</Content>
                     </FlexItem>
                   );
                 })}
@@ -273,7 +259,7 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
         </>
       }
       footer={
-        <div className="footer">
+        <>
           <Button data-test="panels-reset-button" key="reset" variant="link" onClick={() => onReset()}>
             {t('Restore default panels')}
           </Button>
@@ -291,22 +277,18 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
               {t('Save')}
             </Button>
           </Tooltip>
-        </div>
+        </>
       }
     >
-      <div className="co-m-form-row">
-        <DragDrop onDrop={onDrop}>
-          <Droppable hasNoWrapper>
-            <DataList
-              aria-label="Overview panel management"
-              data-test="overview-panel-management"
-              id="overview-panel-management"
-              isCompact
-            >
-              {draggableItems}
-            </DataList>
-          </Droppable>
-        </DragDrop>
+      <div className="co-m-form-row" id="drag-drop-container-overview">
+        <DragDropSort items={draggableItems} onDrop={onDrop} variant="DataList" overlayProps={{ isCompact: true }}>
+          <DataList
+            aria-label="Overview panel management"
+            data-test="overview-panel-management"
+            id="overview-panel-management"
+            isCompact
+          />
+        </DragDropSort>
       </div>
     </Modal>
   );

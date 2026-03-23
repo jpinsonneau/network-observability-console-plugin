@@ -27,7 +27,7 @@
 }
 
 /* Health drawer panel - scoring drawer */
-#health-drawer .pf-v5-c-drawer__panel-main {
+#health-drawer .pf-v6-c-drawer__panel-main {
     overflow-y: auto;
 }
 
@@ -92,38 +92,38 @@
 }
 
 /* For content with drawers (HealthDrawerContainer) */
-.health-main-content .pf-v5-c-drawer {
+.health-main-content .pf-v6-c-drawer {
     flex: 0 1 auto;
     min-height: 0;
     overflow: hidden;
 }
 
-.health-main-content .pf-v5-c-drawer__content {
+.health-main-content .pf-v6-c-drawer__content {
     overflow: hidden;
     min-height: 0;
 }
 
-.health-main-content .pf-v5-c-drawer__body {
+.health-main-content .pf-v6-c-drawer__body {
     overflow-y: auto;
     min-height: 0;
 }
 
 /* For simple content without drawers (HealthGlobal, HealthError) */
-.health-main-content > div:not(.pf-v5-c-drawer):not(.health-tabs-container) {
+.health-main-content > div:not(.pf-v6-c-drawer):not(.health-tabs-container) {
     overflow-y: auto;
     flex: 0 1 auto;
 }
 
 /* Prevent empty states from forcing full height */
-.health-main-content .pf-v5-c-bullseye,
-.health-main-content .pf-v5-l-bullseye {
+.health-main-content .pf-v6-c-bullseye,
+.health-main-content .pf-v6-l-bullseye {
     min-height: 200px;
     max-height: 400px;
     height: auto !important;
 }
 
-.health-main-content .pf-v5-c-drawer__content .pf-v5-c-bullseye,
-.health-main-content .pf-v5-c-drawer__content .pf-v5-l-bullseye {
+.health-main-content .pf-v6-c-drawer__content .pf-v6-c-bullseye,
+.health-main-content .pf-v6-c-drawer__content .pf-v6-l-bullseye {
     min-height: 200px;
     max-height: 400px;
     height: auto !important;
@@ -135,15 +135,15 @@
     flex-direction: column;
 }
 
-.health-gallery-drawer .pf-v5-c-drawer__content {
+.health-gallery-drawer .pf-v6-c-drawer__content {
     overflow-y: auto;
 }
 
-.health-gallery-drawer .pf-v5-c-drawer__body {
+.health-gallery-drawer .pf-v6-c-drawer__body {
     overflow: hidden !important;
 }
 
-.health-gallery-drawer .pf-v5-c-drawer__panel-main {
+.health-gallery-drawer .pf-v6-c-drawer__panel-main {
     overflow-y: auto;
 }
 
@@ -288,7 +288,7 @@
     min-height: 140px;
 }
 
-.health-metric-card .pf-v5-c-card__body {
+.health-metric-card .pf-v6-c-card__body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -469,7 +469,7 @@
     padding-left: 0;
 }
 
-.overflow-button .pf-v5-c-button__icon {
+.overflow-button .pf-v6-c-button__icon {
     margin-right: 0.25rem;
 }
 

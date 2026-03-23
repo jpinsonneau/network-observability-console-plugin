@@ -1,23 +1,17 @@
 import {
   Button,
+  Content,
+  ContentVariants,
   DataList,
   DataListCell,
   DataListCheck,
   DataListControl,
-  DataListDragButton,
-  DataListItem,
   DataListItemCells,
-  DataListItemRow,
-  DragDrop,
-  Draggable,
-  Droppable,
   Flex,
   FlexItem,
-  Text,
-  TextContent,
-  TextVariants,
   Tooltip
 } from '@patternfly/react-core';
+import { DragDropSort, DragDropSortDragEndEvent, DraggableObject } from '@patternfly/react-drag-drop';
 import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -66,11 +60,11 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   }, [columns, isModalOpen]);
 
   const onDrop = React.useCallback(
-    (source, dest) => {
-      if (dest) {
+    (event: DragDropSortDragEndEvent, items: DraggableObject[], oldIndex?: number, newIndex?: number) => {
+      if (oldIndex !== undefined && newIndex !== undefined) {
         const result = [...updatedColumns];
-        const [removed] = result.splice(source.index, 1);
-        result.splice(dest.index, 0, removed);
+        const [removed] = result.splice(oldIndex, 1);
+        result.splice(newIndex, 0, removed);
         setUpdatedColumns(result);
         return true;
       }
@@ -81,17 +75,15 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
 
   const onCheck = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (event, checked) => {
-      if (event?.target?.id) {
-        const result = [...updatedColumns];
-        const selectedColumn = result.find(col => col.id === event.target.id);
-        if (selectedColumn) {
-          selectedColumn.isSelected = !selectedColumn.isSelected;
-          setUpdatedColumns(result);
-        }
+    (event: React.FormEvent<HTMLInputElement>, checked: boolean) => {
+      if (event?.target && 'id' in event.target) {
+        const columnId = (event.target as HTMLInputElement).id;
+        setUpdatedColumns(prevColumns =>
+          prevColumns.map(col => (col.id === columnId ? { ...col, isSelected: checked } : col))
+        );
       }
     },
-    [updatedColumns, setUpdatedColumns]
+    []
   );
 
   const onReset = React.useCallback(() => {
@@ -136,14 +128,10 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
 
   const onSelectAll = React.useCallback(() => {
     const allSelected = isAllSelected();
-    const result = [...updatedColumns];
-    _.forEach(result, (c: Column) => {
-      if (isFilteredColumn(c, filterKeys)) {
-        c.isSelected = !allSelected;
-      }
-    });
-    setUpdatedColumns(result);
-  }, [isAllSelected, updatedColumns, isFilteredColumn, filterKeys]);
+    setUpdatedColumns(prevColumns =>
+      prevColumns.map(col => (isFilteredColumn(col, filterKeys) ? { ...col, isSelected: !allSelected } : col))
+    );
+  }, [isAllSelected, isFilteredColumn, filterKeys]);
 
   const onClose = React.useCallback(() => {
     setResetClicked(false);
@@ -170,40 +158,35 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
     [filterKeys]
   );
 
-  const draggableItems = filteredColumns().map((column, i) => (
-    <Draggable key={i} hasNoWrapper>
-      <DataListItem
-        key={'data-list-item-' + i}
-        aria-labelledby={'table-column-management-item' + i}
-        className="data-list-item"
-        data-test={'data-' + i}
-        id={'data-' + i}
-      >
-        <DataListItemRow key={'data-list-item-row-' + i}>
-          <DataListControl>
-            <DataListDragButton aria-label="Reorder" aria-labelledby={'table-column-management-item' + i} />
-            <DataListCheck
-              aria-labelledby={'table-column-management-item-' + i}
-              checked={column.isSelected}
-              id={column.id}
-              onChange={onCheck}
+  const draggableItems: DraggableObject[] = Array.from(
+    filteredColumns().map((column, i) => {
+      return {
+        id: 'data-' + i,
+        content: (
+          <>
+            <DataListControl>
+              <DataListCheck
+                aria-labelledby={'table-column-management-item-' + i}
+                isChecked={column.isSelected}
+                id={column.id}
+                onChange={onCheck}
+              />
+            </DataListControl>
+            <DataListItemCells
+              dataListCells={[
+                <DataListCell key={'data-list-cell-' + i} className="center">
+                  <label htmlFor={column.id}>{getFullColumnName(column)}</label>
+                </DataListCell>
+              ]}
             />
-          </DataListControl>
-          <DataListItemCells
-            dataListCells={[
-              <DataListCell key={'data-list-cell-' + i} className="center">
-                <label htmlFor={column.id}>{getFullColumnName(column)}</label>
-              </DataListCell>
-            ]}
-          />
-        </DataListItemRow>
-      </DataListItem>
-    </Draggable>
-  ));
+          </>
+        )
+      };
+    })
+  );
 
   return (
     <Modal
-      data-test={id}
       id={id}
       title={t('Manage columns')}
       isOpen={isModalOpen}
@@ -211,12 +194,12 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
       onClose={onClose}
       description={
         <>
-          <TextContent>
-            <Text component={TextVariants.p}>
+          <Content>
+            <Content component={ContentVariants.p}>
               {t('Selected columns will appear in the table.')}&nbsp;
               {t('Click and drag the items to reorder the columns in the table.')}
-            </Text>
-          </TextContent>
+            </Content>
+          </Content>
           <Flex className="popup-header-margin">
             <FlexItem flex={{ default: 'flex_4' }}>
               <Flex className="flex-gap">
@@ -229,7 +212,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
                         filterKeys.includes(key) ? 'selected' : 'unselected'
                       } buttonless gap pointer`}
                     >
-                      <Text component={TextVariants.p}>{key}</Text>
+                      <Content component={ContentVariants.p}>{key}</Content>
                     </FlexItem>
                   );
                 })}
@@ -252,7 +235,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
         </>
       }
       footer={
-        <div className="footer">
+        <>
           <Button data-test="columns-reset-button" key="reset" variant="link" onClick={() => onReset()}>
             {t('Restore default columns')}
           </Button>
@@ -270,23 +253,19 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
               {t('Save')}
             </Button>
           </Tooltip>
-        </div>
+        </>
       }
     >
-      <div className="co-m-form-row">
-        <DragDrop onDrop={onDrop}>
-          <Droppable hasNoWrapper>
-            <DataList
-              aria-label="Table column management"
-              data-test="table-column-management"
-              id="table-column-management"
-              className="centered-list"
-              isCompact
-            >
-              {draggableItems}
-            </DataList>
-          </Droppable>
-        </DragDrop>
+      <div className="co-m-form-row" id="drag-drop-container">
+        <DragDropSort items={draggableItems} onDrop={onDrop} variant="DataList" overlayProps={{ isCompact: true }}>
+          <DataList
+            aria-label="Table column management"
+            data-test="table-column-management"
+            id="table-column-management"
+            className="centered-list"
+            isCompact
+          />
+        </DragDropSort>
       </div>
     </Modal>
   );

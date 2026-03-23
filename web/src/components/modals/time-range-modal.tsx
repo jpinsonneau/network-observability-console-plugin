@@ -1,12 +1,11 @@
 import {
   Button,
+  Content,
+  ContentVariants,
   DatePicker,
   Flex,
   FlexItem,
   isValidDate,
-  Text,
-  TextContent,
-  TextVariants,
   TimePicker,
   Tooltip
 } from '@patternfly/react-core';
@@ -155,7 +154,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
       return (
         <Flex className="date-time-pickers-container" direction={{ default: 'column' }}>
           <FlexItem>
-            <Text component={TextVariants.h4}>{t('From')}</Text>
+            <Content component={ContentVariants.h4}>{t('From')}</Content>
             <Flex direction={{ default: 'row' }} className="time-range-row">
               <FlexItem>
                 <DatePicker
@@ -165,6 +164,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, v: unknown) => setFromDate(typeof e === 'string' ? String(e) : String(v))}
                   onInput={e => onInput(e, 'date')}
                   value={fromDate}
+                  appendTo={() => document.body}
                 />
               </FlexItem>
               <FlexItem>
@@ -178,12 +178,13 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, t: unknown) => setFromTime(typeof e === 'string' ? String(e) : String(t))}
                   onInput={e => onInput(e, 'time')}
                   time={fromTime}
+                  menuAppendTo={() => document.body}
                 />
               </FlexItem>
             </Flex>
           </FlexItem>
           <FlexItem>
-            <Text component={TextVariants.h4}>{t('To')}</Text>
+            <Content component={ContentVariants.h4}>{t('To')}</Content>
             <Flex direction={{ default: 'row' }} className="time-range-row">
               <FlexItem>
                 <DatePicker
@@ -194,6 +195,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, v: unknown) => setToDate(typeof e === 'string' ? String(e) : String(v))}
                   onInput={e => onInput(e, 'date')}
                   value={toDate}
+                  appendTo={() => document.body}
                 />
               </FlexItem>
               <FlexItem>
@@ -207,6 +209,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, t: unknown) => setToTime(typeof e === 'string' ? String(e) : String(t))}
                   onInput={e => onInput(e, 'time')}
                   time={toTime}
+                  menuAppendTo={() => document.body}
                 />
               </FlexItem>
             </Flex>
@@ -240,14 +243,13 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
 
   return (
     <Modal
-      data-test={id}
       id={id}
       title={t('Custom time range')}
       isOpen={isModalOpen}
       scrollable={false}
       onClose={() => onCancel()}
       footer={
-        <div className="footer">
+        <>
           <Button data-test="time-range-reset" key="reset" variant="link" onClick={() => reloadInputs(true)}>
             {t('Reset')}
           </Button>
@@ -270,24 +272,24 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
               {t('Save')}
             </Button>
           </Tooltip>
-        </div>
+        </>
       }
     >
-      <TextContent>
-        <Text component={TextVariants.p}>
+      <Content>
+        <Content component={ContentVariants.p}>
           {t('Select a custom time range. Flows are selected based on their End Time value.')}
-        </Text>
-      </TextContent>
+        </Content>
+      </Content>
       {getDateTimePickers()}
       {maxChunkAge && (
-        <TextContent>
-          <Text component={TextVariants.blockquote}>
+        <Content>
+          <Content component={ContentVariants.blockquote}>
             {t(
               'Collection latency could be up to {{maxChunkAge}} corresponding to the current Loki "max_chunk_age" ingester configuration.',
               { maxChunkAge: formatDuration(maxChunkAge) }
             )}
-          </Text>
-        </TextContent>
+          </Content>
+        </Content>
       )}
     </Modal>
   );

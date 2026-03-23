@@ -1,15 +1,8 @@
 import { Rule } from '@openshift-console/dynamic-plugin-sdk';
-import {
-  Alert,
-  AlertActionCloseButton,
-  AlertActionLink,
-  Text,
-  TextContent,
-  TextVariants
-} from '@patternfly/react-core';
+import { Alert, AlertActionCloseButton, AlertActionLink, Content, ContentVariants } from '@patternfly/react-core';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { navigate } from '../dynamic-loader/dynamic-loader';
+import { useNavigate } from '../../utils/url';
 import './banner.css';
 
 export interface AlertBannerProps {
@@ -19,6 +12,8 @@ export interface AlertBannerProps {
 
 export const AlertBanner: React.FC<AlertBannerProps> = ({ rule, onDelete }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+  const navigate = useNavigate();
+
   const routeAlert = () => {
     let path = `/monitoring/alerts/${rule.id}`;
     path += `?alertname=${rule.name}&app=${rule.labels.app}&severity=${rule.labels.severity}`;
@@ -42,9 +37,11 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ rule, onDelete }) => {
           </React.Fragment>
         }
       >
-        <TextContent>
-          <Text component={TextVariants.p}>{!!rule.annotations.description ? rule.annotations.description : ''}</Text>
-        </TextContent>
+        <Content>
+          <Content component={ContentVariants.p}>
+            {!!rule.annotations.description ? rule.annotations.description : ''}
+          </Content>
+        </Content>
       </Alert>
     </div>
   );

@@ -593,7 +593,7 @@ const severityLabelsColors = {
 
 export const getSeverityColor = (
   severity: string | undefined
-): 'red' | 'orange' | 'blue' | 'grey' | 'purple' | 'cyan' | 'green' | 'gold' => {
+): 'red' | 'orange' | 'blue' | 'grey' | 'purple' | 'teal' | 'green' | 'yellow' | 'orangered' => {
   if (severity && severity in severityLabelsColors) {
     return severityLabelsColors[severity as keyof typeof severityLabelsColors];
   }

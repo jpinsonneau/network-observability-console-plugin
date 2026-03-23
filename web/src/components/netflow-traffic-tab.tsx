@@ -90,9 +90,9 @@ export const NetflowTrafficTab: React.FC<NetflowTrafficTabProps> = ({ match, obj
       }
     }
 
-    const container = document.getElementById('content-scrollable');
-    if (container) {
-      setContainerHeight(container.clientHeight);
+    const containers = document.getElementsByClassName('pf-v6-c-tab-content');
+    if (containers.length > 0) {
+      setContainerHeight(containers[0].clientHeight);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -287,11 +287,16 @@ export const NetflowTrafficTab: React.FC<NetflowTrafficTabProps> = ({ match, obj
     );
   } else {
     return (
-      <PageSection id="pageSection" data-test="tab-page-section">
-        <EmptyState data-test="error-state" variant={EmptyStateVariant.sm}>
-          <Title headingLevel="h2" size="lg">
-            {t('Kind not managed')}
-          </Title>
+      <PageSection hasBodyWrapper={false} id="pageSection" data-test="tab-page-section">
+        <EmptyState
+          titleText={
+            <Title headingLevel="h2" size="lg">
+              {t('Kind not managed')}
+            </Title>
+          }
+          data-test="error-state"
+          variant={EmptyStateVariant.sm}
+        >
           <EmptyStateBody>{obj?.kind}</EmptyStateBody>
         </EmptyState>
       </PageSection>

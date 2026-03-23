@@ -3,9 +3,10 @@ import { compareProtocols, formatProtocol } from '../protocol';
 
 describe('formatProtocol', () => {
   it('should format protocol', () => {
-    expect(formatProtocol(6, v => v)).toEqual('TCP');
-    expect(formatProtocol(17, v => v)).toEqual('UDP');
-    expect(formatProtocol(0, v => v)).toEqual('HOPOPT');
+    const mockT = (v: string) => v as any;
+    expect(formatProtocol(6, mockT as any)).toEqual('TCP');
+    expect(formatProtocol(17, mockT as any)).toEqual('UDP');
+    expect(formatProtocol(0, mockT as any)).toEqual('HOPOPT');
   });
 });
 

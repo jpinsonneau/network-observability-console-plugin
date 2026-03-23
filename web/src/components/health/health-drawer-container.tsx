@@ -1,17 +1,15 @@
 import { ResourceLink } from '@openshift-console/dynamic-plugin-sdk';
 import {
   Bullseye,
+  Content,
+  ContentVariants,
   Drawer,
   DrawerContent,
   DrawerContentBody,
   DrawerHead,
   DrawerPanelContent,
   EmptyState,
-  EmptyStateIcon,
   Gallery,
-  Text,
-  TextContent,
-  TextVariants,
   Title
 } from '@patternfly/react-core';
 import { CheckCircleIcon } from '@patternfly/react-icons';
@@ -69,15 +67,15 @@ export const HealthDrawerContainer: React.FC<HealthDrawerContainerProps> = ({ ti
           }
         >
           <DrawerContentBody>
-            <TextContent>
-              <Text component={TextVariants.h3}>{title}</Text>
-            </TextContent>
+            <Content>
+              <Content component={ContentVariants.h3}>{title}</Content>
+            </Content>
             {!hasAnyViolations && (
               <Bullseye>
-                <EmptyState>
-                  <EmptyStateIcon icon={CheckCircleIcon} />
-                  <Title headingLevel="h2">{t('No violations found')}</Title>
-                </EmptyState>
+                <EmptyState
+                  titleText={<Title headingLevel="h2">{t('No violations found')}</Title>}
+                  icon={CheckCircleIcon}
+                ></EmptyState>
               </Bullseye>
             )}
             {hasAnyViolations && (

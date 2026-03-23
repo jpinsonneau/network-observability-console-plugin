@@ -14,7 +14,7 @@
   padding-left: 1.5rem;
 }
 
-.error-suggestions .pf-v5-c-button {
+.error-suggestions .pf-v6-c-button {
   margin-top: 0.5rem;
 }
 
@@ -40,7 +40,7 @@
   padding-left: 1rem;
 }
 
-.error-suggestions-compact .pf-v5-c-button {
+.error-suggestions-compact .pf-v6-c-button {
   margin-top: 0.25rem;
   font-size: var(--pf-v5-global--FontSize--sm);
 }
@@ -49,7 +49,7 @@
   margin-top: 0.5rem;
 }
 
-.error-suggestions-compact .error-suggestions-links .pf-v5-c-button {
+.error-suggestions-compact .error-suggestions-links .pf-v6-c-button {
   padding: 0;
   font-size: var(--pf-v5-global--FontSize--sm);
   margin-top: 0;

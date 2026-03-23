@@ -2,13 +2,11 @@ import {
   Bullseye,
   ClipboardCopy,
   ClipboardCopyVariant,
+  Content,
+  ContentVariants,
   EmptyState,
   EmptyStateBody,
-  EmptyStateIcon,
   Spinner,
-  Text,
-  TextContent,
-  TextVariants,
   Title
 } from '@patternfly/react-core';
 import { ExclamationCircleIcon, ExclamationTriangleIcon } from '@patternfly/react-icons';
@@ -134,29 +132,30 @@ export const ErrorComponent: React.FC<ErrorProps> = ({ title, error }) => {
 
   return (
     <div id="netobserv-error-container">
-      <EmptyState data-test="error-state">
-        <EmptyStateIcon
-          className={isCritical ? 'netobserv-error-icon' : ''}
-          icon={isCritical ? ExclamationCircleIcon : ExclamationTriangleIcon}
-        />
-        <Title headingLevel="h2" size="lg">
-          {title}
-        </Title>
+      <EmptyState
+        titleText={
+          <Title headingLevel="h2" size="lg">
+            {title}
+          </Title>
+        }
+        icon={isCritical ? ExclamationCircleIcon : ExclamationTriangleIcon}
+        data-test="error-state"
+      >
         <EmptyStateBody className="error-body">
-          <Text className={isCritical ? 'netobserv-error-message' : ''} component={TextVariants.p}>
+          <Content className={isCritical ? 'netobserv-error-message' : ''} component={ContentVariants.p}>
             {String(error)}
-          </Text>
-          <TextContent className="error-text-content">
+          </Content>
+          <Content className="error-text-content">
             {typeof error !== 'string' && <ErrorSuggestions error={error} compact={false} />}
             {status && <StatusTexts status={status} />}
             {statusError && (
-              <Text component={TextVariants.blockquote}>
+              <Content component={ContentVariants.blockquote}>
                 {t('Check for errors in health dashboard. Status endpoint is returning: {{statusError}}', {
                   statusError
                 })}
-              </Text>
+              </Content>
             )}
-          </TextContent>
+          </Content>
         </EmptyStateBody>
         <SecondaryAction
           showMetrics={() => updateInfo(LokiInfo.Metrics)}
@@ -170,8 +169,8 @@ export const ErrorComponent: React.FC<ErrorProps> = ({ title, error }) => {
         </Bullseye>
       ) : (
         info && (
-          <TextContent>
-            <Text component={TextVariants.h4}>{infoName}</Text>
+          <Content>
+            <Content component={ContentVariants.h4}>{infoName}</Content>
             <ClipboardCopy
               isCode
               isExpanded
@@ -181,7 +180,7 @@ export const ErrorComponent: React.FC<ErrorProps> = ({ title, error }) => {
             >
               {info}
             </ClipboardCopy>
-          </TextContent>
+          </Content>
         )
       )}
     </div>

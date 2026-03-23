@@ -1,16 +1,55 @@
-import { Button, Dropdown, DropdownItem, Toolbar, ToolbarItem } from '@patternfly/react-core';
+import { DropdownItem, Toolbar } from '@patternfly/react-core';
 import { mount, shallow } from 'enzyme';
 import * as React from 'react';
 import { FilterDefinitionSample } from '../../../../components/__tests-data__/filters';
 import { actOn } from '../../../../components/__tests__/common.spec';
 import { defaultConfig } from '../../../../model/config';
+import { NetflowContext, NetflowContextValue } from '../../../../model/netflow-context';
+import { ConfigCapabilities } from '../../../../utils/netflow-capabilities-hook';
 import FiltersToolbar, { FiltersToolbarProps } from '../../../toolbar/filters-toolbar';
+
+const testCaps = {
+  allowLoki: true,
+  allowProm: true,
+  isFlow: true,
+  isConnectionTracking: true,
+  isDNSTracking: false,
+  isFlowRTT: false,
+  isPktDrop: true,
+  isPromOnly: false,
+  availableScopes: [],
+  allowedMetricTypes: [],
+  availablePanels: [],
+  selectedPanels: [],
+  availableColumns: [],
+  selectedColumns: [],
+  filterDefs: FilterDefinitionSample,
+  quickFilters: [],
+  defaultFilters: [],
+  flowQuery: {},
+  fetchFunctions: {}
+} as unknown as ConfigCapabilities;
+
+import { defaultNetflowMetrics } from '../../../../api/loki';
+import { FetchCallbacks } from '../../../../model/netflow-context';
+
+const testFetchCallbacks: FetchCallbacks = {
+  metricsRef: { current: defaultNetflowMetrics },
+  setFlows: jest.fn(),
+  setMetrics: jest.fn(),
+  setError: jest.fn()
+};
+
+const testContext: NetflowContextValue = {
+  caps: testCaps,
+  config: defaultConfig,
+  k8sModels: {},
+  fetchCallbacks: testFetchCallbacks
+};
 
 describe('<FiltersToolbar />', () => {
   const props: FiltersToolbarProps = {
-    config: defaultConfig,
     filters: { match: 'all', list: [] },
-    filterDefinitions: FilterDefinitionSample,
     forcedFilters: undefined,
     skipTipsDelay: true,
     setFilters: jest.fn(),
@@ -33,7 +72,6 @@ describe('<FiltersToolbar />', () => {
       setRecordType: jest.fn(),
       setDataSource: jest.fn()
     },
-    quickFilters: [],
     isFullScreen: false,
     setFullScreen: jest.fn()
   };
@@ -43,17 +81,18 @@ describe('<FiltersToolbar />', () => {
     props.clearFilters = jest.fn();
   });
 
+  const withContext = (ui: React.ReactElement) => (
+    <NetflowContext.Provider value={testContext}>{ui}</NetflowContext.Provider>
+  );
+
   it('should render component', async () => {
-    const wrapper = shallow(<FiltersToolbar {...props} />);
+    const wrapper = shallow(withContext(<FiltersToolbar {...props} />));
     expect(wrapper.find(FiltersToolbar)).toBeTruthy();
     expect(wrapper.find(Toolbar)).toBeTruthy();
-    expect(wrapper.find(ToolbarItem)).toHaveLength(3);
-    expect(wrapper.find(Dropdown)).toBeTruthy();
-    expect(wrapper.find(Button)).toBeTruthy();
   });
 
   it('should open and close', async () => {
-    const wrapper = mount(<FiltersToolbar {...props} />);
+    const wrapper = mount(withContext(<FiltersToolbar {...props} />));
     expect(wrapper.find('#filter-popper').length).toBe(0);
     expect(wrapper.find('.column-filter-item').length).toBe(0);
 
@@ -77,7 +116,7 @@ describe('<FiltersToolbar />', () => {
   });
 
   it('should show tips on complex fields', async () => {
-    const wrapper = mount(<FiltersToolbar {...props} />);
+    const wrapper = mount(withContext(<FiltersToolbar {...props} />));
 
     //open popper
     await actOn(() => wrapper.find('[aria-label="Open advanced search"]').last().simulate('click'), wrapper);

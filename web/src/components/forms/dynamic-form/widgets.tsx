@@ -26,7 +26,7 @@ export const TextWidget: React.FC<WidgetProps> = props => {
     <NumberWidget {...props} />
   ) : (
     <span
-      className={classNames('pf-v5-c-form-control', {
+      className={classNames('pf-v6-c-form-control', {
         'pf-m-disabled': disabled,
         'pf-m-readonly': readonly
       })}
@@ -50,7 +50,7 @@ export const NumberWidget: React.FC<WidgetProps> = props => {
   const { value, id, onBlur, onChange, onFocus } = props;
   const numberValue = _.toNumber(value);
   return (
-    <span className="pf-v5-c-form-control">
+    <span className="pf-v6-c-form-control">
       <input
         id={id}
         key={id}
@@ -95,7 +95,6 @@ export const SwitchWidget: React.FC<WidgetProps> = props => {
       onChange={(_event, v) => onChange(v, undefined, id)}
       onFocus={onFocus && (event => onFocus(id, event.target.value))}
       label={t('True')}
-      labelOff={t('False')}
     />
   );
 };
@@ -137,7 +136,7 @@ export const JSONWidget: React.FC<WidgetProps> = props => {
   const { disabled = false, id, onBlur, onChange, onFocus, readonly = false, value = '{}' } = props;
   return (
     <span
-      className={classNames('pf-v5-c-form-control', {
+      className={classNames('pf-v6-c-form-control', {
         'pf-m-disabled': disabled,
         'pf-m-readonly': readonly
       })}
@@ -165,14 +164,14 @@ export const ArrayCheckboxesWidget: React.FC<WidgetProps> = props => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enums = (schema.items as any).enum || [];
-  const errFunc = () => console.error('Function not implemented.');
+  const errFunc = (value: string) => () => console.error('Function not implemented.', value);
 
   return (
     // since schema type is 'array' and widget is 'checkboxes', we use AtomicFieldTemplate
     // to render the field and values all at once without the add/remove buttons
     <AtomicFieldTemplate
-      onKeyChange={() => errFunc}
-      onDropPropertyClick={() => errFunc}
+      onKeyChange={errFunc}
+      onDropPropertyClick={errFunc}
       description={<DescriptionField schema={schema} description={schema.description} />}
       {...{
         ...props,

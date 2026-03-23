@@ -5,9 +5,9 @@ import { EmptyState } from '@patternfly/react-core';
 import { droppedMetrics, metrics } from '../../../../components/__tests-data__/metrics';
 
 import { defaultNetflowMetrics } from '../../../../api/loki';
-import { TruncateLength } from '../../../../components/dropdowns/truncate-dropdown';
 import { ScopeDefSample } from '../../../../components/__tests-data__/scopes';
 import { actOn, waitForRender } from '../../../../components/__tests__/common.spec';
+import { TruncateLength } from '../../../../components/dropdowns/truncate-dropdown';
 import { FlowScope, RecordType } from '../../../../model/flow-query';
 import { Result } from '../../../../utils/result';
 import { SamplePanel, ShuffledDefaultPanels } from '../../../__tests-data__/panels';

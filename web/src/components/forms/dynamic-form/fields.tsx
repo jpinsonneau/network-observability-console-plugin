@@ -56,9 +56,16 @@ export const Description: React.FC<{
         headerContent={label}
         bodyContent={<div className={`co-pre-line description`}>{content}</div>}
       >
-        <Button className={`co-pre-line description`} variant="plain" style={{ paddingLeft: 0 }}>
-          {formatText(parts[0])} {t('(see more...)')}
-        </Button>
+        <Button
+          icon={
+            <>
+              {formatText(parts[0])} {t('(see more...)')}
+            </>
+          }
+          className={`co-pre-line description`}
+          variant="plain"
+          style={{ paddingLeft: 0 }}
+        />
       </Popover>
     );
   }
@@ -92,6 +99,7 @@ export const DescriptionField: React.FC<DescriptionFieldProps> = ({
 };
 
 export type FormFieldProps = {
+  children?: React.ReactNode;
   id: string;
   defaultLabel?: string;
   required: boolean;
@@ -122,6 +130,7 @@ export const FormField: React.FC<FormFieldProps> = ({ children, id, defaultLabel
 };
 
 export type FieldSetProps = Pick<FieldProps, 'idSchema' | 'required' | 'schema' | 'uiSchema'> & {
+  children?: React.ReactNode;
   defaultLabel?: string;
 };
 
@@ -132,15 +141,9 @@ export const FieldSet: React.FC<FieldSetProps> = props => {
   const description = useSchemaDescription(schema, uiSchema || {});
   return showLabel && label ? (
     <div id={`${idSchema.$id}_field-group`} className="form-group co-dynamic-form__field-group">
-      <AccordionItem>
-        <AccordionToggle
-          id={`${idSchema.$id}_accordion-toggle`}
-          isExpanded={expanded}
-          onClick={() => setExpanded(!expanded)}
-        >
-          <label className={classnames({ 'co-required': required })} htmlFor={`${idSchema.$id}_accordion-content`}>
-            {label}
-          </label>
+      <AccordionItem isExpanded={expanded}>
+        <AccordionToggle id={`${idSchema.$id}_accordion-toggle`} onClick={() => setExpanded(!expanded)}>
+          <span className={classnames({ 'co-required': required })}>{label}</span>
         </AccordionToggle>
         {description && (
           <Description
@@ -151,9 +154,7 @@ export const FieldSet: React.FC<FieldSetProps> = props => {
             padding={true}
           />
         )}
-        <AccordionContent id={`${idSchema.$id}_accordion-content`} isHidden={!expanded}>
-          {children}
-        </AccordionContent>
+        <AccordionContent id={`${idSchema.$id}_accordion-content`}>{children}</AccordionContent>
       </AccordionItem>
     </div>
   ) : (

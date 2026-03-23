@@ -1,6 +1,8 @@
 import { Rule } from '@openshift-console/dynamic-plugin-sdk';
 import {
   Button,
+  Content,
+  ContentVariants,
   Drawer,
   DrawerContent,
   DrawerContentBody,
@@ -9,8 +11,6 @@ import {
   PageSection,
   Tab,
   Tabs,
-  Text,
-  TextVariants,
   Title
 } from '@patternfly/react-core';
 import { QuestionCircleIcon, SyncAltIcon } from '@patternfly/react-icons';
@@ -121,7 +121,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                   />
                 </Tabs>
               </FlexItem>
-              <FlexItem className={`${isDarkTheme ? 'dark' : 'light'}-bottom-border`}>
+              <FlexItem className={'bottom-border'}>
                 <Button
                   data-test="health-scoring-info-button"
                   className="overflow-button"
@@ -165,7 +165,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   };
 
   return (
-    <PageSection id="health-page" className={`${isDarkTheme ? 'dark' : 'light'}`}>
+    <PageSection hasBodyWrapper={false} id="health-page" className={`${isDarkTheme ? 'dark' : 'light'}`}>
       <Drawer id="health-drawer" isInline isExpanded={isScoringDrawerOpen}>
         <DrawerContent id="healthDrawerContent" panelContent={panelContent()}>
           <DrawerContentBody id="healthDrawerBody">
@@ -175,7 +175,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                   <FlexItem flex={{ default: 'flex_1' }}>
                     <Flex direction={{ default: 'column' }}>
                       <FlexItem>
-                        <Title headingLevel={TextVariants.h1}>{t('Network Health')}</Title>
+                        <Title headingLevel={ContentVariants.h1}>{t('Network Health')}</Title>
                       </FlexItem>
                       <FlexItem>
                         <HealthSummary rules={rules} stats={health} forceCollapsed={isScoringDrawerOpen} />
@@ -187,7 +187,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                       <FlexItem className="netobserv-refresh-interval-container">
                         <Flex direction={{ default: 'column' }}>
                           <FlexItem className="netobserv-action-title">
-                            <Text component={TextVariants.h4}>{t('Refresh interval')}</Text>
+                            <Content component={ContentVariants.h4}>{t('Refresh interval')}</Content>
                           </FlexItem>
                           <FlexItem flex={{ default: 'flex_1' }}>
                             <RefreshDropdown

@@ -4,11 +4,10 @@ import {
   CardBody,
   CardHeader,
   CardTitle,
+  Content,
+  ContentVariants,
   Flex,
-  FlexItem,
-  Text,
-  TextContent,
-  TextVariants
+  FlexItem
 } from '@patternfly/react-core';
 import { BellIcon, ExclamationCircleIcon, ExclamationTriangleIcon, InfoAltIcon } from '@patternfly/react-icons';
 import * as React from 'react';
@@ -96,7 +95,6 @@ export const HealthCard: React.FC<HealthCardProps> = ({
       <CardHeader
         className={hideTitle ? 'card-header-hidden' : 'card-header'}
         selectableActions={{
-          selectableActionId: `health-card-${name || 'global'}`,
           selectableActionAriaLabelledby: `selectable-card-${name || 'global'}`,
           variant: 'single',
           onClickAction: onClick
@@ -147,18 +145,24 @@ export const HealthCard: React.FC<HealthCardProps> = ({
           <FlexItem>
             <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
               <FlexItem>
-                <TextContent>
-                  <Text component={TextVariants.small} style={{ color: 'var(--pf-v5-global--Color--200)' }}>
+                <Content>
+                  <Content
+                    component={ContentVariants.small}
+                    style={{
+                      color:
+                        'var(--pf-t--temp--dev--tbd)' /* CODEMODS: original v5 color was --pf-v5-global--Color--200 */
+                    }}
+                  >
                     {t('Score')}
-                  </Text>
-                </TextContent>
+                  </Content>
+                </Content>
               </FlexItem>
               <FlexItem>
-                <TextContent>
-                  <Text component={TextVariants.h1}>
+                <Content>
+                  <Content component={ContentVariants.h1}>
                     {isNaN(score) || !isFinite(score) ? '-' : valueFormat(score, 1)}
-                  </Text>
-                </TextContent>
+                  </Content>
+                </Content>
               </FlexItem>
             </Flex>
           </FlexItem>

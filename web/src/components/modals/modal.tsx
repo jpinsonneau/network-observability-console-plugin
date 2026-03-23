@@ -1,28 +1,31 @@
-import { Button, Text, TextContent, TextVariants } from '@patternfly/react-core';
-import { CloseIcon } from '@patternfly/react-icons';
+import { Modal, ModalBody, ModalFooter, ModalHeader, ModalVariant } from '@patternfly/react-core';
 import React from 'react';
-import Modal from 'react-modal';
-import { useTheme } from '../../utils/theme-hook';
-import './modal.css';
+
+// TODO: Remove this workaround when @patternfly/react-drag-drop >= 6.5.0 is available,
+// which adds an `appendTo` prop on DragDropSort/DragDropContainer.
+// See https://github.com/patternfly/patternfly-react/issues/11566
+function ensureRootElement() {
+  if (!document.getElementById('root')) {
+    const el = document.createElement('div');
+    el.id = 'root';
+    (document.getElementById('app') || document.body).appendChild(el);
+  }
+}
 
 export interface CustomModalProps {
+  children?: React.ReactNode;
   title: string;
   description?: JSX.Element;
   footer?: JSX.Element;
   onClose?: () => void;
   isOpen: boolean;
-  scrollable: boolean;
+  scrollable?: boolean;
   id?: string;
 }
 
-/* This Modal component replace patternfly one that has issues with overflows
- * it is based on console approach but their component doesn't manage non scrollable content & overflow
- * in @openshift-console/dynamic-plugin-sdk
- * https://github.com/openshift/console/blob/master/frontend/public/components/factory/modal.tsx
- */
 const CustomModal: React.FC<CustomModalProps> = ({
   id,
-  scrollable,
+  scrollable = true,
   isOpen,
   onClose,
   title,
@@ -30,54 +33,25 @@ const CustomModal: React.FC<CustomModalProps> = ({
   children,
   footer
 }) => {
-  const isDarkTheme = useTheme();
+  React.useEffect(() => {
+    ensureRootElement();
+  }, []);
 
-  return isOpen ? (
+  return (
     <Modal
-      data-test={id}
       id={id}
+      data-test={id}
+      variant={ModalVariant.small}
       isOpen={isOpen}
-      className={'modal-dialog'}
-      ariaHideApp={false}
-      onRequestClose={() => (onClose ? onClose() : console.error('modal called onClose but is undefined'))}
-      overlayClassName="co-overlay"
+      onClose={onClose}
+      appendTo={() => document.body}
     >
-      <div className={`modal-content modal-content--no-inner-scroll ${isDarkTheme ? 'dark' : 'light'}`}>
-        <div data-test={`${id}-header`} className="modal-header">
-          <TextContent>
-            <Text component={TextVariants.h1}>
-              {title}
-              {onClose && (
-                <Button
-                  data-test={`${id}-close-button`}
-                  className={'co-close-button co-close-button--float-right'}
-                  onClick={e => {
-                    e.stopPropagation();
-                    onClose();
-                  }}
-                  variant="plain"
-                >
-                  <CloseIcon />
-                </Button>
-              )}
-            </Text>
-          </TextContent>
-          {description && <div className="modal-description">{description}</div>}
-        </div>
-        {children && (
-          <div data-test={`${id}-body`} className={`${'modal-body'} ${scrollable ? 'scrollable' : 'overflow-visible'}`}>
-            {children}
-          </div>
-        )}
-        {footer && (
-          <div data-test={`${id}-footer`} className="modal-footer">
-            {footer}
-          </div>
-        )}
-      </div>
+      <ModalHeader title={title} description={description} />
+      <ModalBody style={{ maxHeight: '50vh' }} tabIndex={scrollable ? 0 : undefined}>
+        {children}
+      </ModalBody>
+      {footer && <ModalFooter>{footer}</ModalFooter>}
     </Modal>
-  ) : (
-    <></>
   );
 };
 

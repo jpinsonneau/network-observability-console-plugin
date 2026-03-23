@@ -50,7 +50,7 @@ export const NetflowTableRow: React.FC<NetflowTableRowProps> = ({
         data-test={`tr-${flow.key}`}
         isRowSelected={flow.key === selectedRecord?.key}
         onRowClick={onRowClick}
-        className={`${isDark ? 'dark' : 'light'}-stripped`}
+        className="stripped"
         style={{ height }}
       >
         {showContent &&
