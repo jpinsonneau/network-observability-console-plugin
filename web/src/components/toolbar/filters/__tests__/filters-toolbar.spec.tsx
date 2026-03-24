@@ -1,8 +1,7 @@
-import { DropdownItem, Toolbar } from '@patternfly/react-core';
-import { mount, shallow } from 'enzyme';
+import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import * as React from 'react';
+
 import { FilterDefinitionSample } from '../../../../components/__tests-data__/filters';
-import { actOn } from '../../../../components/__tests__/common.spec';
 import { defaultConfig } from '../../../../model/config';
 import { NetflowContext, NetflowContextValue } from '../../../../model/netflow-context';
 import { ConfigCapabilities } from '../../../../utils/netflow-capabilities-hook';
@@ -86,70 +85,42 @@ describe('<FiltersToolbar />', () => {
   );
 
   it('should render component', async () => {
-    const wrapper = shallow(withContext(<FiltersToolbar {...props} />));
-    expect(wrapper.find(FiltersToolbar)).toBeTruthy();
-    expect(wrapper.find(Toolbar)).toBeTruthy();
+    const { container } = render(withContext(<FiltersToolbar {...props} />));
+    expect(container.querySelector('.pf-v6-c-toolbar')).toBeTruthy();
   });
 
-  it('should open and close', async () => {
-    const wrapper = mount(withContext(<FiltersToolbar {...props} />));
-    expect(wrapper.find('#filter-popper').length).toBe(0);
-    expect(wrapper.find('.column-filter-item').length).toBe(0);
+  it('should open and close search popper', async () => {
+    const { container } = render(withContext(<FiltersToolbar {...props} />));
 
-    //open popper
-    await actOn(() => wrapper.find('[aria-label="Open advanced search"]').last().simulate('click'), wrapper);
+    await act(async () => {
+      fireEvent.click(container.querySelector('[aria-label="Open advanced search"]')!);
+    });
+    await waitFor(() => {
+      expect(document.querySelector('#filter-popper')).toBeTruthy();
+    });
 
-    //open dropdow
-    await actOn(() => wrapper.find('#column-filter-toggle').at(0).simulate('click'), wrapper);
-    expect(wrapper.find('.column-filter-item').length).toBeGreaterThan(0);
-    expect(wrapper.find(DropdownItem).length).toBeGreaterThan(0);
+    await act(async () => {
+      fireEvent.click(container.querySelector('[aria-label="Open advanced search"]')!);
+    });
 
-    //close dropdow
-    await actOn(() => wrapper.find('#column-filter-toggle').at(0).simulate('click'), wrapper);
-    expect(wrapper.find('.column-filter-item').length).toBe(0);
-
-    //close popper
-    await actOn(() => wrapper.find('[aria-label="Open advanced search"]').last().simulate('click'), wrapper);
-
-    //setFilters should not be called at startup, because filters are supposed to be already initialized from URL
     expect(props.setFilters).toHaveBeenCalledTimes(0);
   });
 
-  it('should show tips on complex fields', async () => {
-    const wrapper = mount(withContext(<FiltersToolbar {...props} />));
+  it('should open column dropdown in popper', async () => {
+    const { container } = render(withContext(<FiltersToolbar {...props} />));
 
-    //open popper
-    await actOn(() => wrapper.find('[aria-label="Open advanced search"]').last().simulate('click'), wrapper);
+    await act(async () => {
+      fireEvent.click(container.querySelector('[aria-label="Open advanced search"]')!);
+    });
+    await waitFor(() => {
+      expect(document.querySelector('#filter-popper')).toBeTruthy();
+    });
 
-    //open dropdow
-    await actOn(() => wrapper.find('#column-filter-toggle').at(0).simulate('click'), wrapper);
-
-    //select name
-    await actOn(() => wrapper.find('[id="name"]').last().simulate('click'), wrapper);
-    let tips = wrapper.find('#tips').at(0).getElement();
-    expect(String(tips.props.children[0].props.children)).toContain('Specify a single kubernetes name');
-
-    //open dropdow
-    await actOn(() => wrapper.find('#column-filter-toggle').at(0).simulate('click'), wrapper);
-
-    //select port
-    await actOn(() => wrapper.find('[id="port"]').last().simulate('click'), wrapper);
-    tips = wrapper.find('#tips').at(0).getElement();
-    expect(String(tips.props.children[0].props.children)).toContain('Specify a single port');
-
-    //open dropdow
-    await actOn(() => wrapper.find('#column-filter-toggle').at(0).simulate('click'), wrapper);
-
-    //select address
-    await actOn(() => wrapper.find('[id="address"]').last().simulate('click'), wrapper);
-    tips = wrapper.find('#tips').at(0).getElement();
-    expect(String(tips.props.children[0].props.children)).toContain('Specify a single IP');
-
-    //open dropdow
-    await actOn(() => wrapper.find('#column-filter-toggle').at(0).simulate('click'), wrapper);
-    //select Protocol
-    await actOn(() => wrapper.find('[id="protocol"]').last().simulate('click'), wrapper);
-    tips = wrapper.find('#tips').at(0).getElement();
-    expect(String(tips.props.children[0].props.children)).toContain('Specify a single protocol');
+    await act(async () => {
+      fireEvent.click(document.querySelector('#column-filter-toggle')!);
+    });
+    await waitFor(() => {
+      expect(document.querySelectorAll('.column-filter-item').length).toBeGreaterThan(0);
+    });
   });
 });

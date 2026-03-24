@@ -12,8 +12,7 @@ import {
   EmptyStateBody,
   EmptyStateVariant,
   PageSection,
-  Spinner,
-  Title
+  Spinner
 } from '@patternfly/react-core';
 import _ from 'lodash';
 import * as React from 'react';
@@ -289,11 +288,8 @@ export const NetflowTrafficTab: React.FC<NetflowTrafficTabProps> = ({ match, obj
     return (
       <PageSection hasBodyWrapper={false} id="pageSection" data-test="tab-page-section">
         <EmptyState
-          titleText={
-            <Title headingLevel="h2" size="lg">
-              {t('Kind not managed')}
-            </Title>
-          }
+          titleText={t('Kind not managed')}
+          headingLevel="h2"
           data-test="error-state"
           variant={EmptyStateVariant.sm}
         >

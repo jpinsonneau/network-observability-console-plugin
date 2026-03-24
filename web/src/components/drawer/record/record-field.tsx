@@ -245,9 +245,13 @@ export const RecordField: React.FC<RecordFieldProps> = ({
               const child = c ? c : emptyText();
               if (i > 0 && asChild && childIcon) {
                 const arrow = <span className="child-arrow">{'↪'}</span>;
-                return sideBySideContainer(arrow, child, 'flexNone', 'flex_1', 'nowrap');
+                return (
+                  <React.Fragment key={i}>
+                    {sideBySideContainer(arrow, child, 'flexNone', 'flex_1', 'nowrap')}
+                  </React.Fragment>
+                );
               }
-              return child;
+              return <React.Fragment key={i}>{child}</React.Fragment>;
             })
         ) : (
           <Content component="p" className="text-muted record-field-value">

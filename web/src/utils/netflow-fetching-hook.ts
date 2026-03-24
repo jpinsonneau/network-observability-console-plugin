@@ -29,7 +29,7 @@ export function canTick(
     !initState.current.includes('configLoaded') ||
     initState.current.includes('configLoadError')
   ) {
-    console.error('tick skipped', initState.current);
+    console.debug('tick skipped', initState.current);
     return false;
   }
   if (modals.isTRModalOpen || modals.isOverviewModalOpen || modals.isColModalOpen || modals.isExportModalOpen) {

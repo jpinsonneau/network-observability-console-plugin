@@ -5,8 +5,7 @@ import {
   EmptyState,
   EmptyStateBody,
   EmptyStateVariant,
-  Spinner,
-  Title
+  Spinner
 } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons';
 import React from 'react';
@@ -69,11 +68,8 @@ export const Empty: React.FC<EmptyProps> = ({ showDetails, resetDefaultFilters, 
 
   return (
     <EmptyState
-      titleText={
-        <Title headingLevel="h2" size="lg">
-          {t('No results found')}
-        </Title>
-      }
+      titleText={t('No results found')}
+      headingLevel="h2"
       icon={SearchIcon}
       variant={!showDetails ? EmptyStateVariant.sm : undefined}
       data-test="empty-state"
