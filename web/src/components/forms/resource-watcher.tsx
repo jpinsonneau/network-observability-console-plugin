@@ -210,7 +210,9 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
             })
               .then(res => {
                 setErrors([]);
-                onSuccess && onSuccess(res);
+                if (onSuccess) {
+                  onSuccess(res);
+                }
               })
               .catch(e => setErrors([e.message]));
           }

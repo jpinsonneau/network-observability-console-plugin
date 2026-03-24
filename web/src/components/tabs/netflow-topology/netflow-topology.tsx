@@ -97,7 +97,7 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
     } catch (err) {
       console.log('Could not fetch topology alerts:', err);
     }
-  }, []);
+  }, [config.recordingAnnotations]);
 
   // Trigger stats refresh if outdated
   const refreshResourceStatsIfNeeded = React.useCallback(() => {

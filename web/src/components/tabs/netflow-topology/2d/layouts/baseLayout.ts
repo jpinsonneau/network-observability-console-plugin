@@ -247,8 +247,9 @@ export class BaseLayout implements Layout {
         try {
           this.runLayout(false, this.scheduleRestart);
           this.scheduleRestart = false;
-          // eslint-disable-next-line no-empty
-        } catch (e) {}
+        } catch {
+          // intentionally ignored
+        }
       });
     }
   };

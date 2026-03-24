@@ -29,7 +29,6 @@ export const NetflowOverviewPanel: React.FC<NetflowOverviewPanelProps> = ({
   children,
   onClick,
   focusOn,
-  isSelected,
   isFocus
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');

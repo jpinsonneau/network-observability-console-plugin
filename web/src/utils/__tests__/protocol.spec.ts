@@ -1,12 +1,14 @@
+import { TFunction } from 'i18next';
 import { FilterDefinitionSample } from '../../components/__tests-data__/filters';
 import { compareProtocols, formatProtocol } from '../protocol';
 
 describe('formatProtocol', () => {
   it('should format protocol', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockT = (v: string) => v as any;
-    expect(formatProtocol(6, mockT as any)).toEqual('TCP');
-    expect(formatProtocol(17, mockT as any)).toEqual('UDP');
-    expect(formatProtocol(0, mockT as any)).toEqual('HOPOPT');
+    expect(formatProtocol(6, mockT as TFunction)).toEqual('TCP');
+    expect(formatProtocol(17, mockT as TFunction)).toEqual('UDP');
+    expect(formatProtocol(0, mockT as TFunction)).toEqual('HOPOPT');
   });
 });
 

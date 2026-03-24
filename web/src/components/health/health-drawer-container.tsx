@@ -32,7 +32,9 @@ export const HealthDrawerContainer: React.FC<HealthDrawerContainerProps> = ({ ti
   const drawerRef = React.useRef<HTMLDivElement>(null);
 
   const onExpand = () => {
-    drawerRef.current && drawerRef.current.focus();
+    if (drawerRef.current) {
+      drawerRef.current.focus();
+    }
   };
 
   const selectedItem = React.useMemo(() => {

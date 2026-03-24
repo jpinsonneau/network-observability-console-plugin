@@ -1154,7 +1154,9 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
             isFocusable
               ? (id?: string) => {
                   setSelectedPanel(props.panels.find(p => p.id === id));
-                  props.setFocus ? props.setFocus(!allowFocus) : undefined;
+                  if (props.setFocus) {
+                    props.setFocus(!allowFocus);
+                  }
                 }
               : undefined
           }
