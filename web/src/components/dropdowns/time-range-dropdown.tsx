@@ -84,6 +84,7 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({ id, range,
         data-test={id}
         id={id}
         isOpen={isOpen}
+        onOpenChange={setOpen}
         onSelect={() => setOpen(false)}
         toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
           <MenuToggle
@@ -91,7 +92,6 @@ export const TimeRangeDropdown: React.FC<TimeRangeDropdownProps> = ({ id, range,
             data-test={`${id}-dropdown`}
             id={`${id}-dropdown`}
             onClick={() => setOpen(!isOpen)}
-            onBlur={() => setTimeout(() => setOpen(false), 500)}
           >
             {selectedKey === customTimeRangeKey
               ? textContent(false)
