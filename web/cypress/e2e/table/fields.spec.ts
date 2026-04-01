@@ -97,8 +97,8 @@ describe('netflow-table', () => {
   });
 
   it('display pktDrop', () => {
-    // select third row
-    cy.get('#netflow-table-row-2').click();
+    // select seventh row (has pktDrop data)
+    cy.get('#netflow-table-row-6').click();
 
     // check for drop bytes and packets
     cy.checkRecordField('Bytes', 'Bytes', ['32 bytes dropped']);
@@ -117,8 +117,8 @@ describe('netflow-table', () => {
   });
 
   it('display flowRTT', () => {
-    // select second row
-    cy.get('#netflow-table-row-2').click();
+    // select seventh row (has flowRTT = 4047000ns = 4.05ms)
+    cy.get('#netflow-table-row-6').click();
 
     // check for rtt
     cy.checkRecordField('TimeFlowRttMs', 'Flow RTT', ['4.05ms']);
@@ -133,8 +133,8 @@ describe('netflow-table', () => {
   });
 
   it('display zones', () => {
-    // select second row
-    cy.get('#netflow-table-row-2').click();
+    // select seventh row (has zone data: eu-west-1 and us-east-2)
+    cy.get('#netflow-table-row-6').click();
 
     // check for source zone
     cy.checkRecordField('SrcZone', 'Zone', ['eu-west-1']);
@@ -144,8 +144,8 @@ describe('netflow-table', () => {
   });
 
   it('display networkEvents', () => {
-    // select third row
-    cy.get('#netflow-table-row-3').click();
+    // select eighth row (has NetworkEvents data)
+    cy.get('#netflow-table-row-7').click();
 
     // check for source zone
     cy.checkRecordField('NetworkEvents', 'Network Events', ['Allowed by default allow from local node policy, direction Ingress']);
