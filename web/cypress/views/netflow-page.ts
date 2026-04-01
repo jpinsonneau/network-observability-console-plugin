@@ -51,11 +51,13 @@ export const netflowPage = {
     stopAutoRefresh: () => {
         cy.byTestID(genSelectors.refreshDrop).should('exist').then($btn => {
             // only stop refresh if it's not already OFF
-            if (!$btn.text().includes("Refresh off")) {
-                cy.byTestID(genSelectors.refreshDrop).click()
+            if ($btn.text() != "Refresh off") {
+                cy.wrap($btn).click({ force: true })
                 // Wait for dropdown menu to be rendered and visible
                 cy.get('.pf-v5-c-menu').should('be.visible')
-                cy.get('body').find('[data-test="OFF_KEY"]').click()
+                cy.get('[data-test="OFF_KEY"]')
+                    .should('be.visible')
+                    .click()
             }
         })
     },
