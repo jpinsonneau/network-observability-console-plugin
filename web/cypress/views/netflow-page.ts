@@ -53,8 +53,11 @@ export const netflowPage = {
             // only stop refresh if it's not already OFF
             if ($btn.text() != "Refresh off") {
                 cy.wrap($btn).click({ force: true })
-                cy.get('[data-test="OFF_KEY"]').should('exist').click({ force: true })
-                cy.wrap($btn).click({ force: true })
+                // Wait for dropdown menu to be rendered and visible
+                cy.get('.pf-v5-c-menu').should('be.visible')
+                cy.get('[data-test="OFF_KEY"]')
+                    .should('be.visible')
+                    .click()
             }
         })
     },
