@@ -39,7 +39,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
       <Consumer>
         {ctx => {
           const status = getFlowCollectorOverallStatus(ctx.data, ctx.loadError);
-          const showTrafficButton = status === 'ready';
+          const showTrafficButton = status === 'ready' || status === 'degraded';
 
           return (
             <PageSection id="pageSection">

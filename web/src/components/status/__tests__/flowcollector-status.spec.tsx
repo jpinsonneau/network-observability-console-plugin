@@ -38,9 +38,18 @@ describe('getFlowCollectorOverallStatus', () => {
     expect(getFlowCollectorOverallStatus(cr, null)).toBe('ready');
   });
 
+  it('should return degraded when Ready is True with reason Ready,Degraded', () => {
+    const cr = {
+      status: {
+        conditions: [{ type: 'Ready', status: 'True', reason: 'Ready,Degraded' }]
+      }
+    };
+    expect(getFlowCollectorOverallStatus(cr, null)).toBe('degraded');
+  });
+
   it('should return pending when Ready condition is missing', () => {
     const cr = {
-      status: { conditions: [{ type: 'WaitingFLP', status: 'False', reason: 'Ready' }] }
+      status: { conditions: [{ type: 'AgentReady', status: 'True', reason: 'Ready' }] }
     };
     expect(getFlowCollectorOverallStatus(cr, null)).toBe('pending');
   });
@@ -50,7 +59,7 @@ describe('getFlowCollectorOverallStatus', () => {
       status: {
         conditions: [
           { type: 'Ready', status: 'False', reason: 'Pending' },
-          { type: 'WaitingPlugin', status: 'True', reason: 'DeploymentNotReady' }
+          { type: 'PluginReady', status: 'False', reason: 'DeploymentNotReady' }
         ]
       }
     };
@@ -62,7 +71,7 @@ describe('getFlowCollectorOverallStatus', () => {
       status: {
         conditions: [
           { type: 'Ready', status: 'False', reason: 'Failed' },
-          { type: 'WaitingPlugin', status: 'True', reason: 'CrashLoopBackOff' }
+          { type: 'PluginReady', status: 'False', reason: 'CrashLoopBackOff' }
         ]
       }
     };
@@ -74,21 +83,8 @@ describe('getFlowCollectorOverallStatus', () => {
       status: {
         conditions: [
           { type: 'Ready', status: 'True', reason: 'Ready' },
-          { type: 'WaitingFlowCollectorLegacy', status: 'False', reason: 'Ready' },
           { type: 'ConfigurationIssue', status: 'True', reason: 'Warnings' },
           { type: 'LokiWarning', status: 'True', reason: 'LokiStackWarnings' }
-        ]
-      }
-    };
-    expect(getFlowCollectorOverallStatus(cr, null)).toBe('ready');
-  });
-
-  it('should ignore ComponentUnused conditions', () => {
-    const cr = {
-      status: {
-        conditions: [
-          { type: 'Ready', status: 'True', reason: 'Ready' },
-          { type: 'WaitingFLPTransformer', status: 'Unknown', reason: 'ComponentUnused' }
         ]
       }
     };
@@ -105,6 +101,11 @@ describe('<FlowCollectorStatusIcon />', () => {
   it('should render ConnectedIcon for ready', () => {
     const wrapper = shallow(<FlowCollectorStatusIcon status="ready" />);
     expect(wrapper.find(ConnectedIcon)).toHaveLength(1);
+  });
+
+  it('should render ExclamationTriangleIcon for degraded', () => {
+    const wrapper = shallow(<FlowCollectorStatusIcon status="degraded" />);
+    expect(wrapper.find(ExclamationTriangleIcon)).toHaveLength(1);
   });
 
   it('should render ExclamationTriangleIcon for pending', () => {
