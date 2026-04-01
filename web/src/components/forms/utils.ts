@@ -4,7 +4,7 @@ import { UiSchema } from '@rjsf/utils';
 import _ from 'lodash';
 import { ClusterServiceVersionKind } from './types';
 
-export type FlowCollectorOverallStatus = 'ready' | 'pending' | 'error' | 'onHold' | 'loading';
+export type FlowCollectorOverallStatus = 'ready' | 'degraded' | 'pending' | 'error' | 'onHold' | 'loading';
 
 export const getFlowCollectorOverallStatus = (
   cr: K8sResourceKind | undefined,
@@ -25,6 +25,9 @@ export const getFlowCollectorOverallStatus = (
   }
   const readyCondition = conditions.find(c => c.type === 'Ready');
   if (readyCondition?.status === 'True') {
+    if (readyCondition.reason === 'Ready,Degraded') {
+      return 'degraded';
+    }
     return 'ready';
   }
   if (readyCondition?.status === 'False') {

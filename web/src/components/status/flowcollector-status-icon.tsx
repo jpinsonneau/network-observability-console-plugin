@@ -20,6 +20,8 @@ export const FlowCollectorStatusIcon: React.FC<FlowCollectorStatusIconProps> = (
     switch (status) {
       case 'ready':
         return t('FlowCollector is ready');
+      case 'degraded':
+        return t('FlowCollector is degraded');
       case 'pending':
         return t('FlowCollector is pending');
       case 'error':
@@ -35,6 +37,8 @@ export const FlowCollectorStatusIcon: React.FC<FlowCollectorStatusIconProps> = (
     switch (status) {
       case 'ready':
         return <ConnectedIcon color="var(--pf-v5-global--success-color--100)" />;
+      case 'degraded':
+        return <ExclamationTriangleIcon color="var(--pf-v5-global--warning-color--100)" />;
       case 'pending':
         return <ExclamationTriangleIcon color="var(--pf-v5-global--warning-color--100)" />;
       case 'error':
