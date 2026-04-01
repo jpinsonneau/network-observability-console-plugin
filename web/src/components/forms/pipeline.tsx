@@ -219,7 +219,7 @@ export const Pipeline: React.FC<FlowCollectorPipelineProps> = ({ existing, selec
       steps.push({
         id: 'processor',
         label: replicaLabel(processorStatus, t('Flowlogs pipeline')),
-        runAfterTasks: [_.last(steps)!.id],
+        runAfterTasks: steps.length ? [_.last(steps)!.id] : [],
         data: {
           status: stateToRunStatus(processorStatus),
           selected: selectedTypes.includes('processor'),
