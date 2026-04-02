@@ -1,23 +1,17 @@
 import {
   Button,
+  Content,
+  ContentVariants,
   DataList,
   DataListCell,
   DataListCheck,
   DataListControl,
-  DataListDragButton,
-  DataListItem,
   DataListItemCells,
-  DataListItemRow,
-  DragDrop,
-  Draggable,
-  Droppable,
   Flex,
   FlexItem,
-  Text,
-  TextContent,
-  TextVariants,
   Tooltip
 } from '@patternfly/react-core';
+import { DragDropSort, DragDropSortDragEndEvent, DraggableObject } from '@patternfly/react-drag-drop';
 import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,8 +19,6 @@ import { Config } from '../../model/config';
 import { Column, ColumnSizeMap, getDefaultColumns, getFullColumnName } from '../../utils/columns';
 import './columns-modal.css';
 import Modal from './modal';
-
-const COLUMNS_DRAG_ZONE = 'netobs-columns-modal';
 
 export const columnFilterKeys = ['source', 'destination', 'time', 'host', 'namespace', 'owner', 'ip', 'dns'];
 
@@ -53,7 +45,6 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   const [updatedColumns, setUpdatedColumns] = React.useState<Column[]>([]);
   const [filterKeys, setFilterKeys] = React.useState<string[]>([]);
   const { t } = useTranslation('plugin__netobserv-plugin');
-  const dragDescriptionId = 'columns-drag-description';
 
   React.useEffect(() => {
     if (isModalOpen) {
@@ -68,60 +59,18 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns, isModalOpen]);
 
-  const isFilteredColumn = React.useCallback((c: Column, fks: string[]) => {
-    return (
-      _.isEmpty(fks) ||
-      _.reduce(
-        fks,
-        (acc, fk) =>
-          (acc =
-            acc &&
-            (c.id.toLowerCase().includes(fk) ||
-              c.name.toLowerCase().includes(fk) ||
-              c.group?.toLowerCase().includes(fk) ||
-              false)),
-        true
-      )
-    );
-  }, []);
-
-  const onListDrop = React.useCallback(
-    (source: { droppableId: string; index: number }, dest?: { droppableId: string; index: number }) => {
-      if (!dest || source.droppableId !== dest.droppableId) {
-        return false;
+  const onDrop = React.useCallback(
+    (event: DragDropSortDragEndEvent, items: DraggableObject[], oldIndex?: number, newIndex?: number) => {
+      if (oldIndex !== undefined && newIndex !== undefined) {
+        const result = [...updatedColumns];
+        const [removed] = result.splice(oldIndex, 1);
+        result.splice(newIndex, 0, removed);
+        setUpdatedColumns(result);
+        return true;
       }
-      const oldIndex = source.index;
-      const newIndex = dest.index;
-      if (oldIndex === newIndex) {
-        return false;
-      }
-      let accepted = false;
-      setUpdatedColumns(prev => {
-        const filtered = prev.filter(c => isFilteredColumn(c, filterKeys));
-        if (oldIndex < 0 || oldIndex >= filtered.length || newIndex < 0 || newIndex >= filtered.length) {
-          return prev;
-        }
-        const reorderedFiltered = [...filtered];
-        const [removed] = reorderedFiltered.splice(oldIndex, 1);
-        reorderedFiltered.splice(newIndex, 0, removed);
-        const next: Column[] = [];
-        const fq = [...reorderedFiltered];
-        for (const col of prev) {
-          if (isFilteredColumn(col, filterKeys)) {
-            const shifted = fq.shift();
-            if (shifted) {
-              next.push(shifted);
-            }
-          } else {
-            next.push(col);
-          }
-        }
-        accepted = true;
-        return next;
-      });
-      return accepted;
+      return false;
     },
-    [filterKeys, isFilteredColumn]
+    [updatedColumns, setUpdatedColumns]
   );
 
   const onCheck = React.useCallback(
@@ -147,6 +96,23 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   const isSaveDisabled = React.useCallback(() => {
     return _.isEmpty(updatedColumns.filter(c => c.isSelected));
   }, [updatedColumns]);
+
+  const isFilteredColumn = React.useCallback((c: Column, fks: string[]) => {
+    return (
+      _.isEmpty(fks) ||
+      _.reduce(
+        fks,
+        (acc, fk) =>
+          (acc =
+            acc &&
+            (c.id.toLowerCase().includes(fk) ||
+              c.name.toLowerCase().includes(fk) ||
+              c.group?.toLowerCase().includes(fk) ||
+              false)),
+        true
+      )
+    );
+  }, []);
 
   const getColumnFilterKeys = React.useCallback(() => {
     return columnFilterKeys.filter(fk => columns.some(c => isFilteredColumn(c, [fk])));
@@ -192,6 +158,33 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
     [filterKeys]
   );
 
+  const draggableItems: DraggableObject[] = Array.from(
+    filteredColumns().map((column, i) => {
+      return {
+        id: 'data-' + i,
+        content: (
+          <>
+            <DataListControl>
+              <DataListCheck
+                aria-labelledby={'table-column-management-item-' + i}
+                isChecked={column.isSelected}
+                id={column.id}
+                onChange={onCheck}
+              />
+            </DataListControl>
+            <DataListItemCells
+              dataListCells={[
+                <DataListCell key={'data-list-cell-' + i} className="center">
+                  <label htmlFor={column.id}>{getFullColumnName(column)}</label>
+                </DataListCell>
+              ]}
+            />
+          </>
+        )
+      };
+    })
+  );
+
   return (
     <Modal
       id={id}
@@ -201,12 +194,12 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
       onClose={onClose}
       description={
         <>
-          <TextContent>
-            <Text component={TextVariants.p}>
+          <Content>
+            <Content component={ContentVariants.p}>
               {t('Selected columns will appear in the table.')}&nbsp;
               {t('Click and drag the items to reorder the columns in the table.')}
-            </Text>
-          </TextContent>
+            </Content>
+          </Content>
           <Flex className="popup-header-margin">
             <FlexItem flex={{ default: 'flex_4' }}>
               <Flex className="flex-gap">
@@ -219,7 +212,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
                         filterKeys.includes(key) ? 'selected' : 'unselected'
                       } buttonless gap pointer`}
                     >
-                      <Text component={TextVariants.p}>{key}</Text>
+                      <Content component={ContentVariants.p}>{key}</Content>
                     </FlexItem>
                   );
                 })}
@@ -264,59 +257,15 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
       }
     >
       <div className="co-m-form-row" id="drag-drop-container">
-        <DragDrop onDrop={onListDrop}>
-          <Droppable hasNoWrapper zone={COLUMNS_DRAG_ZONE} droppableId="columns-list">
-            <DataList
-              aria-label="Table column management"
-              data-test="table-column-management"
-              id="table-column-management"
-              className="centered-list"
-              isCompact
-            >
-              {filteredColumns().map(column => {
-                const rowLabelId = `table-column-management-item-${column.id}`;
-                return (
-                  <Draggable key={column.id} hasNoWrapper>
-                    <DataListItem aria-labelledby={rowLabelId} id={`table-column-management-row-${column.id}`}>
-                      <DataListItemRow>
-                        <DataListControl>
-                          <DataListDragButton
-                            aria-label={t('Reorder column')}
-                            aria-labelledby={rowLabelId}
-                            aria-describedby={dragDescriptionId}
-                            aria-pressed={false}
-                          />
-                          <DataListCheck
-                            aria-labelledby={rowLabelId}
-                            isChecked={column.isSelected}
-                            id={column.id}
-                            onChange={onCheck}
-                            otherControls
-                          />
-                        </DataListControl>
-                        <DataListItemCells
-                          dataListCells={[
-                            <DataListCell key={`data-list-cell-${column.id}`} className="center">
-                              <label htmlFor={column.id} id={rowLabelId}>
-                                {getFullColumnName(column)}
-                              </label>
-                            </DataListCell>
-                          ]}
-                        />
-                      </DataListItemRow>
-                    </DataListItem>
-                  </Draggable>
-                );
-              })}
-            </DataList>
-          </Droppable>
-          <div className="pf-v5-screen-reader" id={dragDescriptionId}>
-            {t(
-              // eslint-disable-next-line max-len
-              'Press space or enter to begin dragging, and use the arrow keys to navigate up or down. Press enter to confirm the drag, or any other key to cancel the drag operation.'
-            )}
-          </div>
-        </DragDrop>
+        <DragDropSort items={draggableItems} onDrop={onDrop} variant="DataList" overlayProps={{ isCompact: true }}>
+          <DataList
+            aria-label="Table column management"
+            data-test="table-column-management"
+            id="table-column-management"
+            className="centered-list"
+            isCompact
+          />
+        </DragDropSort>
       </div>
     </Modal>
   );

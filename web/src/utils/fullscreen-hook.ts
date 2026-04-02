@@ -4,14 +4,14 @@ export function useFullScreen(): [boolean, React.Dispatch<React.SetStateAction<b
   const [isFullScreen, setFullScreen] = React.useState(false);
 
   React.useEffect(() => {
-    if (isFullScreen && document.getElementsByClassName('pf-v5-c-page__sidebar pf-m-expanded').length) {
+    if (isFullScreen && document.getElementsByClassName('pf-v6-c-page__sidebar pf-m-expanded').length) {
       document.getElementById('nav-toggle')?.click();
     }
 
     const header = document.getElementById('page-main-header');
-    const headersCompat = document.getElementsByClassName('pf-v5-c-masthead');
+    const headersCompat = document.getElementsByClassName('pf-v6-c-masthead');
     const sideBar = document.getElementById('page-sidebar');
-    const sideBarsCompat = document.getElementsByClassName('pf-v5-c-page__sidebar');
+    const sideBarsCompat = document.getElementsByClassName('pf-v6-c-page__sidebar');
     const notification = document.getElementsByClassName('co-global-notifications');
 
     [

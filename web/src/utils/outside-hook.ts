@@ -14,7 +14,7 @@ export const useOutsideClickEvent = (onClickOutside: () => void) => {
         const target = event.target;
         const isPatternFlyMenu =
           target instanceof Element &&
-          target.closest('.pf-v5-c-menu, .pf-v5-c-select__menu, .pf-v5-c-menu, .pf-v5-c-select__menu');
+          target.closest('.pf-v6-c-menu, .pf-v6-c-select__menu, .pf-v5-c-menu, .pf-v5-c-select__menu');
 
         if (!isPatternFlyMenu) {
           onClickOutside();

@@ -26,7 +26,7 @@ export const TextWidget: React.FC<WidgetProps> = props => {
     <NumberWidget {...props} />
   ) : (
     <span
-      className={classNames('pf-v5-c-form-control', {
+      className={classNames('pf-v6-c-form-control', {
         'pf-m-disabled': disabled,
         'pf-m-readonly': readonly
       })}
@@ -50,7 +50,7 @@ export const NumberWidget: React.FC<WidgetProps> = props => {
   const { value, id, onBlur, onChange, onFocus } = props;
   const numberValue = _.toNumber(value);
   return (
-    <span className="pf-v5-c-form-control">
+    <span className="pf-v6-c-form-control">
       <input
         id={id}
         key={id}
@@ -69,7 +69,7 @@ export const NumberWidget: React.FC<WidgetProps> = props => {
 export const PasswordWidget: React.FC<WidgetProps> = props => {
   const { value = '', id, onBlur, onChange, onFocus } = props;
   return (
-    <span className="pf-v5-c-form-control">
+    <span className="pf-v6-c-form-control">
       <input
         key={id}
         id={id}
@@ -136,7 +136,7 @@ export const JSONWidget: React.FC<WidgetProps> = props => {
   const { disabled = false, id, onBlur, onChange, onFocus, readonly = false, value = '{}' } = props;
   return (
     <span
-      className={classNames('pf-v5-c-form-control', {
+      className={classNames('pf-v6-c-form-control', {
         'pf-m-disabled': disabled,
         'pf-m-readonly': readonly
       })}

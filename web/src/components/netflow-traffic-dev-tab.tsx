@@ -26,7 +26,7 @@ export const NetflowTrafficDevTab: React.FC<NetflowTrafficDevTabProps> = props =
   const [containerHeight, setContainerHeight] = React.useState(800);
 
   React.useEffect(() => {
-    const containers = document.getElementsByClassName('pf-v5-c-tab-content');
+    const containers = document.getElementsByClassName('pf-v6-c-tab-content');
     if (containers.length > 0) {
       setContainerHeight(containers[0].clientHeight);
     }
@@ -35,7 +35,7 @@ export const NetflowTrafficDevTab: React.FC<NetflowTrafficDevTabProps> = props =
   const namespace = props.params?.ns || props.match?.params?.ns;
   if (!namespace) {
     return (
-      <PageSection id="pageSection">
+      <PageSection hasBodyWrapper={false} id="pageSection">
         <Bullseye data-test="loading-tab">
           <Spinner size="xl" />
         </Bullseye>

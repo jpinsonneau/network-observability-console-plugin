@@ -1,4 +1,4 @@
-import { Flex, FlexItem, Label, Text, TextVariants, Tooltip } from '@patternfly/react-core';
+import { Content, ContentVariants, Flex, FlexItem, Label, Tooltip } from '@patternfly/react-core';
 import { InfoCircleIcon } from '@patternfly/react-icons';
 import { ActionsColumn, Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { TFunction } from 'i18next';
@@ -34,14 +34,14 @@ const VerticalField: React.FC<{ label: string; children: React.ReactNode }> = ({
   <FlexItem>
     <Flex direction={{ default: 'column' }} gap={{ default: 'gapXs' }}>
       <FlexItem>
-        <Text
-          component={TextVariants.small}
+        <Content
+          component={ContentVariants.small}
           style={{
             color: 'var(--pf-t--global--text--color--subtle)'
           }}
         >
           {label}
-        </Text>
+        </Content>
       </FlexItem>
       <FlexItem>{children}</FlexItem>
     </Flex>

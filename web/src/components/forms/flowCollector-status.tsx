@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 
-import { Alert, AlertVariant, Button, Flex, FlexItem, PageSection, Text, Title } from '@patternfly/react-core';
+import { Alert, AlertVariant, Button, Content, Flex, FlexItem, PageSection, Title } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { flowCollectorEditPath, flowCollectorNewPath, netflowTrafficPath, useNavigate } from '../../utils/url';
 import './forms.css';
@@ -30,7 +30,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
           const isOnHold = ctx.data?.spec?.execution?.mode === 'OnHold';
 
           return (
-            <PageSection id="pageSection">
+            <PageSection hasBodyWrapper={false} id="pageSection">
               <div id="pageHeader">
                 <Title headingLevel="h1" size="2xl">
                   {t('Network Observability FlowCollector status')}
@@ -91,9 +91,9 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
               {ctx.loadError && (
                 <Flex direction={{ default: 'column' }}>
                   <FlexItem>
-                    <Text>
+                    <Content>
                       {t('An error occured while retreiving FlowCollector: {{error}}', { error: ctx.loadError })}
-                    </Text>
+                    </Content>
                   </FlexItem>
                   <FlexItem alignSelf={{ default: 'alignSelfCenter' }}>
                     <Button id="create-flow-collector" onClick={() => navigate(flowCollectorNewPath)}>

@@ -1,23 +1,17 @@
 import {
   Button,
+  Content,
+  ContentVariants,
   DataList,
   DataListCell,
   DataListCheck,
   DataListControl,
-  DataListDragButton,
-  DataListItem,
   DataListItemCells,
-  DataListItemRow,
-  DragDrop,
-  Draggable,
-  Droppable,
   Flex,
   FlexItem,
-  Text,
-  TextContent,
-  TextVariants,
   Tooltip
 } from '@patternfly/react-core';
+import { DragDropSort, DragDropSortDragEndEvent, DraggableObject } from '@patternfly/react-drag-drop';
 import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,8 +20,6 @@ import { RecordType } from '../../model/flow-query';
 import { getDefaultOverviewPanels, getOverviewPanelInfo, OverviewPanel } from '../../utils/overview-panels';
 import Modal from './modal';
 import './overview-panels-modal.css';
-
-const PANELS_DRAG_ZONE = 'netobs-overview-panels-modal';
 
 export interface OverviewPanelsModalProps {
   isModalOpen: boolean;
@@ -53,7 +45,6 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   const [updatedPanels, setUpdatedPanels] = React.useState<OverviewPanel[]>([]);
   const [filterKeys, setFilterKeys] = React.useState<string[]>([]);
   const { t } = useTranslation('plugin__netobserv-plugin');
-  const dragDescriptionId = 'overview-panels-drag-description';
 
   React.useEffect(() => {
     if (isModalOpen) {
@@ -88,66 +79,18 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
     return panelFilterKeys;
   }, [features]);
 
-  const isFilteredPanel = React.useCallback(
-    (p: OverviewPanel) => {
-      return (
-        _.isEmpty(filterKeys) ||
-        _.reduce(
-          filterKeys,
-          (acc, fk) => {
-            const panelInfo = getOverviewPanelInfo(
-              t,
-              p.id,
-              undefined,
-              recordType === 'flowLog' ? t('flow') : t('conversation')
-            );
-            const str = `${p.id}: ${panelInfo.title} - ${panelInfo.chartType}`;
-            return (acc = acc && str.toLowerCase().includes(fk));
-          },
-          true
-        )
-      );
-    },
-    [filterKeys, recordType, t]
-  );
-
-  const onListDrop = React.useCallback(
-    (source: { droppableId: string; index: number }, dest?: { droppableId: string; index: number }) => {
-      if (!dest || source.droppableId !== dest.droppableId) {
-        return false;
+  const onDrop = React.useCallback(
+    (event: DragDropSortDragEndEvent, items: DraggableObject[], oldIndex?: number, newIndex?: number) => {
+      if (oldIndex !== undefined && newIndex !== undefined) {
+        const result = [...updatedPanels];
+        const [removed] = result.splice(oldIndex, 1);
+        result.splice(newIndex, 0, removed);
+        setUpdatedPanels(result);
+        return true;
       }
-      const oldIndex = source.index;
-      const newIndex = dest.index;
-      if (oldIndex === newIndex) {
-        return false;
-      }
-      let accepted = false;
-      setUpdatedPanels(prev => {
-        const filtered = prev.filter(p => isFilteredPanel(p));
-        if (oldIndex < 0 || oldIndex >= filtered.length || newIndex < 0 || newIndex >= filtered.length) {
-          return prev;
-        }
-        const reorderedFiltered = [...filtered];
-        const [removed] = reorderedFiltered.splice(oldIndex, 1);
-        reorderedFiltered.splice(newIndex, 0, removed);
-        const next: OverviewPanel[] = [];
-        const fq = [...reorderedFiltered];
-        for (const panel of prev) {
-          if (isFilteredPanel(panel)) {
-            const shifted = fq.shift();
-            if (shifted) {
-              next.push(shifted);
-            }
-          } else {
-            next.push(panel);
-          }
-        }
-        accepted = true;
-        return next;
-      });
-      return accepted;
+      return false;
     },
-    [isFilteredPanel]
+    [updatedPanels, setUpdatedPanels]
   );
 
   const onCheck = React.useCallback(
@@ -170,6 +113,29 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   const isSaveDisabled = React.useCallback(() => {
     return _.isEmpty(updatedPanels.filter(p => p.isSelected));
   }, [updatedPanels]);
+
+  const isFilteredPanel = React.useCallback(
+    (p: OverviewPanel) => {
+      return (
+        _.isEmpty(filterKeys) ||
+        _.reduce(
+          filterKeys,
+          (acc, fk) => {
+            const panelInfo = getOverviewPanelInfo(
+              t,
+              p.id,
+              undefined,
+              recordType === 'flowLog' ? t('flow') : t('conversation')
+            );
+            const str = `${p.id}: ${panelInfo.title} - ${panelInfo.chartType}`;
+            return (acc = acc && str.toLowerCase().includes(fk));
+          },
+          true
+        )
+      );
+    },
+    [filterKeys, recordType, t]
+  );
 
   const filteredPanels = React.useCallback(() => {
     return updatedPanels.filter(p => isFilteredPanel(p));
@@ -207,7 +173,41 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
     [filterKeys, getFilterKeys]
   );
 
-  const flowOrConversation = recordType === 'flowLog' ? t('flow') : t('conversation');
+  const draggableItems: DraggableObject[] = Array.from(
+    filteredPanels().map((panel, i) => {
+      const info = getOverviewPanelInfo(
+        t,
+        panel.id,
+        undefined,
+        recordType === 'flowLog' ? t('flow') : t('conversation')
+      );
+      return {
+        id: 'data-' + i,
+        content: (
+          <>
+            <DataListControl>
+              <DataListCheck
+                aria-labelledby={'overview-panel-management-item-' + i}
+                isChecked={panel.isSelected}
+                id={panel.id}
+                onChange={onCheck}
+              />
+            </DataListControl>
+            <DataListItemCells
+              dataListCells={[
+                <DataListCell key={'data-list-cell-' + i}>
+                  <label htmlFor={panel.id}>
+                    {info.title}
+                    {info.chartType && <>{' (' + info.chartType + ')'}</>}
+                  </label>
+                </DataListCell>
+              ]}
+            />
+          </>
+        )
+      };
+    })
+  );
 
   return (
     <Modal
@@ -218,12 +218,12 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
       onClose={() => onClose()}
       description={
         <>
-          <TextContent>
-            <Text component={TextVariants.p}>
+          <Content>
+            <Content component={ContentVariants.p}>
               {t('Selected panels will appear in the overview tab.')}&nbsp;
               {t('Click and drag the items to reorder the panels in the overview tab.')}
-            </Text>
-          </TextContent>
+            </Content>
+          </Content>
           <Flex className="popup-header-margin">
             <FlexItem flex={{ default: 'flex_4' }}>
               <Flex className="flex-gap">
@@ -236,7 +236,7 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
                         filterKeys.includes(key) ? 'selected' : 'unselected'
                       } buttonless gap pointer`}
                     >
-                      <Text component={TextVariants.p}>{key}</Text>
+                      <Content component={ContentVariants.p}>{key}</Content>
                     </FlexItem>
                   );
                 })}
@@ -281,60 +281,14 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
       }
     >
       <div className="co-m-form-row" id="drag-drop-container-overview">
-        <DragDrop onDrop={onListDrop}>
-          <Droppable hasNoWrapper zone={PANELS_DRAG_ZONE} droppableId="overview-panels-list">
-            <DataList
-              aria-label="Overview panel management"
-              data-test="overview-panel-management"
-              id="overview-panel-management"
-              isCompact
-            >
-              {filteredPanels().map(panel => {
-                const info = getOverviewPanelInfo(t, panel.id, undefined, flowOrConversation);
-                const rowLabelId = `overview-panel-management-item-${panel.id}`;
-                return (
-                  <Draggable key={panel.id} hasNoWrapper>
-                    <DataListItem aria-labelledby={rowLabelId} id={`overview-panel-management-row-${panel.id}`}>
-                      <DataListItemRow>
-                        <DataListControl>
-                          <DataListDragButton
-                            aria-label={t('Reorder panel')}
-                            aria-labelledby={rowLabelId}
-                            aria-describedby={dragDescriptionId}
-                            aria-pressed={false}
-                          />
-                          <DataListCheck
-                            aria-labelledby={rowLabelId}
-                            isChecked={panel.isSelected}
-                            id={panel.id}
-                            onChange={onCheck}
-                            otherControls
-                          />
-                        </DataListControl>
-                        <DataListItemCells
-                          dataListCells={[
-                            <DataListCell key={`data-list-cell-${panel.id}`}>
-                              <label htmlFor={panel.id} id={rowLabelId}>
-                                {info.title}
-                                {info.chartType && <>{' (' + info.chartType + ')'}</>}
-                              </label>
-                            </DataListCell>
-                          ]}
-                        />
-                      </DataListItemRow>
-                    </DataListItem>
-                  </Draggable>
-                );
-              })}
-            </DataList>
-          </Droppable>
-          <div className="pf-v5-screen-reader" id={dragDescriptionId}>
-            {t(
-              // eslint-disable-next-line max-len
-              'Press space or enter to begin dragging, and use the arrow keys to navigate up or down. Press enter to confirm the drag, or any other key to cancel the drag operation.'
-            )}
-          </div>
-        </DragDrop>
+        <DragDropSort items={draggableItems} onDrop={onDrop} variant="DataList" overlayProps={{ isCompact: true }}>
+          <DataList
+            aria-label="Overview panel management"
+            data-test="overview-panel-management"
+            id="overview-panel-management"
+            isCompact
+          />
+        </DragDropSort>
       </div>
     </Modal>
   );

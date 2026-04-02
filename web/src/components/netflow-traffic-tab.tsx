@@ -10,7 +10,6 @@ import {
   Bullseye,
   EmptyState,
   EmptyStateBody,
-  EmptyStateHeader,
   EmptyStateVariant,
   PageSection,
   Spinner
@@ -90,7 +89,7 @@ export const NetflowTrafficTab: React.FC<NetflowTrafficTabProps> = ({ match, obj
       }
     }
 
-    const containers = document.getElementsByClassName('pf-v5-c-tab-content');
+    const containers = document.getElementsByClassName('pf-v6-c-tab-content');
     if (containers.length > 0) {
       setContainerHeight(containers[0].clientHeight);
     }
@@ -287,9 +286,13 @@ export const NetflowTrafficTab: React.FC<NetflowTrafficTabProps> = ({ match, obj
     );
   } else {
     return (
-      <PageSection id="pageSection" data-test="tab-page-section">
-        <EmptyState data-test="error-state" variant={EmptyStateVariant.sm}>
-          <EmptyStateHeader titleText={t('Kind not managed')} headingLevel="h2" />
+      <PageSection hasBodyWrapper={false} id="pageSection" data-test="tab-page-section">
+        <EmptyState
+          titleText={t('Kind not managed')}
+          headingLevel="h2"
+          data-test="error-state"
+          variant={EmptyStateVariant.sm}
+        >
           <EmptyStateBody>{obj?.kind}</EmptyStateBody>
         </EmptyState>
       </PageSection>

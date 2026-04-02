@@ -1,8 +1,8 @@
-#table-container>.pf-v5-c-table tbody>tr>* {
+#table-container>.pf-v6-c-table tbody>tr>* {
   vertical-align: top;
 }
 
-.pf-v5-theme-dark #table-container {
+.pf-v6-theme-dark #table-container {
   --pf-t--global--background--color--primary--default: #292929;
   --pf-t--global--background--color--secondary--default: #151515;
   --pf-t--global--text--color--regular: #e0e0e0;
