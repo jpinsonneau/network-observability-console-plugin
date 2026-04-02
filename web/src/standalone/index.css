@@ -17,12 +17,8 @@ section#pageSection {
   padding: 10px;
 }
 
-section#pageSection.dark {
-  background: #0f1214 !important;
-}
-
-section#pageSection.light {
-  background: #fff !important;
+section#pageSection {
+  background: var(--pf-t--global--background--color--primary--default) !important;
 }
 
 #consolePageSection {
@@ -34,10 +30,6 @@ section#pageSection.light {
 }
 
 body>#app>.pf-v6-c-page {
-  background: #fff;
-}
-
-.pf-v6-theme-dark>body>#app>.pf-v6-c-page {
   background: var(--pf-t--global--background--color--primary--default);
 }
 
@@ -177,9 +169,9 @@ textarea,
 
 /* resource icons */
 .co-m-resource-icon {
-  background-color: #2b9af3;
+  background-color: var(--pf-t--global--color--brand--default);
   border-radius: 20px;
-  color: #fff;
+  color: var(--pf-t--global--text--color--inverse);
   display: inline-block;
   flex-shrink: 0;
   font-size: 14px;
@@ -197,14 +189,14 @@ textarea,
 }
 .pf-v6-theme-dark .pf-v6-c-toggle-group__button.pf-m-selected {
   color: var(--pf-v6-c-toggle-group__button--Color);
-  --pf-v6-c-toggle-group__button--BackgroundColor: #06c;
-  --pf-v6-c-toggle-group__button--before--BorderColor: #1fa7f8;
+  --pf-v6-c-toggle-group__button--BackgroundColor: var(--pf-t--global--color--brand--default);
+  --pf-v6-c-toggle-group__button--before--BorderColor: var(--pf-t--global--color--brand--hover);
 }
 
 /* fix primary button color*/
 .pf-v6-theme-dark .pf-m-primary {
-  color: #fff;
-  background-color: #06c;
+  color: var(--pf-t--global--text--color--inverse);
+  background-color: var(--pf-t--global--color--brand--default);
 }
 
 /* fix chip background colors */
@@ -232,8 +224,8 @@ textarea,
 .pf-v6-c-masthead .masthead-link a {
   text-decoration: none;
   font-weight: bold;
-  color: #e0e0e0;
+  color: var(--pf-t--global--text--color--inverse);
 }
 .pf-v6-c-masthead .masthead-link a:hover {
-  color: #bbb;
+  color: var(--pf-t--global--text--color--subtle);
 }

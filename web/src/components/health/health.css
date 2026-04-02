@@ -2,13 +2,6 @@
 #health-page {
     padding: 0 !important;
     height: 100%;
-}
-
-#health-page.light {
-    background-color: var(--pf-t--global--background--color--primary--default);
-}
-
-#health-page.dark {
     background-color: var(--pf-t--global--background--color--primary--default);
 }
 
@@ -450,11 +443,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background-color: #d2d2d2;
-}
-
-.health-tabs-container.dark::after {
-    background-color: #444548;
+    background-color: var(--pf-t--global--border--color--default);
 }
 
 .health-tabs-container > div:last-child {
@@ -471,19 +460,6 @@
 
 .overflow-button .pf-v6-c-button__icon {
     margin-right: 0.25rem;
-}
-
-/* outside bottom border */
-.light-bottom-border {
-    margin: 0 !important;
-    align-self: flex-end;
-    border-bottom: 1px #d2d2d2 solid;
-}
-
-.dark-bottom-border {
-    margin: 0 !important;
-    align-self: flex-end;
-    border-bottom: 1px #444548 solid;
 }
 
 /* Health scoring drawer styles */

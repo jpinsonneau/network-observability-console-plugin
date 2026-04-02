@@ -95,7 +95,7 @@ div.record-field-popover-footer {
 }
 
 .record-panel-warning {
-  color: #2B9AF3;
+  color: var(--pf-t--global--color--brand--default);
   margin-right: 5px;
 }
 

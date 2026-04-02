@@ -17,12 +17,8 @@
   border-width: 3px;
 }
 
-.description.border.light {
-  border-left-color: #06c !important;
-}
-
-.description.border.dark {
-  border-left-color: #1fa7f8 !important;
+.description.border {
+  border-left-color: var(--pf-t--global--color--brand--default) !important;
 }
 
 .co-pre-line {

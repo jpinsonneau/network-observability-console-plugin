@@ -86,9 +86,9 @@
   visibility: hidden;
   transition-property: visibility;
   transition-delay: 0.5s;
-  background-color: #151515 !important;
+  background-color: var(--pf-t--global--background--color--tooltip--default) !important;
   padding: .5rem !important;
-  color: #fff !important;
+  color: var(--pf-t--global--text--color--inverse) !important;
   text-align: center;
   word-break: break-word;
   font-size: 13px !important;
