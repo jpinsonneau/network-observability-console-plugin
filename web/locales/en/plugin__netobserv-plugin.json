@@ -205,6 +205,8 @@
   "Delete": "Delete",
   "Network Observability FlowCollector status": "Network Observability FlowCollector status",
   "FlowCollector status": "FlowCollector status",
+  "Configuration error": "Configuration error",
+  "Configuration warnings": "Configuration warnings",
   "Network Observability is on hold": "Network Observability is on hold",
   "Execution mode is set to OnHold. All operator-managed workloads have been deleted, while preserving other resources. To change execution mode, update or remove \"spec.execution.mode\" in the FlowCollector resource.": "Execution mode is set to OnHold. All operator-managed workloads have been deleted, while preserving other resources. To change execution mode, update or remove \"spec.execution.mode\" in the FlowCollector resource.",
   "Edit FlowCollector": "Edit FlowCollector",

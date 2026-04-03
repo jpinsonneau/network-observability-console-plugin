@@ -230,20 +230,55 @@ export const ResourceStatus: FC<ResourceStatusProps> = ({
           </Tr>
         </Thead>
         <Tbody>
-          {conditions.map((condition, i) => (
-            <Tr
-              id={`${condition.type}-row`}
-              data-test-status={`${condition.status}`}
-              data-test-reason={`${condition.reason}`}
-              key={i}
-            >
-              <Td>{condition.type}</Td>
-              <Td>{condition.status}</Td>
-              <Td>{condition.reason}</Td>
-              <Td>{condition.message}</Td>
-              <Td>{condition.lastTransitionTime}</Td>
-            </Tr>
-          ))}
+          {conditions.map((condition, i) => {
+            const isWarning =
+              condition.type === 'ConfigurationIssue' && condition.status === 'True' && condition.reason === 'Warnings';
+            const isError =
+              (condition.type === 'ConfigurationIssue' &&
+                condition.status === 'True' &&
+                condition.reason === 'Error') ||
+              (condition.type !== 'ConfigurationIssue' &&
+                condition.status === 'False' &&
+                condition.reason !== 'Pending' &&
+                condition.reason !== 'Valid');
+            return (
+              <Tr
+                id={`${condition.type}-row`}
+                data-test-status={`${condition.status}`}
+                data-test-reason={`${condition.reason}`}
+                key={i}
+              >
+                <Td>
+                  {isError ? (
+                    <ExclamationCircleIcon color="var(--pf-v5-global--danger-color--100)" />
+                  ) : isWarning ? (
+                    <ExclamationTriangleIcon color="var(--pf-v5-global--warning-color--100)" />
+                  ) : condition.status === 'True' && condition.type !== 'ConfigurationIssue' ? (
+                    <CheckCircleIcon color="var(--pf-v5-global--success-color--100)" />
+                  ) : condition.status === 'False' && condition.reason === 'Pending' ? (
+                    <HourglassHalfIcon color="var(--pf-v5-global--info-color--100)" />
+                  ) : (
+                    <UnknownIcon color="var(--pf-v5-global--disabled-color--100)" />
+                  )}{' '}
+                  {condition.type}
+                </Td>
+                <Td>{condition.status}</Td>
+                <Td>{condition.reason}</Td>
+                <Td
+                  style={
+                    isWarning
+                      ? { color: 'var(--pf-v5-global--warning-color--200)' }
+                      : isError
+                      ? { color: 'var(--pf-v5-global--danger-color--100)' }
+                      : undefined
+                  }
+                >
+                  {condition.message}
+                </Td>
+                <Td>{condition.lastTransitionTime}</Td>
+              </Tr>
+            );
+          })}
         </Tbody>
       </Table>
     </>
