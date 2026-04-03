@@ -40,6 +40,14 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
         {ctx => {
           const status = getFlowCollectorOverallStatus(ctx.data, ctx.loadError);
           const showTrafficButton = status === 'ready' || status === 'degraded';
+          const configIssue = (
+            (ctx.data?.status?.conditions as Array<{
+              type: string;
+              status: string;
+              reason?: string;
+              message?: string;
+            }>) || []
+          ).find(c => c.type === 'ConfigurationIssue' && c.status === 'True');
 
           return (
             <PageSection id="pageSection">
@@ -59,6 +67,17 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
               </div>
               {ctx.data && (
                 <Flex className="status-container" direction={{ default: 'column' }}>
+                  {configIssue && (
+                    <FlexItem>
+                      <Alert
+                        variant={configIssue.reason === 'Error' ? AlertVariant.danger : AlertVariant.warning}
+                        isInline
+                        title={configIssue.reason === 'Error' ? t('Configuration error') : t('Configuration warnings')}
+                      >
+                        {configIssue.message}
+                      </Alert>
+                    </FlexItem>
+                  )}
                   <FlexItem flex={{ default: 'flex_1' }}>
                     {status === 'onHold' ? (
                       <Alert variant={AlertVariant.info} isInline title={t('Network Observability is on hold')}>
