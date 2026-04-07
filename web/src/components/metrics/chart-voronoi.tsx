@@ -26,7 +26,7 @@ export const chartVoronoi = (legendData: LegendDataItem[], f: (v: number) => str
         <ChartLegendTooltip
           legendData={tooltipData}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          title={(cb: any) => cb.datum?.date || cb.date}
+          title={(cb: any) => cb.datum?.date}
           flyoutWidth={flyoutWidth}
         />
       }
