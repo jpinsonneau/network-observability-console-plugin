@@ -44,15 +44,16 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
 
   const dateValidator = React.useCallback(
     (isFrom: boolean, date: Date): string => {
-      const d = new Date(isFrom ? Date.parse(`${toDate} ${toTime}`) : Date.parse(`${fromDate} ${fromTime}`));
+      const otherDate = isFrom ? toDate : fromDate;
+      const d = otherDate ? new Date(Date.parse(otherDate)) : undefined;
       if (isFrom && date > new Date()) {
         return t('From date cannot be in the future');
       }
-      return !isValidDate(d) || (!isFrom && date >= d) || (isFrom && date <= d)
+      return !d || !isValidDate(d) || (!isFrom && date >= d) || (isFrom && date <= d)
         ? ''
         : t('To date must be after From date');
     },
-    [fromDate, fromTime, t, toDate, toTime]
+    [fromDate, t, toDate]
   );
 
   //this is a hack to allow user to type into date / time inputs without having to delete previous content

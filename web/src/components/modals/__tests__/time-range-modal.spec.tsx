@@ -91,4 +91,31 @@ describe('<TimeRangeModal />', () => {
     });
     expect(props.setRange).toHaveBeenNthCalledWith(2, nowRange);
   });
+
+  it('should allow same day with different times (NETOBSERV-2665)', async () => {
+    const wrapper = mount(<TimeRangeModal {...props} />);
+    const datePickers = wrapper.find(DatePicker);
+    const timePickers = wrapper.find(TimePicker);
+
+    // Set both dates to the same day but different times
+    // From: 2026-03-12 10:00:00
+    // To: 2026-03-12 10:30:00
+    const testDate = new Date(2026, 2, 12); // March 12, 2026 in local timezone
+    act(() => {
+      datePickers.at(0).props().onChange!(fakeEvent, '2026-03-12', testDate);
+      timePickers.at(0).props().onChange!(fakeEvent, '10:00:00');
+      datePickers.at(1).props().onChange!(fakeEvent, '2026-03-12', testDate);
+      timePickers.at(1).props().onChange!(fakeEvent, '10:30:00');
+    });
+
+    wrapper.update();
+
+    // The save button should be enabled (no error)
+    const saveButton = wrapper.find('[data-test="time-range-save"]').first();
+    expect(saveButton.prop('isDisabled')).toBe(false);
+
+    // Verify no validation error is shown
+    const tooltip = wrapper.find('.time-range-tooltip-empty');
+    expect(tooltip.length).toBeGreaterThan(0);
+  });
 });
