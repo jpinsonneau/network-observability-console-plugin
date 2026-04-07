@@ -165,6 +165,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, v: unknown) => setFromDate(typeof e === 'string' ? String(e) : String(v))}
                   onInput={e => onInput(e, 'date')}
                   value={fromDate}
+                  appendTo={() => document.body}
                 />
               </FlexItem>
               <FlexItem>
@@ -178,6 +179,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, t: unknown) => setFromTime(typeof e === 'string' ? String(e) : String(t))}
                   onInput={e => onInput(e, 'time')}
                   time={fromTime}
+                  menuAppendTo={() => document.body}
                 />
               </FlexItem>
             </Flex>
@@ -194,6 +196,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, v: unknown) => setToDate(typeof e === 'string' ? String(e) : String(v))}
                   onInput={e => onInput(e, 'date')}
                   value={toDate}
+                  appendTo={() => document.body}
                 />
               </FlexItem>
               <FlexItem>
@@ -207,6 +210,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
                   onChange={(e: unknown, t: unknown) => setToTime(typeof e === 'string' ? String(e) : String(t))}
                   onInput={e => onInput(e, 'time')}
                   time={toTime}
+                  menuAppendTo={() => document.body}
                 />
               </FlexItem>
             </Flex>
@@ -240,14 +244,13 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
 
   return (
     <Modal
-      data-test={id}
       id={id}
       title={t('Custom time range')}
       isOpen={isModalOpen}
       scrollable={false}
       onClose={() => onCancel()}
       footer={
-        <div className="footer">
+        <>
           <Button data-test="time-range-reset" key="reset" variant="link" onClick={() => reloadInputs(true)}>
             {t('Reset')}
           </Button>
@@ -270,7 +273,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
               {t('Save')}
             </Button>
           </Tooltip>
-        </div>
+        </>
       }
     >
       <TextContent>
