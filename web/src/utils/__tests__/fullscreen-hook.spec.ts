@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react-hooks';
+import { act, renderHook } from '@testing-library/react';
 import { useFullScreen } from '../fullscreen-hook';
 
 describe('useFullScreen', () => {
@@ -16,7 +16,7 @@ describe('useFullScreen', () => {
     document.body.appendChild(sidebar);
 
     masthead = document.createElement('div');
-    masthead.classList.add('pf-v5-c-masthead');
+    masthead.classList.add('pf-v6-c-masthead');
     document.body.appendChild(masthead);
   });
 
@@ -64,7 +64,7 @@ describe('useFullScreen', () => {
     const clickSpy = jest.spyOn(navToggle, 'click');
     document.body.appendChild(navToggle);
 
-    sidebar.classList.add('pf-v5-c-page__sidebar', 'pf-m-expanded');
+    sidebar.classList.add('pf-v6-c-page__sidebar', 'pf-m-expanded');
 
     const { result } = renderHook(() => useFullScreen());
 

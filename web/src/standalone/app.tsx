@@ -13,7 +13,7 @@ import {
 } from '@patternfly/react-core';
 import { configure } from 'mobx';
 import React from 'react';
-import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom-v5-compat';
+import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router';
 import FlowCollectorForm from '../components/forms/flowCollector';
 import FlowCollectorStatus from '../components/forms/flowCollector-status';
 import FlowCollectorWizard from '../components/forms/flowCollector-wizard';
@@ -27,8 +27,6 @@ import NetflowTab from '../components/netflow-traffic-tab';
 import { ContextSingleton } from '../utils/context';
 import Header from './header';
 
-import '@patternfly/patternfly/patternfly-charts-theme-dark.css';
-import '@patternfly/patternfly/patternfly-theme-dark.css';
 import '@patternfly/react-core/dist/styles/base.css';
 import './index.css';
 
@@ -131,7 +129,7 @@ export const App: React.FunctionComponent<{ endUser?: boolean }> = ({ endUser })
 
   const withContext = (content: JSX.Element, name: string) => {
     return (
-      <PageSection id="netobservPageSection" className={`tab ${isDark ? 'dark' : 'light'}`}>
+      <PageSection hasBodyWrapper={false} id="consolePageSection" className={`tab ${isDark ? 'dark' : 'light'}`}>
         <div style={{ padding: '1rem' }}>
           <Title headingLevel="h1">{`${name} example`}</Title>
         </div>
@@ -152,7 +150,7 @@ export const App: React.FunctionComponent<{ endUser?: boolean }> = ({ endUser })
   return (
     <BrowserRouter>
       <Page
-        header={
+        masthead={
           <Header isDark={isDark} setDark={setDark} isSidebarOpen={isSidebarOpen} onSidebarToggle={onSidebarToggle} />
         }
         sidebar={
