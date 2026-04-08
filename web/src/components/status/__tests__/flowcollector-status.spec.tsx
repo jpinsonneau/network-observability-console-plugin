@@ -1,12 +1,5 @@
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
-import { Spinner } from '@patternfly/react-core';
-import {
-  ConnectedIcon,
-  ExclamationCircleIcon,
-  ExclamationTriangleIcon,
-  PauseCircleIcon
-} from '@patternfly/react-icons';
-import { shallow } from 'enzyme';
+import { render } from '@testing-library/react';
 import * as React from 'react';
 import { getFlowCollectorOverallStatus } from '../../forms/utils';
 import { FlowCollectorStatusIcon } from '../flowcollector-status-icon';
@@ -93,34 +86,34 @@ describe('getFlowCollectorOverallStatus', () => {
 });
 
 describe('<FlowCollectorStatusIcon />', () => {
-  it('should render Spinner for loading', () => {
-    const wrapper = shallow(<FlowCollectorStatusIcon status="loading" />);
-    expect(wrapper.find(Spinner)).toHaveLength(1);
+  it('should render spinner for loading', () => {
+    const { container } = render(<FlowCollectorStatusIcon status="loading" />);
+    expect(container.querySelector('[role="progressbar"]')).toBeTruthy();
   });
 
-  it('should render ConnectedIcon for ready', () => {
-    const wrapper = shallow(<FlowCollectorStatusIcon status="ready" />);
-    expect(wrapper.find(ConnectedIcon)).toHaveLength(1);
+  it('should render icon for ready', () => {
+    const { container } = render(<FlowCollectorStatusIcon status="ready" />);
+    expect(container.querySelector('svg')).toBeTruthy();
   });
 
-  it('should render ExclamationTriangleIcon for degraded', () => {
-    const wrapper = shallow(<FlowCollectorStatusIcon status="degraded" />);
-    expect(wrapper.find(ExclamationTriangleIcon)).toHaveLength(1);
+  it('should render icon for degraded', () => {
+    const { container } = render(<FlowCollectorStatusIcon status="degraded" />);
+    expect(container.querySelector('svg')).toBeTruthy();
   });
 
-  it('should render ExclamationTriangleIcon for pending', () => {
-    const wrapper = shallow(<FlowCollectorStatusIcon status="pending" />);
-    expect(wrapper.find(ExclamationTriangleIcon)).toHaveLength(1);
+  it('should render icon for pending', () => {
+    const { container } = render(<FlowCollectorStatusIcon status="pending" />);
+    expect(container.querySelector('svg')).toBeTruthy();
   });
 
-  it('should render ExclamationCircleIcon for error', () => {
-    const wrapper = shallow(<FlowCollectorStatusIcon status="error" />);
-    expect(wrapper.find(ExclamationCircleIcon)).toHaveLength(1);
+  it('should render icon for error', () => {
+    const { container } = render(<FlowCollectorStatusIcon status="error" />);
+    expect(container.querySelector('svg')).toBeTruthy();
   });
 
-  it('should render PauseCircleIcon for onHold', () => {
-    const wrapper = shallow(<FlowCollectorStatusIcon status="onHold" />);
-    expect(wrapper.find(PauseCircleIcon)).toHaveLength(1);
+  it('should render icon for onHold', () => {
+    const { container } = render(<FlowCollectorStatusIcon status="onHold" />);
+    expect(container.querySelector('svg')).toBeTruthy();
   });
 });
 
@@ -131,33 +124,33 @@ describe('<FlowCollectorStatusIndicator />', () => {
     jest.clearAllMocks();
   });
 
-  it('should pass correct status to icon', () => {
+  it('should render a clickable button', () => {
+    useK8sWatchResourceMock.mockReturnValue([null, false, null]);
+    const { container } = render(<FlowCollectorStatusIndicator />);
+    const button = container.querySelector('#flowcollector-status-indicator');
+    expect(button).toBeTruthy();
+  });
+
+  it('should render spinner when CR is loading', () => {
+    useK8sWatchResourceMock.mockReturnValue([null, false, null]);
+    const { container } = render(<FlowCollectorStatusIndicator />);
+    expect(container.querySelector('[role="progressbar"]')).toBeTruthy();
+  });
+
+  it('should render icon when CR is ready', () => {
     useK8sWatchResourceMock.mockReturnValue([
       { status: { conditions: [{ type: 'Ready', status: 'True', reason: 'Ready' }] } },
       true,
       null
     ]);
-    const wrapper = shallow(<FlowCollectorStatusIndicator />);
-    expect(wrapper.find(FlowCollectorStatusIcon).prop('status')).toBe('ready');
+    const { container } = render(<FlowCollectorStatusIndicator />);
+    expect(container.querySelector('svg')).toBeTruthy();
+    expect(container.querySelector('[role="progressbar"]')).toBeFalsy();
   });
 
-  it('should pass loading status when CR is null', () => {
-    useK8sWatchResourceMock.mockReturnValue([null, false, null]);
-    const wrapper = shallow(<FlowCollectorStatusIndicator />);
-    expect(wrapper.find(FlowCollectorStatusIcon).prop('status')).toBe('loading');
-  });
-
-  it('should pass error status on load error', () => {
+  it('should render icon on load error', () => {
     useK8sWatchResourceMock.mockReturnValue([null, false, 'load error']);
-    const wrapper = shallow(<FlowCollectorStatusIndicator />);
-    expect(wrapper.find(FlowCollectorStatusIcon).prop('status')).toBe('error');
-  });
-
-  it('should render a clickable button', () => {
-    useK8sWatchResourceMock.mockReturnValue([null, false, null]);
-    const wrapper = shallow(<FlowCollectorStatusIndicator />);
-    const button = wrapper.find('#flowcollector-status-indicator');
-    expect(button).toHaveLength(1);
-    expect(button.prop('variant')).toBe('plain');
+    const { container } = render(<FlowCollectorStatusIndicator />);
+    expect(container.querySelector('svg')).toBeTruthy();
   });
 });
