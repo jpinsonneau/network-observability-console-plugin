@@ -187,13 +187,15 @@ export const QueryOptionsPanel: React.FC<QueryOptionsProps> = ({
         <Tooltip
           content={
             <div>
-              <p>{t('Filter flows by their drop status. Only packets dropped by the kernel are monitored here.')}</p>
-              <p className="netobserv-align-start">- {t('Fully dropped shows the flows that are 100% dropped')}</p>
+              <p className="netobserv-align-start">
+                {t('Filter flows by their drop status. Only packets dropped by the kernel are monitored here.')}
+              </p>
+              <p className="netobserv-align-start"> - {t('Fully dropped shows the flows that are 100% dropped')}</p>
               <p className="netobserv-align-start">
                 - {t('Containing drops shows the flows having at least one packet dropped')}
               </p>
-              <p className="netobserv-align-start">- {t('Without drops show the flows having 0% dropped')}</p>
-              <p className="netobserv-align-start">- {t('All shows everything')}</p>
+              <p className="netobserv-align-start"> - {t('Without drops show the flows having 0% dropped')}</p>
+              <p className="netobserv-align-start"> - {t('All shows everything')}</p>
             </div>
           }
         >
