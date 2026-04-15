@@ -158,7 +158,9 @@ export const FieldSet: React.FC<FieldSetProps> = props => {
             padding={true}
           />
         )}
-        <AccordionContent id={`${idSchema.$id}_accordion-content`}>{children}</AccordionContent>
+        <AccordionContent id={`${idSchema.$id}_accordion-content`} data-test={`${idSchema.$id}_accordion-content`}>
+          {children}
+        </AccordionContent>
       </AccordionItem>
     </div>
   ) : (
