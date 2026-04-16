@@ -26,6 +26,7 @@ import NetflowTrafficParent from '../components/netflow-traffic-parent';
 import NetflowTab from '../components/netflow-traffic-tab';
 import { ContextSingleton } from '../utils/context';
 import Header from './header';
+import { applyStandaloneDocumentTheme, StandaloneTheme } from './standalone-theme';
 
 import '@patternfly/react-core/dist/styles/base.css';
 import './index.css';
@@ -119,17 +120,22 @@ const endUserPages = allPages.filter(p => p.id === 'netflow-traffic' || p.id ===
 
 export const App: React.FunctionComponent<{ endUser?: boolean }> = ({ endUser }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
-  const [isDark, setDark] = React.useState(false);
+  const [theme, setTheme] = React.useState<StandaloneTheme>('light');
   ContextSingleton.setStandalone();
   const pages = endUser ? endUserPages : allPages;
+
+  React.useEffect(() => {
+    applyStandaloneDocumentTheme(theme);
+  }, [theme]);
 
   const onSidebarToggle = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   const withContext = (content: JSX.Element, name: string) => {
+    const tabScheme = theme === 'dark' ? 'dark' : theme === 'glass' ? 'glass' : 'light';
     return (
-      <PageSection hasBodyWrapper={false} id="consolePageSection" className={`tab ${isDark ? 'dark' : 'light'}`}>
+      <PageSection hasBodyWrapper={false} id="consolePageSection" className={`tab ${tabScheme}`}>
         <div style={{ padding: '1rem' }}>
           <Title headingLevel="h1">{`${name} example`}</Title>
         </div>
@@ -151,7 +157,7 @@ export const App: React.FunctionComponent<{ endUser?: boolean }> = ({ endUser })
     <BrowserRouter>
       <Page
         masthead={
-          <Header isDark={isDark} setDark={setDark} isSidebarOpen={isSidebarOpen} onSidebarToggle={onSidebarToggle} />
+          <Header theme={theme} setTheme={setTheme} isSidebarOpen={isSidebarOpen} onSidebarToggle={onSidebarToggle} />
         }
         sidebar={
           <PageSidebar isSidebarOpen={isSidebarOpen} id="vertical-sidebar">

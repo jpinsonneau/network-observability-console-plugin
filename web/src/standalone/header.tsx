@@ -16,22 +16,14 @@ import {
 
 import React from 'react';
 
+import { StandaloneTheme } from './standalone-theme';
+
 export const Header: React.FunctionComponent<{
   isSidebarOpen: boolean;
   onSidebarToggle: () => void;
-  isDark: boolean;
-  setDark: (dark: boolean) => void;
-}> = ({ isSidebarOpen, onSidebarToggle, isDark, setDark }) => {
-  const onThemeSelect = (isDarkTheme: boolean) => {
-    setDark(isDarkTheme);
-    const htmlElement = document.documentElement;
-    if (isDarkTheme) {
-      htmlElement.classList.add('pf-v6-theme-dark');
-    } else {
-      htmlElement.classList.remove('pf-v6-theme-dark');
-    }
-  };
-
+  theme: StandaloneTheme;
+  setTheme: (theme: StandaloneTheme) => void;
+}> = ({ isSidebarOpen, onSidebarToggle, theme, setTheme }) => {
   return (
     <Masthead>
       <MastheadMain>
@@ -60,9 +52,16 @@ export const Header: React.FunctionComponent<{
               </a>
             </ToolbarItem>
             <ToolbarItem align={{ default: 'alignEnd' }}>
-              <ToggleGroup>
-                <ToggleGroupItem text="Light" isSelected={!isDark} onClick={() => onThemeSelect(false)} />
-                <ToggleGroupItem text="Dark" isSelected={isDark} onClick={() => onThemeSelect(true)} />
+              <ToggleGroup aria-label="Color theme" isCompact>
+                <ToggleGroupItem text="Light" isSelected={theme === 'light'} onClick={() => setTheme('light')} />
+                <ToggleGroupItem text="Dark" isSelected={theme === 'dark'} onClick={() => setTheme('dark')} />
+                <ToggleGroupItem text="Glass" isSelected={theme === 'glass'} onClick={() => setTheme('glass')} />
+                <ToggleGroupItem
+                  text="Contrast"
+                  aria-label="High contrast"
+                  isSelected={theme === 'high-contrast'}
+                  onClick={() => setTheme('high-contrast')}
+                />
               </ToggleGroup>
             </ToolbarItem>
           </ToolbarContent>

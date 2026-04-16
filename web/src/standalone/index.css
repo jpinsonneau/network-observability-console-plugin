@@ -48,8 +48,11 @@ label.pf-v6-c-menu__menu-item {
 }
 
 /* Map PF6 semantic tokens for standalone mode (light).
-   In OCP Console, these are provided by the Console shell. */
-#pageSection, #netobservPageSection {
+   In OCP Console, these are provided by the Console shell.
+   Omit when PatternFly high contrast is on so :root HC tokens are not overridden. */
+html:not(.pf-v6-theme-high-contrast):not(.pf-v6-theme-dark):not(.netobserv-standalone-theme-glass) #pageSection,
+html:not(.pf-v6-theme-high-contrast):not(.pf-v6-theme-dark):not(.netobserv-standalone-theme-glass)
+  #netobservPageSection {
   --pf-t--global--background--color--primary--default: #fff;
   --pf-t--global--background--color--secondary--default: #f0f0f0;
   --pf-t--global--border--color--default: #d2d2d2;
@@ -79,6 +82,67 @@ label.pf-v6-c-menu__menu-item {
   --pf-t--global--color--brand--default: #1fa7f8;
   --pf-t--global--color--status--danger--default: #fe5142;
   --pf-t--global--spacer--xs: 0.25rem;
+}
+
+/*
+ * Standalone “glass” (frosted) look — approximates OpenShift Console’s glass shell where the
+ * full token set is injected by the Console app. PatternFly 6.4 in this repo has no pf-v6-theme-glass.
+ */
+html.netobserv-standalone-theme-glass {
+  min-height: 100%;
+}
+
+html.netobserv-standalone-theme-glass body {
+  min-height: 100%;
+  background: linear-gradient(145deg, #c7dbf5 0%, #e4dcf5 38%, #f2eadf 100%);
+  background-attachment: fixed;
+}
+
+/* Page chrome tokens: same frosted fill as sidebar + main (matches OCP glass shell). */
+html.netobserv-standalone-theme-glass body > #app > .pf-v6-c-page {
+  --pf-v6-c-page--BackgroundColor: transparent;
+  --pf-v6-c-page__sidebar--BackgroundColor: rgba(255, 255, 255, 0.35);
+  --pf-v6-c-page__main-container--BackgroundColor: rgba(255, 255, 255, 0.35);
+  --pf-v6-c-page__main-section--BackgroundColor: transparent;
+  background: transparent;
+}
+
+html.netobserv-standalone-theme-glass .pf-v6-c-page__sidebar,
+html.netobserv-standalone-theme-glass .pf-v6-c-page__main-container {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+html.netobserv-standalone-theme-glass .pf-v6-c-page__sidebar-body {
+  background: transparent;
+}
+
+html.netobserv-standalone-theme-glass .pf-v6-c-masthead {
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+html.netobserv-standalone-theme-glass #pageSection,
+html.netobserv-standalone-theme-glass #netobservPageSection {
+  --pf-t--global--background--color--primary--default: rgba(255, 255, 255, 0.52);
+  --pf-t--global--background--color--secondary--default: rgba(255, 255, 255, 0.38);
+  --pf-t--global--border--color--default: rgba(210, 210, 210, 0.65);
+  --pf-t--global--text--color--subtle: #5c5f66;
+  --pf-t--global--text--color--inverse: #fff;
+  --pf-t--global--text--color--regular: #151515;
+  --pf-t--global--text--color--status--danger--default: #c9190b;
+  --pf-t--global--text--color--status--warning--default: #f0ab00;
+  --pf-t--global--text--color--status--info--default: #2b9af3;
+  --pf-t--global--color--brand--default: #06c;
+  --pf-t--global--color--status--danger--default: #c9190b;
+  --pf-t--global--spacer--xs: 0.25rem;
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+}
+
+html.netobserv-standalone-theme-glass section#pageSection {
+  box-shadow: 0 1px 3px rgba(15, 17, 21, 0.08);
 }
 
 /*set font & titles styles*/
@@ -225,6 +289,14 @@ textarea,
   color: var(--pf-v6-c-toggle-group__button--Color);
   --pf-v6-c-toggle-group__button--BackgroundColor: var(--pf-t--global--color--brand--default);
   --pf-v6-c-toggle-group__button--before--BorderColor: var(--pf-t--global--color--brand--hover);
+}
+
+html.netobserv-standalone-theme-glass .pf-v6-c-toggle-group__button.pf-m-selected {
+  color: black;
+}
+
+.pf-v6-theme-high-contrast:not(.pf-v6-theme-dark) .pf-v6-c-toggle-group__button.pf-m-selected {
+  color: var(--pf-v6-c-toggle-group__button--Color);
 }
 
 /* fix primary button color*/
