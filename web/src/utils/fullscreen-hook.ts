@@ -4,8 +4,9 @@ export function useFullScreen(): [boolean, React.Dispatch<React.SetStateAction<b
   const [isFullScreen, setFullScreen] = React.useState(false);
 
   React.useEffect(() => {
-    const sidebarExpanded = document.querySelector('.pf-v6-c-page__sidebar.pf-m-expanded');
-    if (isFullScreen && sidebarExpanded) {
+    const pageSidebar = document.querySelector('.pf-v6-c-page__sidebar');
+    const sidebarOpen = pageSidebar?.getAttribute('aria-hidden') === 'false';
+    if (isFullScreen && sidebarOpen) {
       document.getElementById('nav-toggle')?.click();
     }
 
