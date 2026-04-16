@@ -227,6 +227,15 @@ span.pf-v6-c-button__icon.pf-m-start {
 
 .netobserv-tab-container {
     margin-top: 1.5rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.netobserv-tab-container>section#pageSection {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .chips-popover-close-button {
