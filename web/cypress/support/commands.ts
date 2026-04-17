@@ -111,14 +111,18 @@ Cypress.Commands.add('openColumnsModal', () => {
 
 Cypress.Commands.add('selectPopupItems', (id, names) => {
   for (let i = 0; i < names.length; i++) {
-    cy.get(id).get('.modal-body').contains(names[i])
-      .closest('.pf-v6-c-data-list__item-row').find('.pf-v6-c-data-list__check').click();
+    cy.get(id)
+      .find('.pf-v6-c-modal-box__body')
+      .contains(names[i])
+      .closest('.pf-v6-c-data-list__item-row')
+      .find('.pf-v6-c-data-list__check')
+      .click();
   }
 });
 
 Cypress.Commands.add('checkPopupItems', (id, ids) => {
   for (let i = 0; i < ids.length; i++) {
-    cy.get(id).find('.modal-body').find(`#${ids[i]}`).check();
+    cy.get(id).find('.pf-v6-c-modal-box__body').find(`#${ids[i]}`).check();
   }
 });
 

@@ -237,27 +237,6 @@ textarea,
   padding-top: 0.5em;
 }
 
-.modal-body {
-  padding: 0 3em 0 3em !important;
-  background: none !important;
-  max-height: 50vh;
-  overflow-x: hidden;
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  position: relative;
-}
-
-.modal-body.scrollable {
-  overflow-y: scroll;
-}
-
-.modal-body.overflow-visible {
-  overflow: visible;
-}
-
 .modal-footer {
   display: flex;
   align-self: flex-end;
