@@ -70,7 +70,6 @@ Cypress.Commands.add('checkDashboards', (names) => {
             cy.get(graphSelector.graphBody, { timeout: 120000 }).should($body => {
                 const hasEmptyState = $body.hasClass('pf-v6-c-empty-state')
                 if (hasEmptyState) {
-                    // Force a retry by throwing an error
                     throw new Error('Dashboard panel still showing empty state, retrying...')
                 }
             })
