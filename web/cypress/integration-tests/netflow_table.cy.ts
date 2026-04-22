@@ -14,7 +14,7 @@ describe('(OCP-50532, OCP-50531, OCP-50530, OCP-59408 Network_Observability) Net
 
     beforeEach("test", function () {
         netflowPage.visit()
-        cy.get('#tabs-container li:nth-child(2)').click()
+        cy.get('#tabs-container').contains('Traffic flows').click()
         cy.byTestID("table-composable").should('exist')
     })
 
@@ -124,7 +124,10 @@ describe('(OCP-50532, OCP-50531, OCP-50530, OCP-59408 Network_Observability) Net
         netflowPage.clearAllFilters()
 
         // verify NOT filter
-        cy.get(filterSelectors.filterDropdown).click().get('.pf-v6-c-panel__main-body').should('be.visible')
+        // Clear any text in filter input to ensure FilterSearchPanel (not suggestions) is shown
+        cy.get(filterSelectors.filterInput).clear()
+        cy.get(filterSelectors.filterDropdown).click()
+        cy.get('#filter-popper').should('be.visible')
         cy.get(filterSelectors.sourceRadio).should('exist').click()
         cy.get(filterSelectors.columnFilter).should('exist').click().get('#namespace').should('exist').click()
         cy.get(filterSelectors.compareDropdown).should('exist').click().get('#not-equal').should('exist').click()
@@ -136,17 +139,17 @@ describe('(OCP-50532, OCP-50531, OCP-50530, OCP-59408 Network_Observability) Net
 
         // verify src port filter and port Naming
         cy.get(filterSelectors.filterInput).type("src_port=3100" + '{enter}')
-        cy.get('#src_port-0-toggle > span.pf-v6-c-menu-toggle__text').should('contain.text', 'loki')
+        cy.get('#src_port-0-toggle').should('contain.text', 'loki')
 
         // disable filter
         cy.get('#src_port-0-toggle').click().get('#dropdown-item-disable').click()
 
         // sort by port
-        cy.get('[data-test=th-SrcPort] > .pf-v6-c-table__button').click()
+        cy.get('[data-test=th-SrcPort] button').click()
 
         // Verify SrcPort doesnt not have text loki for all rows
         cy.get('[data-test-td-column-id=SrcPort]').each((td) => {
-            cy.get('[data-test-td-column-id=SrcPort] > div > div > p').should('not.contain.text', 'loki (3100)')
+            cy.wrap(td).should('not.contain.text', 'loki (3100)')
         })
 
         // enable filter
@@ -154,7 +157,7 @@ describe('(OCP-50532, OCP-50531, OCP-50530, OCP-59408 Network_Observability) Net
 
         // Verify SrcPort has text loki for all rows
         cy.get('[data-test-td-column-id=SrcPort]').each((td) => {
-            cy.get('[data-test-td-column-id=SrcPort] > div > div > p').should('contain.text', 'loki (3100)')
+            cy.wrap(td).should('contain.text', 'loki (3100)')
         })
 
         netflowPage.clearAllFilters()
@@ -193,7 +196,7 @@ describe('(OCP-50532, OCP-50531, OCP-50530, OCP-59408 Network_Observability) Net
         cy.byTestID("show-histogram-button").should('exist').click()
         cy.get('#popover-netobserv-tour-popover-body').should('exist')
         // close tour
-        cy.get("#popover-netobserv-tour-popover-header > h6 > div > div:nth-child(2) > button").should("exist").click()
+        cy.get(".guided-tour-close-button").should("exist").click()
         cy.byTestID(genSelectors.refreshDrop).should('be.disabled')
         // get current refreshed time
         let lastRefresh = Cypress.$("#lastRefresh").text()

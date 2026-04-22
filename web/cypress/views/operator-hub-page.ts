@@ -44,7 +44,7 @@ export const installedOperators = {
 
 export const operatorHubPage = {
   getAllTileLabels: () => {
-    return cy.get('.pf-v6-c-badge')
+    return cy.get('.co-catalog-tile').find('[role="status"]')
   },
   checkCustomCatalog: (name: string) => {
     sourceActions(name, 'view');
@@ -196,7 +196,7 @@ export const operatorHubPage = {
 
 export const operatorHubModal = {
   clickInstall: () => {
-    cy.get('[data-test-id="operator-install-btn"]').click({ force: true });
+    cy.byLegacyTestID('operator-install-btn').click({ force: true });
   },
   selectChannel: (channel) => {
     cy.get('h5').contains('Channel').parent('div').within(() => {

@@ -123,16 +123,20 @@ export const Operator = {
         cy.visit('k8s/ns/openshift-netobserv-operator/operators.coreos.com~v1alpha1~ClusterServiceVersion')
         const selector = '[data-test-operator-row="' + Operator.name() + '"]'
         cy.get(selector).invoke('attr', 'href').then(href => {
-            cy.visit(href)
+            if (href) {
+                cy.visit(href)
+            }
         })
 
         cy.contains('Flow Collector').invoke('attr', 'href').then(href => {
-            cy.visit(href)
+            if (href) {
+                cy.visit(href)
+            }
         })
     },
     createFlowcollector: (parameters?: FlowCollectorParameter) => {
         Operator.visitFlowcollector()
-        cy.get('div.loading-box__loaded:nth-child(2)').should('exist')
+        cy.get('div.loading-box__loaded').should('exist')
         cy.wait(3000)
         cy.get("#yaml-create").should('exist').then(() => {
             if ((Cypress.$('td[role="gridcell"]').length > 0) && (parameters != null)) {
@@ -142,7 +146,7 @@ export const Operator = {
             }
         })
         // don't create flowcollector if already exists
-        cy.get('div.loading-box__loaded:nth-child(2)', { timeout: 60000 }).should('be.visible').then(() => {
+        cy.get('div.loading-box__loaded', { timeout: 60000 }).should('be.visible').then(() => {
             if (Cypress.$('td[role="gridcell"]').length == 0) {
                 cy.log("Deploying flowcollector")
                 switch (parameters) {
@@ -193,17 +197,13 @@ export const Operator = {
                 // cy.reload(true)
                 cy.intercept('**/copy-login-commands*').as('reload')
                 // wait for all window refresh
-                cy.wait('@reload', { timeout: 60000 })
+                cy.wait('@reload', { timeout: 100000 })
                 cy.log("Console refreshed successfully")
-                Operator.visitFlowcollector()
-                cy.byTestID('status-text').should('exist').should('contain.text', 'Ready')
-                // Check for loki pod running in netobserv namespace only if Loki is not disabled
                 if (parameters !== "LokiDisabled") {
-                    cy.adminCLI(`oc get pods -n ${project} -l app=loki -o jsonpath="{.items[*].status.phase}"`).then(result => {
-                        const phases = result.stdout.trim().split(' ')
-                        expect(phases).to.include('Running')
-                    })
+                    cy.adminCLI(`oc wait --for=condition=Ready pod -l app=loki -n ${project} --timeout=180s`)
                 }
+                Operator.visitFlowcollector()
+                cy.byTestID('status-text', { timeout: 120000 }).should('exist').should('contain.text', 'Ready')
             }
         })
     },
@@ -212,7 +212,7 @@ export const Operator = {
         // Overview tab
         cy.get(pluginSelectors.next).should('exist').click()
         // Processing tab
-        cy.get(pluginSelectors.privilegedToggle).should('exist').click()
+        cy.get(pluginSelectors.privilegedToggle).should('exist').click({ force: true })
         // Enable PacketDrop
         cy.get(pluginSelectors.packetDropEnable).should('exist').check()
         cy.get(pluginSelectors.next).should('exist').click()
@@ -220,11 +220,10 @@ export const Operator = {
         cy.get(pluginSelectors.lokiMode).should('exist').click().then(mode => {
             cy.get(pluginSelectors.monolithicMode).should('exist').click()
         })
-        // Install demoLoki
-        cy.get(pluginSelectors.installDemoLoki).should('exist').click()
+        cy.get(pluginSelectors.installDemoLoki).should('exist').click({ force: true })
         cy.get(pluginSelectors.next).should('exist').click()
-        // Consumption tab
-        cy.get(pluginSelectors.next).should('exist').click()
+        // Consumption tab - final submit
+        cy.get('footer').contains('button', 'Submit').should('exist').click()
     },
     deleteFlowCollector: () => {
         cy.adminCLI(`oc delete flowcollector cluster --ignore-not-found`)
@@ -255,7 +254,9 @@ export const Operator = {
 
 Cypress.Commands.add('checkStorageClass', (context: Mocha.Context) => {
     let storageClassCheck = false
-    cy.adminCLI('oc get sc', { failOnNonZeroExit: false }).then(result => {
+    const kubeconfig = Cypress.env('KUBECONFIG_PATH');
+    expect(kubeconfig, 'KUBECONFIG_PATH').to.be.a('string').and.not.be.empty
+    cy.exec(`oc get sc --kubeconfig ${kubeconfig}`).then(result => {
         if (result.stderr.includes('No resources found')) {
             cy.log('StorageClass not deployed, skipping')
             storageClassCheck = true

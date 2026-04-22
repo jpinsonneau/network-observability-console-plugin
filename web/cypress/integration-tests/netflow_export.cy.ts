@@ -25,7 +25,7 @@ describe('(OCP-72610 Network_Observability) Export automation', { tags: ['Networ
         cy.readFile('cypress/downloads/overview_page.png')
 
         // Export only Top 5 average bytes rates panel
-        cy.get('#panel-kebab-top_avg_byte_rates-container > .pf-v6-c-menu-toggle').should('exist').click()
+        cy.get('#panel-kebab-top_avg_byte_rates-container button').should('exist').click()
         cy.contains("Export panel").should('exist').click()
         cy.readFile('cypress/downloads/overview_panel_top_avg_byte_rates.png')
         cy.exec('rm cypress/downloads/overview_page.png')
@@ -39,19 +39,18 @@ describe('(OCP-72610 Network_Observability) Export automation', { tags: ['Networ
         cy.byTestID("table-composable").should('exist')
         cy.showAdvancedOptions();
         cy.get('#export-button').should('exist').click()
-        cy.get('[data-test="export-modal-footer"] > [data-test="export-button"]').should('exist').then((exportbtn) => {
-            cy.wrap(exportbtn).click()
-            // wait for download to complete
-            cy.wait(3000)
-            // get the CSV file name
-            cy.exec("ls cypress/downloads").then((response) => {
-                // rename CSV file to export_table.csv
-                cy.wrap(response.stdout).should('not.be.empty')
-                cy.exec(`mv cypress/downloads/${response.stdout} cypress/downloads/export_table.csv`)
-                cy.readFile('cypress/downloads/export_table.csv')
-            })
-            cy.exec('rm cypress/downloads/export_table.csv')
+        cy.byTestID('export-modal').should('be.visible')
+        cy.byTestID('export-modal').within(() => {
+            cy.byTestID('export-button').should('exist').click()
         })
+        // get the CSV file name with retry built into exec
+        cy.exec("ls cypress/downloads", { timeout: 10000 }).then((response) => {
+            // rename CSV file to export_table.csv
+            cy.wrap(response.stdout).should('not.be.empty')
+            cy.exec(`mv cypress/downloads/${response.stdout.trim()} cypress/downloads/export_table.csv`)
+            cy.readFile('cypress/downloads/export_table.csv')
+        })
+        cy.exec('rm cypress/downloads/export_table.csv')
         netflowPage.clearAllFilters()
     })
 
