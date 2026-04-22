@@ -18,13 +18,32 @@ import _ from 'lodash';
 import { MetricStats, TopologyMetricPeer, TopologyMetrics } from '../api/loki';
 import { TruncateLength } from '../components/dropdowns/truncate-dropdown';
 import { getResourceSeverity, HealthStat, HealthStats, Severity } from '../components/health/health-helper';
-import { Filter, FilterCompare, FilterDefinition, FilterId, Filters, findFromFilters } from '../model/filters';
+import {
+  createFilterValue,
+  Filter,
+  FilterCompare,
+  FilterDefinition,
+  FilterId,
+  Filters,
+  FilterValue,
+  findFromFilters
+} from '../model/filters';
 import { ContextSingleton } from '../utils/context';
 import { findFilter } from '../utils/filter-definitions';
 import { getTopologyEdgeId } from '../utils/ids';
 import { createPeer, getFormattedValue } from '../utils/metrics';
 import { defaultMetricFunction, defaultMetricType } from '../utils/router';
-import { FlowScope, Groups, Match, MetricFunction, MetricType, NodeType, StatFunction } from './flow-query';
+import { mergeTlsLockSeverities, type TlsLockSeverity } from '../utils/tls-lock-severity';
+import {
+  FlowScope,
+  Groups,
+  isTopologyTlsMetric,
+  Match,
+  MetricFunction,
+  MetricType,
+  NodeType,
+  StatFunction
+} from './flow-query';
 import { getStat } from './metrics';
 import { getStepInto, isDirectionnal, resolveGroupTypes, ScopeConfigDef } from './scope';
 
@@ -57,6 +76,10 @@ export interface TopologyOptions {
   metricFunction: StatFunction;
   metricType: MetricType;
   showEmpty?: boolean;
+  /** When true, volume edges without TLS signals show an open-lock hint (can be busy; opt-in). */
+  showCleartextEdgeLock?: boolean;
+  /** When `tlsTracking` is enabled in plugin config (not persisted in local storage). */
+  isTlsTracking?: boolean;
 }
 
 export const DefaultOptions: TopologyOptions = {
@@ -72,7 +95,8 @@ export const DefaultOptions: TopologyOptions = {
   medScale: 0.5,
   metricFunction: defaultMetricFunction,
   metricType: defaultMetricType,
-  showEmpty: false
+  showEmpty: false,
+  showCleartextEdgeLock: false
 };
 
 export type GraphElementPeer = GraphElement<ElementModel, NodeData>;
@@ -191,6 +215,8 @@ const toggleFilter = (
   defValue: {
     def: FilterDefinition;
     value: string;
+    /** When adding, full chip (e.g. display); if omitted, `{ v: value }` is used. */
+    filterValue?: FilterValue;
   },
   isFiltered: boolean,
   setFilters: (filters: Filter[]) => void
@@ -208,10 +234,29 @@ const toggleFilter = (
     if (defValue.def.id === 'src_resource' || defValue.def.id === 'dst_resource') {
       filter!.values = [{ v: defValue.value! }];
     } else {
-      filter!.values.push({ v: defValue.value });
+      const toAdd = defValue.filterValue ?? { v: defValue.value };
+      if (!filter!.values.some(v => v.v === toAdd.v)) {
+        filter!.values.push(toAdd);
+      }
     }
   }
   setFilters(result.filter(f => !_.isEmpty(f.values)));
+};
+
+/**
+ * Toggle one quick-filter chip by filter definition and user-facing value (TLS drawer, etc.).
+ * Uses the same merge/remove rules as {@link toggleElementFilter}: append when adding, drop only this `v` when removing.
+ */
+export const toggleQuickFilterValue = (
+  def: FilterDefinition,
+  label: string,
+  isFiltered: boolean,
+  filters: Filter[],
+  setFilters: (filters: Filter[]) => void
+) => {
+  const fv = createFilterValue(def, label);
+  const result = _.cloneDeep(filters);
+  toggleFilter(result, { def, value: fv.v, filterValue: fv }, isFiltered, setFilters);
 };
 
 export const toggleDirElementFilter = (
@@ -258,6 +303,15 @@ export type NodeData = {
   canStepInto?: boolean;
   badgeColor?: string;
   noMetrics?: boolean;
+};
+
+/** TLS fields on topology edge element data (tags, side panel). */
+export type EdgeTlsPanelData = {
+  tagTlsSecure?: boolean;
+  tlsTypeLabels?: string[];
+  tlsVersionLabels?: string[];
+  tagTlsLockSeverity?: TlsLockSeverity;
+  tagTlsCleartext?: boolean;
 };
 
 const generateNode = (
@@ -378,7 +432,12 @@ const generateEdge = (
   filtered = false,
   highlightedId: string,
   t: TFunction,
-  isDark?: boolean
+  isDark?: boolean,
+  tagTlsSecure = false,
+  tlsTypeLabels?: string[],
+  tlsVersionLabels?: string[],
+  tlsLockSeverity?: TlsLockSeverity,
+  tagTlsCleartext = false
 ): EdgeModel => {
   const id = `${sourceId}.${targetId}`;
 
@@ -405,7 +464,12 @@ const generateEdge = (
       tag: getEdgeTag(stat, options, t),
       tagStatus: getTagStatus(stat, options.maxEdgeStat),
       bps: stat,
-      drops: droppedStat
+      drops: droppedStat,
+      tagTlsSecure,
+      ...(tlsTypeLabels?.length ? { tlsTypeLabels } : {}),
+      ...(tlsVersionLabels?.length ? { tlsVersionLabels } : {}),
+      tagTlsLockSeverity: tagTlsSecure ? tlsLockSeverity ?? 'unknown' : undefined,
+      tagTlsCleartext: tagTlsCleartext && stat > 0 ? true : undefined
     }
   };
 };
@@ -550,7 +614,12 @@ export const generateDataModel = (
     droppedStats: MetricStats | undefined,
     shadowed = false,
     filtered = false,
-    t: TFunction
+    t: TFunction,
+    tlsSecure = false,
+    tlsTypeLabels?: string[],
+    tlsVersionLabels?: string[],
+    tlsLockSeverity?: TlsLockSeverity,
+    tagTlsCleartextHint?: boolean
   ): EdgeModel => {
     const stat = getStat(stats, options.metricFunction);
     const droppedStat = droppedStats ? getStat(droppedStats, options.metricFunction) : 0;
@@ -560,9 +629,24 @@ export const generateDataModel = (
         (e.data.sourceId === targetId && e.data.targetId === sourceId)
     );
     if (edge) {
-      //update style and datas
-      edge.edgeStyle = getEdgeStyle(stat);
-      edge.animationSpeed = getAnimationSpeed(stat, options.maxEdgeStat);
+      const mergedTlsLabels = _.uniq([...(edge.data.tlsTypeLabels || []), ...(tlsTypeLabels || [])]);
+      const tlsTypeLabelsOut = mergedTlsLabels.length ? mergedTlsLabels : undefined;
+      const mergedTlsVersions = _.uniq([...(edge.data.tlsVersionLabels || []), ...(tlsVersionLabels || [])]);
+      const tlsVersionLabelsOut = mergedTlsVersions.length ? mergedTlsVersions : undefined;
+      const mergedStat = edge.data.bps + stat;
+      const mergedDrops = edge.data.drops + droppedStat;
+      const mergedSecure = edge.data.tagTlsSecure || tlsSecure;
+      const mergedLockSeverity = mergedSecure
+        ? mergeTlsLockSeverities(edge.data.tagTlsLockSeverity, tlsSecure ? tlsLockSeverity : undefined) ?? 'unknown'
+        : undefined;
+      const mergedCleartext =
+        Boolean(opts.isTlsTracking) &&
+        opts.showCleartextEdgeLock &&
+        !mergedSecure &&
+        (Boolean(edge.data.tagTlsCleartext) || Boolean(tagTlsCleartextHint)) &&
+        mergedStat > 0;
+      edge.edgeStyle = getEdgeStyle(mergedStat);
+      edge.animationSpeed = getAnimationSpeed(mergedStat, options.maxEdgeStat);
       edge.data = {
         ...edge.data,
         shadowed,
@@ -570,13 +654,36 @@ export const generateDataModel = (
         isDark,
         //edges are directed from src to dst. It will become bidirectional if inverted pair is found
         startTerminalType: edge.data.sourceId !== sourceId ? EdgeTerminalType.directional : edge.data.startTerminalType,
-        tag: getEdgeTag(stat, options, t),
-        tagStatus: getTagStatus(stat, options.maxEdgeStat),
-        bps: stat,
-        drops: droppedStat
+        tag: getEdgeTag(mergedStat, options, t),
+        tagStatus: getTagStatus(mergedStat, options.maxEdgeStat),
+        bps: mergedStat,
+        drops: mergedDrops,
+        tagTlsSecure: mergedSecure,
+        tagTlsLockSeverity: mergedSecure ? mergedLockSeverity : undefined,
+        tagTlsCleartext: mergedCleartext ? true : undefined,
+        ...(tlsTypeLabelsOut ? { tlsTypeLabels: tlsTypeLabelsOut } : {}),
+        ...(tlsVersionLabelsOut ? { tlsVersionLabels: tlsVersionLabelsOut } : {})
       };
     } else {
-      edge = generateEdge(sourceId, targetId, stat, droppedStat, opts, shadowed, filtered, highlightedId, t, isDark);
+      const tlsTypeLabelsOut = tlsTypeLabels?.length ? tlsTypeLabels : undefined;
+      const tlsVersionLabelsOut = tlsVersionLabels?.length ? tlsVersionLabels : undefined;
+      edge = generateEdge(
+        sourceId,
+        targetId,
+        stat,
+        droppedStat,
+        opts,
+        shadowed,
+        filtered,
+        highlightedId,
+        t,
+        isDark,
+        tlsSecure,
+        tlsTypeLabelsOut,
+        tlsVersionLabelsOut,
+        tlsSecure ? tlsLockSeverity ?? 'unknown' : undefined,
+        Boolean(tagTlsCleartextHint) && !tlsSecure && stat > 0
+      );
       edges.push(edge);
     }
 
@@ -644,6 +751,7 @@ export const generateDataModel = (
 
     if (options.edges && srcNode && dstNode && srcNode.id !== dstNode.id) {
       const drops = droppedMetrics.find(dm => dm.source.id === m.source.id && dm.destination.id === m.destination.id);
+      const volumeTls = isTopologyTlsMetric(opts.metricType);
       addEdge(
         srcNode.id,
         dstNode.id,
@@ -651,7 +759,12 @@ export const generateDataModel = (
         drops?.stats,
         srcNode.data.shadowed || dstNode.data.shadowed,
         srcNode.data.filtered || dstNode.data.filtered,
-        t
+        t,
+        m.tlsSecure === true && volumeTls,
+        volumeTls ? m.tlsTypeLabels : undefined,
+        volumeTls ? m.tlsVersionLabels : undefined,
+        volumeTls && m.tlsSecure ? m.tlsLockSeverity : undefined,
+        Boolean(opts.isTlsTracking) && opts.showCleartextEdgeLock && volumeTls && m.tlsSecure !== true
       );
     }
   });

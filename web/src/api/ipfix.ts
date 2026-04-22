@@ -94,6 +94,10 @@ export interface Flow {
   _IsFirst?: string;
   numFlowLogs?: number;
   UdnId?: string;
+  /** TLS message types observed on the flow (requires tlsTracking). */
+  TLSTypes?: string[] | string;
+  /** TLS protocol version from handshake (requires tlsTracking), e.g. TLS 1.3. */
+  TLSVersion?: string[] | string;
 }
 
 export enum FlowDirection {

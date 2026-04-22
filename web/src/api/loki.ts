@@ -3,6 +3,7 @@ import { StructuredError } from '../utils/errors';
 import { cyrb53 } from '../utils/hash';
 import { getFunctionFromId, getRateFunctionFromId } from '../utils/overview-panels';
 import { Result } from '../utils/result';
+import type { TlsLockSeverity } from '../utils/tls-lock-severity';
 import { Field, Flow, Record } from './ipfix';
 
 export interface AggregatedQueryResponse {
@@ -188,6 +189,14 @@ export type TopologyMetrics = {
   values: [number, number][];
   stats: MetricStats;
   scope: FlowScope;
+  /** True when aggregated flows include TLS (from TLSTypes). */
+  tlsSecure?: boolean;
+  /** Distinct TLSTypes label values from Loki when grouped by TLS (or injected mocks). */
+  tlsTypeLabels?: string[];
+  /** Distinct TLSVersion label values when grouped by version (or injected mocks). */
+  tlsVersionLabels?: string[];
+  /** Worst TLS protocol class among tlsVersionLabels (edge lock color). */
+  tlsLockSeverity?: TlsLockSeverity;
 };
 
 export type NamedMetric = TopologyMetrics & {

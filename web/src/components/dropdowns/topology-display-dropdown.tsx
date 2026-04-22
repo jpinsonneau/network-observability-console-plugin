@@ -20,6 +20,7 @@ export const TopologyDisplayDropdown: React.FC<{
   setTopologyOptions: (o: TopologyOptions) => void;
   allowedTypes: MetricType[];
   scopes: ScopeConfigDef[];
+  isTlsTracking: boolean;
 }> = ({
   metricFunction,
   setMetricFunction,
@@ -30,7 +31,8 @@ export const TopologyDisplayDropdown: React.FC<{
   topologyOptions,
   setTopologyOptions,
   allowedTypes,
-  scopes
+  scopes,
+  isTlsTracking
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -68,6 +70,7 @@ export const TopologyDisplayDropdown: React.FC<{
           setTopologyOptions={setTopologyOptions}
           allowedTypes={allowedTypes}
           scopes={scopes}
+          isTlsTracking={isTlsTracking}
         />
       </div>
     );
@@ -81,7 +84,8 @@ export const TopologyDisplayDropdown: React.FC<{
     topologyOptions,
     setTopologyOptions,
     allowedTypes,
-    scopes
+    scopes,
+    isTlsTracking
   ]);
 
   return (

@@ -340,6 +340,7 @@ func (c *Frontend) GetAggregateKeyLabels() map[string][]string {
 		"droppedState": {"PktDropLatestState"},
 		"droppedCause": {"PktDropLatestDropCause"},
 		"dnsRCode":     {"DnsFlagsResponseCode"},
+		"tlsTypes":     {"TLSTypes", "TLSVersion"},
 	}
 	for i := range c.Scopes {
 		keyLabels[c.Scopes[i].ID] = c.Scopes[i].Labels

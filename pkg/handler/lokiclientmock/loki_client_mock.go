@@ -157,5 +157,7 @@ func (o *LokiClientMock) Get(url string) ([]byte, int, error) {
 		}
 	}
 
-	return []byte(file), 200, nil
+	file = injectTLSTypesIntoMatrixResponse(url, file)
+
+	return file, 200, nil
 }

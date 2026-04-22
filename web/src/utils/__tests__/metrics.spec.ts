@@ -7,6 +7,9 @@ import {
   calibrateRange,
   computeStats,
   createPeer,
+  extractTlsTypeLabels,
+  extractTlsVersionLabels,
+  flowMetricHasTls,
   getFormattedValue,
   matchPeer,
   normalizeMetrics,
@@ -406,6 +409,75 @@ describe('parseTopologyMetrics', () => {
     expect(parsed[0].destination.getDisplayName(true, true)).toEqual('ns1.B (pod)');
     expect(parsed[1].source.getDisplayName(true, true)).toEqual('ns1.A');
     expect(parsed[1].destination.getDisplayName(true, true)).toEqual('ns1.B (svc)');
+  });
+
+  it('should set tlsSecure when TLSTypes is non-empty', () => {
+    const metrics: RawTopologyMetrics[] = [
+      {
+        metric: {
+          SrcK8S_Name: 'A',
+          SrcK8S_Type: 'Pod',
+          DstK8S_Name: 'B',
+          DstK8S_Type: 'Pod',
+          TLSTypes: ['ClientHello'],
+          TLSVersion: 'TLS 1.3'
+        },
+        values: [[1, 1]]
+      }
+    ];
+    const parsed = parseTopologyMetrics(metrics, 300, 'resource', 0, true) as TopologyMetrics[];
+    expect(parsed[0].tlsSecure).toBe(true);
+    expect(parsed[0].tlsTypeLabels).toEqual(['ClientHello']);
+    expect(parsed[0].tlsVersionLabels).toEqual(['TLS 1.3']);
+    expect(parsed[0].tlsLockSeverity).toBe('modern');
+  });
+});
+
+describe('extractTlsTypeLabels', () => {
+  it('should return empty for missing or empty TLSTypes', () => {
+    expect(extractTlsTypeLabels({} as never)).toEqual([]);
+    expect(extractTlsTypeLabels({ TLSTypes: [] } as never)).toEqual([]);
+    expect(extractTlsTypeLabels({ TLSTypes: '[]' } as never)).toEqual([]);
+  });
+
+  it('should parse array TLSTypes', () => {
+    expect(extractTlsTypeLabels({ TLSTypes: ['ClientHello', 'AppData'] } as never)).toEqual(['ClientHello', 'AppData']);
+  });
+
+  it('should parse string TLSTypes', () => {
+    expect(extractTlsTypeLabels({ TLSTypes: 'Handshake' } as never)).toEqual(['Handshake']);
+  });
+});
+
+describe('extractTlsVersionLabels', () => {
+  it('should return empty for missing or empty TLSVersion', () => {
+    expect(extractTlsVersionLabels({} as never)).toEqual([]);
+    expect(extractTlsVersionLabels({ TLSVersion: [] } as never)).toEqual([]);
+    expect(extractTlsVersionLabels({ TLSVersion: '[]' } as never)).toEqual([]);
+  });
+
+  it('should parse array and string TLSVersion', () => {
+    expect(extractTlsVersionLabels({ TLSVersion: ['TLS 1.3', 'TLS 1.2'] } as never)).toEqual(['TLS 1.3', 'TLS 1.2']);
+    expect(extractTlsVersionLabels({ TLSVersion: 'TLS 1.3' } as never)).toEqual(['TLS 1.3']);
+  });
+});
+
+describe('flowMetricHasTls', () => {
+  it('should return false for empty or missing TLS signals', () => {
+    expect(flowMetricHasTls({} as never)).toBe(false);
+    expect(flowMetricHasTls({ TLSTypes: [] } as never)).toBe(false);
+    expect(flowMetricHasTls({ TLSTypes: '[]' } as never)).toBe(false);
+    expect(flowMetricHasTls({ TLSVersion: '' } as never)).toBe(false);
+  });
+
+  it('should return true for non-empty TLSTypes', () => {
+    expect(flowMetricHasTls({ TLSTypes: ['AppData'] } as never)).toBe(true);
+    expect(flowMetricHasTls({ TLSTypes: 'ClientHello' } as never)).toBe(true);
+  });
+
+  it('should return true when only TLSVersion is present (Loki sum-by often omits TLSTypes)', () => {
+    expect(flowMetricHasTls({ TLSVersion: 'TLS 1.3' } as never)).toBe(true);
+    expect(flowMetricHasTls({ TLSTypes: [], TLSVersion: 'TLS 1.2' } as never)).toBe(true);
   });
 });
 

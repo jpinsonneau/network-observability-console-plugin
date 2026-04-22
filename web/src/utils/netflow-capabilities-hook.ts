@@ -9,6 +9,7 @@ import {
   filtersToString,
   FlowQuery,
   FlowScope,
+  isTopologyTlsMetric,
   MetricType,
   PacketLoss,
   RecordType
@@ -31,6 +32,7 @@ export interface ConfigCapabilities {
   isDNSTracking: boolean;
   isFlowRTT: boolean;
   isPktDrop: boolean;
+  isTlsTracking: boolean;
   isPromOnly: boolean;
   availableScopes: ScopeConfigDef[];
   allowedMetricTypes: MetricType[];
@@ -102,6 +104,8 @@ export function useConfigCapabilities(params: {
   const isFlowRTT = React.useMemo(() => config.features.includes('flowRTT'), [config.features]);
 
   const isPktDrop = React.useMemo(() => config.features.includes('pktDrop'), [config.features]);
+
+  const isTlsTracking = React.useMemo(() => config.features.includes('tlsTracking'), [config.features]);
 
   const isPromOnly = React.useMemo(() => !allowLoki || dataSource === 'prom', [allowLoki, dataSource]);
 
@@ -218,7 +222,11 @@ export function useConfigCapabilities(params: {
       if (selectedViewId === 'topology') {
         query.type = topologyMetricType;
         const resolvedGroup = resolveGroupTypes(topologyOptions.groupTypes, metricScope, availableScopes);
-        query.groups = resolvedGroup !== 'none' ? resolvedGroup : undefined;
+        const baseGroup = resolvedGroup !== 'none' ? resolvedGroup : '';
+        const tlsGroup =
+          isTlsTracking && !isPromOnly && allowLoki && isTopologyTlsMetric(topologyMetricType) ? 'tlsTypes' : '';
+        const mergedGroups = [baseGroup, tlsGroup].filter(Boolean).join('+');
+        query.groups = mergedGroups || undefined;
       } else if (selectedViewId === 'overview') {
         query.limit = topValues.includes(limit) ? limit : topValues[0];
         query.groups = undefined;
@@ -238,7 +246,10 @@ export function useConfigCapabilities(params: {
     topologyMetricType,
     metricScope,
     topologyOptions.groupTypes,
-    availableScopes
+    availableScopes,
+    isTlsTracking,
+    isPromOnly,
+    allowLoki
   ]);
 
   const fetchFunctions = React.useMemo(() => {
@@ -255,6 +266,7 @@ export function useConfigCapabilities(params: {
     isDNSTracking,
     isFlowRTT,
     isPktDrop,
+    isTlsTracking,
     isPromOnly,
     availableScopes,
     allowedMetricTypes,

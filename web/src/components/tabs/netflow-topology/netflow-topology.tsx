@@ -278,6 +278,7 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
             resetDefaultFilters={props.resetDefaultFilters}
             clearFilters={props.clearFilters}
             resourceStats={memoizedHealth}
+            isTlsTracking={caps.isTlsTracking}
           />
         </VisualizationProvider>
       </div>

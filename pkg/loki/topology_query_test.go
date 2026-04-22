@@ -19,6 +19,7 @@ var aggregateKeyLabels = map[string][]string{
 	"droppedState": {"PktDropLatestState"},
 	"droppedCause": {"PktDropLatestDropCause"},
 	"dnsRCode":     {"DnsFlagsResponseCode"},
+	"tlsTypes":     {"TLSTypes", "TLSVersion"},
 	"cluster":      {"K8S_ClusterName"},
 	"zone":         {"SrcK8S_Zone", "DstK8S_Zone"},
 	"host":         {"SrcK8S_HostName", "DstK8S_HostName"},
@@ -72,6 +73,31 @@ func TestBuildTopologyQuery_GroupsAndAggregate(t *testing.T) {
 		t,
 		"http://loki/loki/api/v1/query_range?query="+
 			"topk(50,sum by(SrcK8S_Namespace,DstK8S_Namespace,SrcK8S_HostName,DstK8S_HostName)(rate({app=\"netobserv-flowcollector\"}|json|unwrap Bytes|__error__=\"\"[2m])))&start=(start)&limit=50&step=10s",
+		result,
+	)
+}
+
+func TestBuildTopologyQuery_TlsTypesGroup(t *testing.T) {
+	in := TopologyInput{
+		Start:          "(start)",
+		End:            "",
+		Top:            "50",
+		RateInterval:   "2m",
+		Step:           "10s",
+		DataField:      "Bytes",
+		MetricFunction: constants.MetricFunctionRate,
+		RecordType:     constants.RecordTypeLog,
+		DataSource:     constants.DataSourceAuto,
+		Aggregate:      "namespace",
+		Groups:         "tlsTypes",
+	}
+	q, err := NewTopologyQuery(&lokiConfig, aggregateKeyLabels, &in)
+	require.NoError(t, err)
+	result := q.Build()
+	assert.Equal(
+		t,
+		"http://loki/loki/api/v1/query_range?query="+
+			"topk(50,sum by(SrcK8S_Namespace,DstK8S_Namespace,TLSTypes,TLSVersion)(rate({app=\"netobserv-flowcollector\"}|json|unwrap Bytes|__error__=\"\"[2m])))&start=(start)&limit=50&step=10s",
 		result,
 	)
 }

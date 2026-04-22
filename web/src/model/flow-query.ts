@@ -56,3 +56,16 @@ export const filterByHashId = (hashId: string): string => {
 export const isTimeMetric = (metricType: MetricType | undefined) => {
   return ['DnsLatencyMs', 'TimeFlowRttNs'].includes(metricType || '');
 };
+
+/** Volume metrics used for topology rate edges; TLS lock / TLSTypes grouping apply only here (not DNS latency or RTT). */
+export const isTopologyTlsMetric = (metricType: MetricType | undefined): boolean => {
+  if (!metricType) {
+    return false;
+  }
+  return (
+    metricType === 'Bytes' ||
+    metricType === 'Packets' ||
+    metricType === 'PktDropBytes' ||
+    metricType === 'PktDropPackets'
+  );
+};

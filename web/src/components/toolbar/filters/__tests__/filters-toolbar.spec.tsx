@@ -15,6 +15,7 @@ const testCaps = {
   isDNSTracking: false,
   isFlowRTT: false,
   isPktDrop: true,
+  isTlsTracking: false,
   isPromOnly: false,
   availableScopes: [],
   allowedMetricTypes: [],

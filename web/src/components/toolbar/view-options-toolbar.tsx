@@ -269,6 +269,7 @@ export const ViewOptionsToolbar = React.forwardRef<SearchHandle, ViewOptionsTool
               setTopologyOptions={props.setTopologyOptions}
               allowedTypes={caps.allowedMetricTypes}
               scopes={caps.availableScopes}
+              isTlsTracking={caps.isTlsTracking}
             />
           )}
         </OverflowMenuItem>

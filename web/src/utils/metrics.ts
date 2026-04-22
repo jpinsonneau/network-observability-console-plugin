@@ -1,7 +1,7 @@
 import { TFunction } from 'i18next';
 import _ from 'lodash';
 import percentile from 'percentile';
-import { Field } from '../api/ipfix';
+import { Field, Flow } from '../api/ipfix';
 import {
   GenericMetric,
   MetricStats,
@@ -19,6 +19,7 @@ import { computeStepInterval, rangeToSeconds, TimeRange } from './datetime';
 import { formatDurationAboveMillisecond } from './duration';
 import { valueFormat } from './format';
 import { getPeerId, idUnknown } from './ids';
+import { aggregateTlsLockSeverity, mergeTlsLockSeverities } from './tls-lock-severity';
 
 // Tolerance, in seconds, to assume presence/emptiness of the last datapoint fetched, when it is
 // close to "now", to accomodate with potential collection latency.
@@ -165,6 +166,59 @@ const nameAndType = (name?: string, type?: string): NameAndType | undefined => {
   return name && type ? { name, type } : undefined;
 };
 
+/** Parse TLSTypes / TLSVersion style fields from Loki matrix metric JSON (string, JSON array string, or array). */
+const extractTlsListField = (v: string[] | string | undefined | null): string[] => {
+  if (v === undefined || v === null) {
+    return [];
+  }
+  if (Array.isArray(v)) {
+    return _.uniq(v.filter(Boolean).map(String));
+  }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (!s || s === '[]' || s === 'null') {
+      return [];
+    }
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s) as unknown;
+        if (Array.isArray(parsed)) {
+          return _.uniq(parsed.filter(Boolean).map(String));
+        }
+      } catch {
+        return [s];
+      }
+    }
+    return [s];
+  }
+  return [];
+};
+
+/** Distinct TLS type labels from a topology metric stream (Loki label or flow JSON). */
+export const extractTlsTypeLabels = (metric: Flow): string[] => extractTlsListField(metric.TLSTypes);
+
+/** Distinct TLS version labels from a topology metric stream (Loki label or flow JSON). */
+export const extractTlsVersionLabels = (metric: Flow): string[] => extractTlsListField(metric.TLSVersion);
+
+/** True when matrix labels / JSON include TLS signals (types and/or version). */
+export const flowMetricHasTls = (metric: Flow): boolean => {
+  const v = metric.TLSTypes;
+  if (v !== undefined && v !== null) {
+    if (Array.isArray(v)) {
+      if (v.length > 0) {
+        return true;
+      }
+    } else if (typeof v === 'string') {
+      const s = v.trim();
+      if (s && s !== '[]' && s !== 'null') {
+        return true;
+      }
+    }
+  }
+  // Loki often omits TLSTypes from sum-by labels when it is a JSON array; TLSVersion is a scalar and is present on the same flows.
+  return extractTlsVersionLabels(metric).length > 0;
+};
+
 const parseTopologyMetric = (
   raw: RawTopologyMetrics,
   start: number,
@@ -203,12 +257,25 @@ const parseTopologyMetric = (
       destFields[sc.id] = (raw.metric as never)[dstField];
     }
   });
+  const flow = raw.metric as Flow;
+  const tlsLabels = extractTlsTypeLabels(flow);
+  const tlsVersionLabels = extractTlsVersionLabels(flow);
+  const tlsSecure = flowMetricHasTls(flow);
+  const tlsLockSeverity = tlsSecure
+    ? tlsVersionLabels.length
+      ? aggregateTlsLockSeverity(tlsVersionLabels) ?? 'unknown'
+      : 'unknown'
+    : undefined;
   return {
     source: createPeer(sourceFields),
     destination: createPeer(destFields),
     values: normalized,
     stats: stats,
-    scope: aggregateBy
+    scope: aggregateBy,
+    tlsSecure,
+    tlsTypeLabels: tlsLabels.length ? tlsLabels : undefined,
+    tlsVersionLabels: tlsVersionLabels.length ? tlsVersionLabels : undefined,
+    tlsLockSeverity
   };
 };
 
@@ -428,6 +495,12 @@ const combineMetrics = (
     if (inCache) {
       inCache.values = combineValues(inCache.values, m.values, step, op);
       inCache.stats = computeStats(inCache.values);
+      inCache.tlsSecure = inCache.tlsSecure || m.tlsSecure;
+      const mergedTlsLabels = _.uniq([...(inCache.tlsTypeLabels || []), ...(m.tlsTypeLabels || [])]);
+      inCache.tlsTypeLabels = mergedTlsLabels.length ? mergedTlsLabels : undefined;
+      const mergedTlsVersions = _.uniq([...(inCache.tlsVersionLabels || []), ...(m.tlsVersionLabels || [])]);
+      inCache.tlsVersionLabels = mergedTlsVersions.length ? mergedTlsVersions : undefined;
+      inCache.tlsLockSeverity = mergeTlsLockSeverities(inCache.tlsLockSeverity, m.tlsLockSeverity);
     } else if (!ignoreAbsentMetric) {
       cache.set(keyFunc(m), m);
     }
