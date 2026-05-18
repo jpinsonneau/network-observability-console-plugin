@@ -182,6 +182,9 @@ func (q *TopologyQueryBuilder) Build() string {
 	}
 
 	q.appendJSON(sb, true)
+	if q.topology.DataField == constants.MetricTypeTLSFlows {
+		q.appendTLSTypesArrayLabelFromLine(sb)
+	}
 
 	dataField := q.topology.GetActualDataField()
 	if len(dataField) > 0 {

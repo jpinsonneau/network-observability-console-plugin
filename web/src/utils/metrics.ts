@@ -1,9 +1,10 @@
 import { TFunction } from 'i18next';
 import _ from 'lodash';
 import percentile from 'percentile';
-import { Field } from '../api/ipfix';
+import { Field, Flow } from '../api/ipfix';
 import {
   GenericMetric,
+  GenericMetricTls,
   MetricStats,
   NameAndType,
   RawTopologyMetrics,
@@ -11,7 +12,7 @@ import {
   TopologyMetricPeer,
   TopologyMetrics
 } from '../api/loki';
-import { FlowScope, MetricFunction, MetricType } from '../model/flow-query';
+import { FlowScope, MetricFunction, MetricType, TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX } from '../model/flow-query';
 import { getCustomScopes } from '../model/scope';
 import { NodeData } from '../model/topology';
 import { roundTwoDigits } from './count';
@@ -19,6 +20,12 @@ import { computeStepInterval, rangeToSeconds, TimeRange } from './datetime';
 import { formatDurationAboveMillisecond } from './duration';
 import { valueFormat } from './format';
 import { getPeerId, idUnknown } from './ids';
+
+export type MergedTlsVersionMetricRow = {
+  metric: GenericMetric;
+  /** First raw TLSVersion in the bucket — use for quick-filters so values match Loki labels. */
+  filterValue: string;
+};
 
 // Tolerance, in seconds, to assume presence/emptiness of the last datapoint fetched, when it is
 // close to "now", to accomodate with potential collection latency.
@@ -33,6 +40,39 @@ const shortKindMap: { [k: string]: string } = {
 };
 
 export const percentileValues = [90, 99];
+
+/** Merge TLS dimensions from TlsFlows rows (same scope + TLSVersion) into volume topology rows by src/dst peer ids. */
+export const mergeTlsIntoTopologyMetrics = (
+  volume: TopologyMetrics[],
+  tlsRows: TopologyMetrics[]
+): TopologyMetrics[] => {
+  const mergeTls = (a: GenericMetricTls | undefined, b: GenericMetricTls | undefined): GenericMetricTls | undefined => {
+    const types = _.uniq([...(a?.types || []), ...(b?.types || [])]);
+    const versions = _.uniq([...(a?.versions || []), ...(b?.versions || [])]);
+    if (!types.length && !versions.length) {
+      return undefined;
+    }
+    return {
+      ...(types.length ? { types } : {}),
+      ...(versions.length ? { versions } : {})
+    };
+  };
+
+  return volume.map(m => {
+    const matches = tlsRows.filter(t => t.source.id === m.source.id && t.destination.id === m.destination.id);
+    if (!matches.length) {
+      return m;
+    }
+    let mergedTls = m.tls;
+    for (const t of matches) {
+      mergedTls = mergeTls(mergedTls, t.tls);
+    }
+    if (!mergedTls) {
+      return m;
+    }
+    return { ...m, tls: mergedTls };
+  });
+};
 
 export const parseTopologyMetrics = (
   raw: RawTopologyMetrics[],
@@ -50,8 +90,12 @@ export const parseTopologyMetrics = (
   );
   const metrics = raw.map(r => parseTopologyMetric(r, start, end, step, aggregateBy, forceZeros));
 
+  const scopeForDisambiguation = aggregateBy.endsWith(TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX)
+    ? aggregateBy.slice(0, -TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX.length)
+    : aggregateBy;
+
   // Disambiguate display names with kind when necessary
-  if (aggregateBy === 'owner' || aggregateBy === 'resource') {
+  if (scopeForDisambiguation === 'owner' || scopeForDisambiguation === 'resource') {
     // Define some helpers
     const addKind = (p: TopologyMetricPeer) => {
       const name = p.getDisplayName(true, false);
@@ -165,6 +209,70 @@ const nameAndType = (name?: string, type?: string): NameAndType | undefined => {
   return name && type ? { name, type } : undefined;
 };
 
+/** Normalize TLS-related metric label values from Loki/Prometheus (arrays, JSON strings, scalars, comma-lists). */
+const normalizeTlsMetricValue = (v: unknown): string | string[] | undefined => {
+  if (v === undefined || v === null) {
+    return undefined;
+  }
+  if (Array.isArray(v)) {
+    return v as string[];
+  }
+  if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+    return String(v);
+  }
+  return undefined;
+};
+
+/** Parse TLSTypes / TLSVersion from Loki matrix metric JSON (string, JSON array string, or array). */
+const extractTlsListField = (v: string[] | string | undefined | null): string[] => {
+  if (v === undefined || v === null) {
+    return [];
+  }
+  if (Array.isArray(v)) {
+    return _.uniq(v.filter(Boolean).map(String));
+  }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (!s || s === '[]' || s === 'null') {
+      return [];
+    }
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s) as unknown;
+        if (Array.isArray(parsed)) {
+          return _.uniq(parsed.filter(Boolean).map(String));
+        }
+      } catch {
+        return [s];
+      }
+    }
+    // Prometheus / some Loki paths: multi-value as comma-separated label
+    if (s.includes(',')) {
+      return _.uniq(
+        s
+          .split(',')
+          .map(x => x.trim())
+          .filter(Boolean)
+      );
+    }
+    return [s];
+  }
+  return [];
+};
+
+const tlsFromFlowMetricLabels = (metric: Flow): GenericMetricTls | undefined => {
+  const m = metric as Record<string, unknown>;
+  const typesRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSTypes));
+  const versionsRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSVersion));
+  if (!typesRaw.length && !versionsRaw.length) {
+    return undefined;
+  }
+  return {
+    ...(typesRaw.length ? { types: typesRaw } : {}),
+    ...(versionsRaw.length ? { versions: versionsRaw } : {})
+  };
+};
+
 const parseTopologyMetric = (
   raw: RawTopologyMetrics,
   start: number,
@@ -203,12 +311,14 @@ const parseTopologyMetric = (
       destFields[sc.id] = (raw.metric as never)[dstField];
     }
   });
+  const tls = tlsFromFlowMetricLabels(raw.metric as Flow);
   return {
     source: createPeer(sourceFields),
     destination: createPeer(destFields),
     values: normalized,
     stats: stats,
-    scope: aggregateBy
+    scope: aggregateBy,
+    ...(tls ? { tls } : {})
   };
 };
 
@@ -222,11 +332,13 @@ const parseGenericMetric = (
 ): GenericMetric => {
   const values = normalizeMetrics(raw.values, start, end, step, forceZeros);
   const stats = computeStats(values);
+  const tls = tlsFromFlowMetricLabels(raw.metric as Flow);
   return {
     name: String(raw.metric[aggregateBy] || ''),
     values,
     stats,
-    aggregateBy
+    aggregateBy,
+    ...(tls ? { tls } : {})
   };
 };
 
@@ -398,6 +510,14 @@ export const matchPeer = (data: NodeData, peer: TopologyMetricPeer): boolean => 
 
 export const isUnknownPeer = (peer: TopologyMetricPeer): boolean => peer.id === idUnknown;
 
+const stepFromGenericValues = (values: [number, number][]): number => {
+  if (values.length < 2) {
+    return 1;
+  }
+  const d = values[1][0] - values[0][0];
+  return Number.isFinite(d) && d > 0 ? d : 1;
+};
+
 const combineValues = (
   values1: [number, number][],
   values2: [number, number][],
@@ -414,6 +534,57 @@ const combineValues = (
     }
     return [t, op(v1, v2)];
   });
+};
+
+/**
+ * Merge metrics rows that share the same TLSVersion label (after trim). Preserves raw Loki label strings.
+ */
+export const mergeTlsVersionUsageMetrics = (rows: GenericMetric[]): MergedTlsVersionMetricRow[] => {
+  type Bucket = { displayName: string; filterValue: string; rows: GenericMetric[] };
+  const buckets = new Map<string, Bucket>();
+
+  for (const row of rows) {
+    const display = row.name.trim();
+    if (!display) {
+      continue;
+    }
+    let b = buckets.get(display);
+    if (!b) {
+      b = { displayName: display, filterValue: row.name.trim(), rows: [] };
+      buckets.set(display, b);
+    }
+    b.rows.push(row);
+  }
+
+  const merged: MergedTlsVersionMetricRow[] = [];
+  for (const b of buckets.values()) {
+    const { rows: group, displayName, filterValue } = b;
+    if (group.length === 1) {
+      const g0 = group[0];
+      merged.push({
+        metric: displayName === g0.name ? g0 : { ...g0, name: displayName },
+        filterValue
+      });
+      continue;
+    }
+    const step = stepFromGenericValues(group[0].values);
+    let values = group[0].values;
+    for (let i = 1; i < group.length; i++) {
+      values = combineValues(values, group[i].values, step, (a, b) => a + b);
+    }
+    merged.push({
+      metric: {
+        ...group[0],
+        name: displayName,
+        values,
+        stats: computeStats(values)
+      },
+      filterValue
+    });
+  }
+
+  merged.sort((a, b) => a.metric.name.localeCompare(b.metric.name));
+  return merged;
 };
 
 const combineMetrics = (

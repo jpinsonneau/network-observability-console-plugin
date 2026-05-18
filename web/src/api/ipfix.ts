@@ -94,6 +94,8 @@ export interface Flow {
   _IsFirst?: string;
   numFlowLogs?: number;
   UdnId?: string;
+  TLSTypes?: string[];
+  TLSVersion?: string;
 }
 
 export enum FlowDirection {

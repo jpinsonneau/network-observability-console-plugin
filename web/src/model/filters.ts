@@ -80,7 +80,8 @@ export type FilterId =
   | 'ipsec_success'
   | 'ipsec_retcode'
   | 'tcp_flags'
-  | 'tls_types';
+  | 'tls_types'
+  | 'tls_version';
 
 export interface FilterConfigDef {
   id: string;

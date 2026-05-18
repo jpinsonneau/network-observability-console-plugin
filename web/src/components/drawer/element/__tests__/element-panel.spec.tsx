@@ -84,6 +84,38 @@ describe('<ElementPanel />', () => {
     expect(container.querySelector('#destination-content')?.textContent).toContain('172.30.0.10');
   });
 
+  it('should show TLS block on edge when TLS data is present', async () => {
+    const edge = getEdge();
+    edge.setData({ tagTlsSecure: true, tlsTypeLabels: ['ClientHello', 'AppData'] });
+    const { container } = render(<ElementPanelContent {...mocks} element={edge} />);
+    await waitFor(() => {
+      expect(container.querySelector('#edge-tls-info')).toBeTruthy();
+    });
+    expect(container.querySelector('#edge-tls-info')?.textContent).toContain('ClientHello');
+    expect(container.querySelector('#edge-tls-info')?.textContent).toContain('AppData');
+  });
+
+  it('should show TLS block on edge when only tlsTypeLabels are set', async () => {
+    const edge = getEdge();
+    edge.setData({ tlsTypeLabels: ['ClientHello', 'AppData'] });
+    const { container } = render(<ElementPanelContent {...mocks} element={edge} />);
+    await waitFor(() => {
+      expect(container.querySelector('#edge-tls-info')).toBeTruthy();
+    });
+    expect(container.querySelector('#edge-tls-info')?.textContent).toContain('ClientHello');
+  });
+
+  it('should list TLS versions on edge when tlsVersionLabels are set', async () => {
+    const edge = getEdge();
+    edge.setData({ tagTlsSecure: true, tlsVersionLabels: ['TLS 1.3', 'TLS 1.2'] });
+    const { container } = render(<ElementPanelContent {...mocks} element={edge} />);
+    await waitFor(() => {
+      expect(container.querySelector('#edge-tls-info')).toBeTruthy();
+    });
+    expect(container.querySelector('#edge-tls-info')?.textContent).toContain('TLS 1.3');
+    expect(container.querySelector('#edge-tls-info')?.textContent).toContain('TLS 1.2');
+  });
+
   it('should render node metrics', async () => {
     const { container } = render(
       <ElementPanelMetrics

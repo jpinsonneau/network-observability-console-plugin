@@ -76,6 +76,8 @@ export interface TopologyContentProps {
   resetDefaultFilters?: (c?: Config) => void;
   clearFilters?: () => void;
   resourceStats: HealthStats;
+  /** When TLS tracking is enabled in the collector (drives cleartext lock option). */
+  isTLSTracking?: boolean;
 }
 
 export const TopologyContent: React.FC<TopologyContentProps> = ({
@@ -100,7 +102,8 @@ export const TopologyContent: React.FC<TopologyContentProps> = ({
   isDark,
   resetDefaultFilters,
   clearFilters,
-  resourceStats
+  resourceStats,
+  isTLSTracking = false
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const controller = useVisualizationController();
@@ -297,10 +300,11 @@ export const TopologyContent: React.FC<TopologyContentProps> = ({
       ...options,
       maxEdgeStat,
       metricFunction,
-      metricType
+      metricType,
+      isTLSTracking
     };
     return opts;
-  }, [metrics, options, metricFunction, metricType]);
+  }, [metrics, options, metricFunction, metricType, isTLSTracking]);
 
   //update graph details level
   const setDetailsLevel = React.useCallback(() => {
@@ -468,7 +472,15 @@ export const TopologyContent: React.FC<TopologyContentProps> = ({
         //remove edge tags on metrics change
         controller.getElements().forEach(e => {
           if (e.getType() === 'edge') {
-            e.setData({ ...e.getData(), tag: undefined });
+            e.setData({
+              ...e.getData(),
+              tag: undefined,
+              tagTlsSecure: undefined,
+              tagTlsLockSeverity: undefined,
+              tagTlsCleartext: undefined,
+              tlsTypeLabels: undefined,
+              tlsVersionLabels: undefined
+            });
           }
         });
       }
