@@ -2,61 +2,77 @@
  * Worst TLS protocol class wins when multiple versions appear on one edge.
  * Used for topology edge lock coloring.
  */
-export type TlsLockSeverity = 'deprecated' | 'legacy' | 'modern' | 'unknown';
+export type TlsLockSeverity = 'deprecated' | 'legacy' | 'modern' | 'pqc' | 'unknown';
+
+/** Post-quantum TLS groups (PQC compliance is based on TLSGroup + TLS 1.3). */
+export const PQC_TLS_GROUPS = new Set(['X25519MLKEM768', 'Secp256r1MLKEM768', 'Secp384r1MLKEM1024']);
 
 const SEVERITY_RANK: Record<TlsLockSeverity, number> = {
-  deprecated: 4,
-  legacy: 3,
-  modern: 2,
+  deprecated: 5,
+  legacy: 4,
+  modern: 3,
+  pqc: 6,
   unknown: 1
 };
 
+/** Known TLSVersion strings from flowlogs-pipeline (optionally prefixed with "~ "). */
+const stripApproxPrefix = (raw: string): string => raw.replace(/^~\s*/, '').trim();
+
 /** Classify a single TLSVersion label from Loki / flow JSON. */
 export const classifyTlsVersionString = (raw: string): TlsLockSeverity | null => {
-  const s = raw.trim().toLowerCase();
+  const s = stripApproxPrefix(raw);
   if (!s) {
     return null;
   }
-  if (/\bssl\s*2|ssl2|sslv2\b/.test(s) || /\bssl\s*3|ssl3|sslv3\b/.test(s)) {
-    return 'deprecated';
-  }
-  const dot = s.match(/\b1\.(0|1|2|3)\b/);
-  if (dot) {
-    const minor = dot[1];
-    if (minor === '0' || minor === '1') {
+  switch (s) {
+    case 'SSLv3':
+    case 'TLS 1.0':
+    case 'TLS 1.1':
       return 'deprecated';
-    }
-    if (minor === '2') {
+    case 'TLS 1.2':
       return 'legacy';
-    }
-    return 'modern';
+    case 'TLS 1.3':
+      return 'modern';
+    default:
+      return null;
   }
-  if (/\btls\s*1\.0\b|\btlsv?1\.0\b/.test(s) || /\btls\s*1\.1\b|\btlsv?1\.1\b/.test(s)) {
-    return 'deprecated';
-  }
-  if (/\btls\s*1\.2\b|\btlsv?1\.2\b/.test(s)) {
-    return 'legacy';
-  }
-  if (/\btls\s*1\.3\b|\btlsv?1\.3\b/.test(s)) {
-    return 'modern';
-  }
-  if (/\b13\b/.test(s) && /\btls\b/.test(s)) {
-    return 'modern';
-  }
-  if (/\b12\b/.test(s) && /\btls\b/.test(s)) {
-    return 'legacy';
+};
+
+/** Lock color for a TLSGroup row in the drawer (PQC when TLS 1.3 is also observed on the link). */
+export const tlsLockSeverityForGroupLabel = (group: string, versionLabels: string[]): TlsLockSeverity => {
+  const hasModern = versionLabels.map(stripApproxPrefix).some(v => classifyTlsVersionString(v) === 'modern');
+  if (hasModern && PQC_TLS_GROUPS.has(group)) {
+    return 'pqc';
   }
   return 'unknown';
 };
 
-/** Aggregate several version strings to a single severity (worst wins). */
-export const aggregateTlsLockSeverity = (labels: string[]): TlsLockSeverity | undefined => {
+/** TLS 1.3 with a PQC TLSGroup → pqc; otherwise derive from version alone. */
+export const classifyTlsLockSeverity = (versionLabel: string, tlsGroup?: string): TlsLockSeverity => {
+  const versionClass = classifyTlsVersionString(versionLabel);
+  if (versionClass === 'modern' && tlsGroup && PQC_TLS_GROUPS.has(tlsGroup)) {
+    return 'pqc';
+  }
+  return versionClass ?? 'unknown';
+};
+
+/** Aggregate several version / group labels to a single severity (worst wins). */
+export const aggregateTlsLockSeverity = (
+  versionLabels: string[],
+  groupLabels: string[] = []
+): TlsLockSeverity | undefined => {
+  const versions = versionLabels.map(stripApproxPrefix).filter(Boolean);
+  const groups = groupLabels.filter(Boolean);
   let best: TlsLockSeverity | undefined;
-  for (const label of labels) {
-    const c = classifyTlsVersionString(label);
-    if (!c) {
-      continue;
-    }
+
+  const hasModern = versions.some(v => classifyTlsVersionString(v) === 'modern');
+  const hasPqcGroup = groups.some(g => PQC_TLS_GROUPS.has(g));
+  if (hasModern && hasPqcGroup) {
+    best = 'pqc';
+  }
+
+  for (const v of versions) {
+    const c = classifyTlsVersionString(v) ?? 'unknown';
     if (!best || SEVERITY_RANK[c] > SEVERITY_RANK[best]) {
       best = c;
     }

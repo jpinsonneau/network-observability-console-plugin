@@ -560,6 +560,31 @@ describe('mergeTlsVersionUsageMetrics', () => {
     expect(merged[0].metric.name).toBe('0xFAFA');
     expect(merged[0].filterValue).toBe('0xFAFA');
   });
+
+  it('merges when the first duplicate row has empty values', () => {
+    const emptyValues: [number, number][] = [];
+    const datapoints: [number, number][] = [
+      [100, 3],
+      [200, 7]
+    ];
+    const merged = mergeTlsVersionUsageMetrics([
+      {
+        name: 'TLS 1.3',
+        values: emptyValues,
+        stats: computeStats(emptyValues),
+        aggregateBy: 'TLSVersion'
+      },
+      {
+        name: 'TLS 1.3',
+        values: datapoints,
+        stats: computeStats(datapoints),
+        aggregateBy: 'TLSVersion'
+      }
+    ]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].metric.values).toEqual(datapoints);
+    expect(merged[0].filterValue).toBe('TLS 1.3');
+  });
 });
 
 describe('getFormattedValue', () => {

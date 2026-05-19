@@ -2,7 +2,7 @@ import {
   aggregateByWithTlsVersion,
   isTimeMetric,
   showTLSHints,
-  TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX
+  topologyTlsVersionAggregateSuffix
 } from '../flow-query';
 
 describe('isTimeMetric', () => {
@@ -23,7 +23,7 @@ describe('isTimeMetric', () => {
 
 describe('aggregateByWithTlsVersion', () => {
   it('should append the TLS version dimension suffix', () => {
-    expect(TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX).toBe('__TLSVersion');
+    expect(topologyTlsVersionAggregateSuffix).toBe('__TLSVersion');
     expect(aggregateByWithTlsVersion('owner')).toBe('owner__TLSVersion');
   });
 });

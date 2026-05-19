@@ -63,6 +63,8 @@ const TopologyConnectorTag: React.FunctionComponent<TopologyConnectorTagProps> =
         return t('Observed TLS includes TLS 1.2 (older but still common). Prefer TLS 1.3 where possible.');
       case 'modern':
         return t('Observed TLS includes TLS 1.3 (current recommended).');
+      case 'pqc':
+        return t('Observed TLS 1.3 with a post-quantum key exchange group (PQC).');
       case 'unknown':
         return t('Observed TLS on this link; protocol version could not be classified from labels.');
       default:

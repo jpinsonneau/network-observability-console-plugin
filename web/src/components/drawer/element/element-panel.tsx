@@ -110,13 +110,13 @@ export const ElementPanel: React.FC<ElementPanelProps> = ({
 
   React.useEffect(() => {
     if (
-      (activeTab === 'metrics' && _.isEmpty(metrics)) ||
+      (activeTab === 'metrics' && (noMetrics || _.isEmpty(metrics))) ||
       (activeTab === 'dropped' && !showDroppedTab) ||
       (activeTab === 'health' && !showHealthTab)
     ) {
       setActiveTab('details');
     }
-  }, [metrics, activeTab, showDroppedTab, showHealthTab]);
+  }, [metrics, activeTab, noMetrics, showDroppedTab, showHealthTab]);
 
   return (
     <DrawerPanelContent

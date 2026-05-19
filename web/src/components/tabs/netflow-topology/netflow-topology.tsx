@@ -83,6 +83,7 @@ export interface NetflowTopologyProps {
 export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTopologyProps>((props, ref) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const { caps, config, fetchCallbacks } = useNetflowContext();
+  const effectiveIsTLSTracking = props.isTLSTracking ?? caps.isTLSTracking;
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = React.useState<DOMRect>({ width: 0, height: 0 } as DOMRect);
@@ -124,8 +125,8 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
       const fq = caps.flowQuery;
       const features = config.features;
       const { getMetrics } = caps.fetchFunctions;
-      const fetchTlsGeneric = caps.isTLSTracking && showTLSHints(metricType);
-      const { metricsRef, setFlows, setMetrics, setError } = fetchCallbacks;
+      const fetchTlsGeneric = effectiveIsTLSTracking && showTLSHints(metricType);
+      const { setFlows, setMetrics, setError } = fetchCallbacks;
 
       setFlows([]);
 
@@ -139,18 +140,15 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
           ? 'PktDropPackets'
           : undefined
         : undefined;
-      let currentMetrics = {
-        ...metricsRef.current,
-        ...(!fetchTlsGeneric
-          ? {
-              tlsFlowRate: defaultNetflowMetrics.tlsFlowRate,
-              totalFlowRate: defaultNetflowMetrics.totalFlowRate,
-              tlsUsagePerCipher: defaultNetflowMetrics.tlsUsagePerCipher,
-              tlsUsagePerGroup: defaultNetflowMetrics.tlsUsagePerGroup,
-              tlsUsagePerVersion: defaultNetflowMetrics.tlsUsagePerVersion
-            }
-          : {})
-      };
+      const tlsMetricsClear = !fetchTlsGeneric
+        ? {
+            tlsFlowRate: defaultNetflowMetrics.tlsFlowRate,
+            totalFlowRate: defaultNetflowMetrics.totalFlowRate,
+            tlsUsagePerCipher: defaultNetflowMetrics.tlsUsagePerCipher,
+            tlsUsagePerGroup: defaultNetflowMetrics.tlsUsagePerGroup,
+            tlsUsagePerVersion: defaultNetflowMetrics.tlsUsagePerVersion
+          }
+        : {};
 
       const promises: Promise<Stats>[] = [
         getMetrics(
@@ -167,38 +165,41 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
             if (['Bytes', 'Packets'].includes(metricType)) {
               const rateMetrics = {} as RateMetrics;
               rateMetrics[getRateMetricKey(metricType)] = m;
-              currentMetrics = {
-                ...currentMetrics,
+              setMetrics(prev => ({
+                ...prev,
+                ...tlsMetricsClear,
                 rate: Result.success(rateMetrics),
                 dnsLatency: Result.empty(),
                 rtt: Result.empty()
-              };
-              setMetrics(currentMetrics);
+              }));
             } else if (['PktDropBytes', 'PktDropPackets'].includes(metricType)) {
               const droppedRateMetrics = {} as RateMetrics;
               droppedRateMetrics[getRateMetricKey(metricType)] = m;
-              currentMetrics = { ...currentMetrics, droppedRate: Result.success(droppedRateMetrics) };
-              setMetrics(currentMetrics);
+              setMetrics(prev => ({
+                ...prev,
+                ...tlsMetricsClear,
+                droppedRate: Result.success(droppedRateMetrics)
+              }));
             } else if (['DnsLatencyMs'].includes(metricType)) {
               const dnsLatencyMetrics = {} as FunctionMetrics;
               dnsLatencyMetrics[getFunctionMetricKey(metricFunction)] = m;
-              currentMetrics = {
-                ...currentMetrics,
+              setMetrics(prev => ({
+                ...prev,
+                ...tlsMetricsClear,
                 rate: Result.empty(),
                 dnsLatency: Result.success(dnsLatencyMetrics),
                 rtt: Result.empty()
-              };
-              setMetrics(currentMetrics);
+              }));
             } else if (['TimeFlowRttNs'].includes(metricType)) {
               const rttMetrics = {} as FunctionMetrics;
               rttMetrics[getFunctionMetricKey(metricFunction)] = m;
-              currentMetrics = {
-                ...currentMetrics,
+              setMetrics(prev => ({
+                ...prev,
+                ...tlsMetricsClear,
                 rate: Result.empty(),
                 dnsLatency: Result.empty(),
                 rtt: Result.success(rttMetrics)
-              };
-              setMetrics(currentMetrics);
+              }));
             }
           };
 
@@ -272,7 +273,7 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
       refreshResourceStatsIfNeeded,
       caps.flowQuery,
       caps.fetchFunctions,
-      caps.isTLSTracking,
+      effectiveIsTLSTracking,
       config.features,
       fetchCallbacks
     ]
@@ -353,7 +354,6 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
             resetDefaultFilters={props.resetDefaultFilters}
             clearFilters={props.clearFilters}
             resourceStats={memoizedHealth}
-            isTLSTracking={props.isTLSTracking ?? caps.isTLSTracking}
           />
         </VisualizationProvider>
       </div>

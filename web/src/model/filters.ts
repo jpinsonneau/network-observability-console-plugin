@@ -81,7 +81,8 @@ export type FilterId =
   | 'ipsec_retcode'
   | 'tcp_flags'
   | 'tls_types'
-  | 'tls_version';
+  | 'tls_version'
+  | 'tls_group';
 
 export interface FilterConfigDef {
   id: string;

@@ -24,7 +24,7 @@ var aggregateKeyLabels = map[string][]string{
 	"host":              {"SrcK8S_HostName", "DstK8S_HostName"},
 	"namespace":         {"SrcK8S_Namespace", "DstK8S_Namespace"},
 	"owner":             {"SrcK8S_OwnerName", "SrcK8S_OwnerType", "DstK8S_OwnerName", "DstK8S_OwnerType", "SrcK8S_Namespace", "DstK8S_Namespace"},
-	"owner__TLSVersion": {"SrcK8S_OwnerName", "SrcK8S_OwnerType", "DstK8S_OwnerName", "DstK8S_OwnerType", "SrcK8S_Namespace", "DstK8S_Namespace", "TLSVersion", "TLSTypes"},
+	"owner__TLSVersion": {"SrcK8S_OwnerName", "SrcK8S_OwnerType", "DstK8S_OwnerName", "DstK8S_OwnerType", "SrcK8S_Namespace", "DstK8S_Namespace", "TLSVersion", "TLSGroup"},
 	"resource":          {"SrcK8S_Name", "SrcK8S_Type", "SrcK8S_OwnerName", "SrcK8S_OwnerType", "SrcK8S_Namespace", "SrcAddr", "SrcK8S_HostName", "DstK8S_Name", "DstK8S_Type", "DstK8S_OwnerName", "DstK8S_OwnerType", "DstK8S_Namespace", "DstAddr", "DstK8S_HostName"},
 }
 
@@ -141,9 +141,7 @@ func TestBuildTopologyQuery_TlsFlowsOwnerPlusTlsVersionAggregate(t *testing.T) {
 	q, err := NewTopologyQuery(&lokiConfig, aggregateKeyLabels, &in)
 	require.NoError(t, err)
 	result := q.Build()
-	assert.Contains(t, result, "sum by(SrcK8S_OwnerName,SrcK8S_OwnerType,DstK8S_OwnerName,DstK8S_OwnerType,SrcK8S_Namespace,DstK8S_Namespace,TLSVersion,TLSTypes)")
+	assert.Contains(t, result, "sum by(SrcK8S_OwnerName,SrcK8S_OwnerType,DstK8S_OwnerName,DstK8S_OwnerType,SrcK8S_Namespace,DstK8S_Namespace,TLSVersion,TLSGroup)")
 	assert.Contains(t, result, "|=\"TLSTypes\"")
 	assert.Contains(t, result, "|json")
-	assert.Contains(t, result, "|regexp ")
-	assert.Contains(t, result, "?P<TLSTypes>")
 }

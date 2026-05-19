@@ -47,6 +47,11 @@ g.netobserv.topology.pf-topology__edge.dark .netobserv-topology-edge-lock--moder
   fill: var(--pf-t--global--success-color--100, #3e8635);
 }
 
+g.netobserv.topology.pf-topology__edge:not(.dark) .netobserv-topology-edge-lock--pqc path,
+g.netobserv.topology.pf-topology__edge.dark .netobserv-topology-edge-lock--pqc path {
+  fill: var(--pf-t--global--color--blue-50, #2b9af3);
+}
+
 g.netobserv.topology.pf-topology__edge:not(.dark) .netobserv-topology-edge-lock--legacy path,
 g.netobserv.topology.pf-topology__edge.dark .netobserv-topology-edge-lock--legacy path {
   fill: var(--pf-t--global--warning-color--100, #f0ab00);

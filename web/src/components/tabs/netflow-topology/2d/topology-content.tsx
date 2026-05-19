@@ -24,6 +24,7 @@ import { Config } from '../../../../model/config';
 import { Filter, FilterDefinition, Filters } from '../../../../model/filters';
 import { FlowScope, MetricType, StatFunction } from '../../../../model/flow-query';
 import { getStat } from '../../../../model/metrics';
+import { useNetflowContext } from '../../../../model/netflow-context';
 import { getStepInto, resolveGroupTypes, ScopeConfigDef } from '../../../../model/scope';
 import {
   Decorated,
@@ -76,8 +77,6 @@ export interface TopologyContentProps {
   resetDefaultFilters?: (c?: Config) => void;
   clearFilters?: () => void;
   resourceStats: HealthStats;
-  /** When TLS tracking is enabled in the collector (drives cleartext lock option). */
-  isTLSTracking?: boolean;
 }
 
 export const TopologyContent: React.FC<TopologyContentProps> = ({
@@ -102,10 +101,10 @@ export const TopologyContent: React.FC<TopologyContentProps> = ({
   isDark,
   resetDefaultFilters,
   clearFilters,
-  resourceStats,
-  isTLSTracking = false
+  resourceStats
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+  const { caps } = useNetflowContext();
   const controller = useVisualizationController();
   const prevMetrics = usePrevious(metrics);
   const prevMetricFunction = usePrevious(metricFunction);
@@ -301,10 +300,10 @@ export const TopologyContent: React.FC<TopologyContentProps> = ({
       maxEdgeStat,
       metricFunction,
       metricType,
-      isTLSTracking
+      isTLSTracking: caps.isTLSTracking
     };
     return opts;
-  }, [metrics, options, metricFunction, metricType, isTLSTracking]);
+  }, [metrics, options, metricFunction, metricType, caps.isTLSTracking]);
 
   //update graph details level
   const setDetailsLevel = React.useCallback(() => {

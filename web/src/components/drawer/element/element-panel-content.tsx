@@ -33,7 +33,8 @@ import {
 } from '../../../model/topology';
 import { findFilter } from '../../../utils/filter-definitions';
 import { createPeer } from '../../../utils/metrics';
-import { TlsVersionLockIcon } from '../../icons/tls-lock-icons';
+import { tlsLockSeverityForGroupLabel } from '../../../utils/tls-lock-severity';
+import { TlsSeverityLockIcon, TlsVersionLockIcon } from '../../icons/tls-lock-icons';
 import { ElementFields } from './element-fields';
 
 export interface ElementPanelContentProps {
@@ -140,17 +141,17 @@ export const ElementPanelContent: React.FC<ElementPanelContentProps> = ({
 
   const edgeTlsInfo = React.useCallback(
     (d: EdgeTlsPanelData | undefined) => {
-      const fromEdge =
-        Boolean(d?.tagTlsSecure) || Boolean(d?.tlsTypeLabels?.length) || Boolean(d?.tlsVersionLabels?.length);
-      const panel = fromEdge ? d : undefined;
-      const hasPanel =
+      const hasTlsData = (panel?: EdgeTlsPanelData) =>
         Boolean(panel?.tagTlsSecure) ||
         Boolean(panel?.tlsTypeLabels?.length) ||
-        Boolean(panel?.tlsVersionLabels?.length);
-      if (!panel || !hasPanel) {
+        Boolean(panel?.tlsVersionLabels?.length) ||
+        Boolean(panel?.tlsGroupLabels?.length);
+      const panel = hasTlsData(d) ? d : undefined;
+      if (!panel || !hasTlsData(panel)) {
         return <></>;
       }
-      const { tagTlsSecure, tlsTypeLabels, tlsVersionLabels } = panel;
+      const { tagTlsSecure, tlsTypeLabels, tlsVersionLabels, tlsGroupLabels } = panel;
+      const versionLabels = tlsVersionLabels ?? [];
 
       const renderTlsQuickFilter = (filterId: FilterId, value: string, buttonId: string) => {
         const def = findFilter(filterDefinitions, filterId);
@@ -164,9 +165,13 @@ export const ElementPanelContent: React.FC<ElementPanelContentProps> = ({
         return (
           <Button
             id={buttonId}
+            data-test={`quick-filter-${filterId}-${value}`}
             variant="plain"
             className="overflow-button"
             icon={isFiltered ? <TimesIcon /> : <FilterIcon />}
+            aria-label={
+              isFiltered ? t('Clear filter for {{value}}', { value }) : t('Apply filter for {{value}}', { value })
+            }
             onClick={() => toggleQuickFilterValue(def, value, isFiltered, filters.list, setFilters)}
           />
         );
@@ -184,11 +189,11 @@ export const ElementPanelContent: React.FC<ElementPanelContentProps> = ({
               </FlexItem>
             </Flex>
           ) : null}
-          {tlsVersionLabels && tlsVersionLabels.length > 0 ? (
+          {versionLabels.length > 0 ? (
             <>
               <Content component={ContentVariants.h4}>{t('TLS versions')}</Content>
               <Flex direction={{ default: 'column' }} gap={{ default: 'gapSm' }}>
-                {tlsVersionLabels.map((label, i) => {
+                {versionLabels.map((label, i) => {
                   const versionFilterBtn = renderTlsQuickFilter('tls_version', label, `edge-tls-version-filter-${i}`);
                   return (
                     <Flex key={`${label}-${i}`} alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
@@ -197,6 +202,26 @@ export const ElementPanelContent: React.FC<ElementPanelContentProps> = ({
                         <Content component={ContentVariants.p}>{label}</Content>
                       </FlexItem>
                       {versionFilterBtn ? <FlexItem>{versionFilterBtn}</FlexItem> : null}
+                    </Flex>
+                  );
+                })}
+              </Flex>
+            </>
+          ) : null}
+          {tlsGroupLabels && tlsGroupLabels.length > 0 ? (
+            <>
+              <Content component={ContentVariants.h4}>{t('TLS groups')}</Content>
+              <Flex direction={{ default: 'column' }} gap={{ default: 'gapSm' }}>
+                {tlsGroupLabels.map((label, i) => {
+                  const groupFilterBtn = renderTlsQuickFilter('tls_group', label, `edge-tls-group-filter-${i}`);
+                  const groupSeverity = tlsLockSeverityForGroupLabel(label, versionLabels);
+                  return (
+                    <Flex key={`${label}-${i}`} alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
+                      <TlsSeverityLockIcon severity={groupSeverity} />
+                      <FlexItem flex={{ default: 'flex_1' }}>
+                        <Content component={ContentVariants.p}>{label}</Content>
+                      </FlexItem>
+                      {groupFilterBtn ? <FlexItem>{groupFilterBtn}</FlexItem> : null}
                     </Flex>
                   );
                 })}
@@ -220,7 +245,7 @@ export const ElementPanelContent: React.FC<ElementPanelContentProps> = ({
                 })}
               </Flex>
             </>
-          ) : tagTlsSecure && !(tlsVersionLabels && tlsVersionLabels.length > 0) ? (
+          ) : tagTlsSecure && !tlsTypeLabels?.length ? (
             <Flex>
               <FlexItem flex={{ default: 'flex_1' }}>
                 <Content component={ContentVariants.small}>

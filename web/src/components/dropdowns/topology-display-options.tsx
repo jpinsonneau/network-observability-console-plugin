@@ -188,6 +188,7 @@ export const TopologyDisplayOptions: React.FC<TopologyDisplayOptionsProps> = ({
             >
               <Checkbox
                 id="edges-cleartext-lock-switch"
+                data-test="edges-cleartext-lock-switch"
                 label={t('Cleartext traffic')}
                 isDisabled={!topologyOptions.edges}
                 isChecked={Boolean(topologyOptions.edges && topologyOptions.showCleartextEdgeLock)}

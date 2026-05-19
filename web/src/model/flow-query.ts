@@ -14,10 +14,10 @@ export type FlowScope = string;
 export type AggregateBy = FlowScope | Field;
 
 /** Suffix for aggregateBy keys that mirror a topology scope plus TLSVersion (see backend GetAggregateKeyLabels). */
-export const TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX = '__TLSVersion';
+export const topologyTlsVersionAggregateSuffix = '__TLSVersion';
 
 export const aggregateByWithTlsVersion = (scope: FlowScope): AggregateBy =>
-  `${scope}${TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX}` as AggregateBy;
+  `${scope}${topologyTlsVersionAggregateSuffix}` as AggregateBy;
 
 export type NodeType = FlowScope | 'unknown';
 // groups are configurable and can be any string

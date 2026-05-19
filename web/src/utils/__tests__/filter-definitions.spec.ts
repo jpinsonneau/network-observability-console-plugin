@@ -19,6 +19,13 @@ describe('Endpoint namespace encoder', () => {
     const def = findFilter(defs, 'namespace')!;
     expect(def.encoder([{ v: 'ns1' }], FilterCompare.equal, false)).toBe('SrcK8S_Namespace=ns1|DstK8S_Namespace=ns1');
   });
+
+  it('should encode negated namespace filter with AND across src and dst', () => {
+    const def = findFilter(FilterDefinitionSample, 'namespace')!;
+    expect(def.encoder([{ v: 'ns1' }], FilterCompare.notEqual, false)).toBe(
+      'SrcK8S_Namespace!=ns1&DstK8S_Namespace!=ns1'
+    );
+  });
 });
 
 describe('Resource validation', () => {

@@ -12,7 +12,7 @@ import {
   TopologyMetricPeer,
   TopologyMetrics
 } from '../api/loki';
-import { FlowScope, MetricFunction, MetricType, TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX } from '../model/flow-query';
+import { FlowScope, MetricFunction, MetricType, topologyTlsVersionAggregateSuffix } from '../model/flow-query';
 import { getCustomScopes } from '../model/scope';
 import { NodeData } from '../model/topology';
 import { roundTwoDigits } from './count';
@@ -49,17 +49,30 @@ export const mergeTlsIntoTopologyMetrics = (
   const mergeTls = (a: GenericMetricTls | undefined, b: GenericMetricTls | undefined): GenericMetricTls | undefined => {
     const types = _.uniq([...(a?.types || []), ...(b?.types || [])]);
     const versions = _.uniq([...(a?.versions || []), ...(b?.versions || [])]);
-    if (!types.length && !versions.length) {
+    const groups = _.uniq([...(a?.groups || []), ...(b?.groups || [])]);
+    if (!types.length && !versions.length && !groups.length) {
       return undefined;
     }
     return {
       ...(types.length ? { types } : {}),
-      ...(versions.length ? { versions } : {})
+      ...(versions.length ? { versions } : {}),
+      ...(groups.length ? { groups } : {})
     };
   };
 
+  const tlsByEdge = new Map<string, TopologyMetrics[]>();
+  for (const t of tlsRows) {
+    const key = `${t.source.id}@${t.destination.id}`;
+    const list = tlsByEdge.get(key);
+    if (list) {
+      list.push(t);
+    } else {
+      tlsByEdge.set(key, [t]);
+    }
+  }
+
   return volume.map(m => {
-    const matches = tlsRows.filter(t => t.source.id === m.source.id && t.destination.id === m.destination.id);
+    const matches = tlsByEdge.get(`${m.source.id}@${m.destination.id}`) ?? [];
     if (!matches.length) {
       return m;
     }
@@ -90,8 +103,8 @@ export const parseTopologyMetrics = (
   );
   const metrics = raw.map(r => parseTopologyMetric(r, start, end, step, aggregateBy, forceZeros));
 
-  const scopeForDisambiguation = aggregateBy.endsWith(TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX)
-    ? aggregateBy.slice(0, -TOPOLOGY_TLS_VERSION_AGGREGATE_SUFFIX.length)
+  const scopeForDisambiguation = aggregateBy.endsWith(topologyTlsVersionAggregateSuffix)
+    ? aggregateBy.slice(0, -topologyTlsVersionAggregateSuffix.length)
     : aggregateBy;
 
   // Disambiguate display names with kind when necessary
@@ -223,7 +236,7 @@ const normalizeTlsMetricValue = (v: unknown): string | string[] | undefined => {
   return undefined;
 };
 
-/** Parse TLSTypes / TLSVersion from Loki matrix metric JSON (string, JSON array string, or array). */
+/** Parse TLSVersion / TLSGroup / TLSTypes from Loki matrix metric JSON (string, JSON array string, or array). */
 const extractTlsListField = (v: string[] | string | undefined | null): string[] => {
   if (v === undefined || v === null) {
     return [];
@@ -264,12 +277,14 @@ const tlsFromFlowMetricLabels = (metric: Flow): GenericMetricTls | undefined => 
   const m = metric as Record<string, unknown>;
   const typesRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSTypes));
   const versionsRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSVersion));
-  if (!typesRaw.length && !versionsRaw.length) {
+  const groupsRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSGroup));
+  if (!typesRaw.length && !versionsRaw.length && !groupsRaw.length) {
     return undefined;
   }
   return {
     ...(typesRaw.length ? { types: typesRaw } : {}),
-    ...(versionsRaw.length ? { versions: versionsRaw } : {})
+    ...(versionsRaw.length ? { versions: versionsRaw } : {}),
+    ...(groupsRaw.length ? { groups: groupsRaw } : {})
   };
 };
 
@@ -567,9 +582,20 @@ export const mergeTlsVersionUsageMetrics = (rows: GenericMetric[]): MergedTlsVer
       });
       continue;
     }
-    const step = stepFromGenericValues(group[0].values);
-    let values = group[0].values;
-    for (let i = 1; i < group.length; i++) {
+    const seedIndex = group.findIndex(row => row.values.length > 0);
+    if (seedIndex < 0) {
+      merged.push({
+        metric: { ...group[0], name: displayName, values: [], stats: computeStats([]) },
+        filterValue
+      });
+      continue;
+    }
+    const step = stepFromGenericValues(group[seedIndex].values);
+    let values = group[seedIndex].values;
+    for (let i = 0; i < group.length; i++) {
+      if (i === seedIndex) {
+        continue;
+      }
       values = combineValues(values, group[i].values, step, (a, b) => a + b);
     }
     merged.push({

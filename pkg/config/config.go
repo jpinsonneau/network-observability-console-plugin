@@ -346,13 +346,11 @@ func (c *Frontend) GetAggregateKeyLabels() map[string][]string {
 		id := c.Scopes[i].ID
 		labs := c.Scopes[i].Labels
 		keyLabels[id] = labs
-		// Same src/dst dimensions as topology scope, plus TLSVersion and TLSTypes (per-link TLS breakdown).
-		// TLSTypes must be a label for LogQL sum by(...). Loki |json does not extract JSON arrays as labels;
-		// the topology builder adds a regexp stage for TlsFlows to capture the TLSTypes array from the line.
-		// For Prometheus metrics, series must expose a scalar TLSTypes label at export time.
+		// Same src/dst dimensions as topology scope, plus TLSVersion and TLSGroup (per-link TLS breakdown).
+		// TLSTypes is omitted from aggregation (cardinality); TLSGroup is used for PQC-oriented hints.
 		withTLS := make([]string, len(labs), len(labs)+2)
 		copy(withTLS, labs)
-		withTLS = append(withTLS, "TLSVersion", "TLSTypes")
+		withTLS = append(withTLS, "TLSVersion", "TLSGroup")
 		keyLabels[id+tlsVersionAggSuffix] = withTLS
 	}
 	return keyLabels

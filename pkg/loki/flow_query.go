@@ -4,7 +4,6 @@ package loki
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/netobserv/network-observability-console-plugin/pkg/config"
@@ -227,15 +226,6 @@ func (q *FlowQueryBuilder) appendDNSFilter(sb *strings.Builder) {
 
 func (q *FlowQueryBuilder) appendTLSFilter(sb *strings.Builder) {
 	sb.WriteString(`|="TLSTypes"`)
-}
-
-// appendTLSTypesArrayLabelFromLine adds a TLSTypes label from the raw log line.
-// Loki's |json stage does not extract JSON array fields as labels, so sum by(TLSTypes,...) would
-// otherwise drop the dimension even though flows include "TLSTypes":[...] in JSON.
-func (q *FlowQueryBuilder) appendTLSTypesArrayLabelFromLine(sb *strings.Builder) {
-	const pattern = "\"TLSTypes\"\\s*:\\s*(?P<TLSTypes>\\[[^\\]]*\\])"
-	sb.WriteString("|regexp ")
-	sb.WriteString(strconv.Quote(pattern))
 }
 
 func (q *FlowQueryBuilder) appendDNSLatencyFilter(sb *strings.Builder) {

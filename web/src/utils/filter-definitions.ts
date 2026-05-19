@@ -63,7 +63,11 @@ const simpleFiltersEncoder = (field: Field): FiltersEncoder => {
   };
 };
 
-/** `[SrcFoo,DstFoo]` on columns that aggregate both endpoints (no single `field`). */
+/**
+ * Endpoint filters (namespace, address, …) encode as src|dst OR. Columns without a single `field`
+ * use `calculated: [SrcFoo,DstFoo]` in config; when that or `filter` is missing (e.g. sample tests),
+ * `endpointDualFieldFallback` supplies the ipfix pair.
+ */
 const parseEndpointCalculatedPair = (calculated: string): [Field, Field] | undefined => {
   const m = calculated.match(/^\s*\[\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*\]\s*$/);
   if (!m) {
@@ -73,7 +77,7 @@ const parseEndpointCalculatedPair = (calculated: string): [Field, Field] | undef
 };
 
 /** When column config has no `filter` key (tests) or no `field`, map endpoint filter id → [src,dst] ipfix fields. */
-const ENDPOINT_DUAL_FIELD_FALLBACK: Partial<Record<FilterId, [Field, Field]>> = {
+const endpointDualFieldFallback: Partial<Record<FilterId, [Field, Field]>> = {
   namespace: ['SrcK8S_Namespace', 'DstK8S_Namespace'],
   name: ['SrcK8S_Name', 'DstK8S_Name'],
   owner_name: ['SrcK8S_OwnerName', 'DstK8S_OwnerName'],
@@ -98,7 +102,8 @@ const endpointEitherSideEncoder =
   (values: FilterValue[], compare: FilterCompare, _matchAny: boolean) => {
     const left = simpleFiltersEncoder(srcField)(values, compare, _matchAny);
     const right = simpleFiltersEncoder(dstField)(values, compare, _matchAny);
-    return `${left}|${right}`;
+    const isNegated = compare === FilterCompare.notEqual || compare === FilterCompare.notMatch;
+    return isNegated ? `${left}&${right}` : `${left}|${right}`;
   };
 
 // As owner / non-owner kind filters are mixed, they are disambiguated via this function
@@ -370,7 +375,7 @@ export const getFilterDefinitions = (
         colConfig && !colConfig.field && colConfig.calculated
           ? parseEndpointCalculatedPair(colConfig.calculated)
           : undefined;
-      const fallback = ENDPOINT_DUAL_FIELD_FALLBACK[d.id as FilterId];
+      const fallback = endpointDualFieldFallback[d.id as FilterId];
       const pair = parsed || fallback;
       if (pair) {
         encoder = endpointEitherSideEncoder(pair[0], pair[1]);
