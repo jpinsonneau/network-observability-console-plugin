@@ -565,7 +565,7 @@ export const mergeTlsVersionUsageMetrics = (rows: GenericMetric[]): MergedTlsVer
     }
     let b = buckets.get(display);
     if (!b) {
-      b = { displayName: display, filterValue: row.name.trim(), rows: [] };
+      b = { displayName: display, filterValue: row.name, rows: [] };
       buckets.set(display, b);
     }
     b.rows.push(row);

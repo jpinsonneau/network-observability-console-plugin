@@ -45,6 +45,10 @@ describe('aggregateTlsLockSeverity', () => {
   it('should detect PQC from TLS 1.3 and group labels on the same edge', () => {
     expect(aggregateTlsLockSeverity(['TLS 1.3'], ['X25519MLKEM768'])).toBe('pqc');
   });
+
+  it('should prefer deprecated over PQC when both are observed', () => {
+    expect(aggregateTlsLockSeverity(['TLS 1.0'], ['X25519MLKEM768'])).toBe('deprecated');
+  });
 });
 
 describe('tlsLockSeverityForGroupLabel', () => {
@@ -65,6 +69,7 @@ describe('mergeTlsLockSeverities', () => {
   it('should merge with worst winning', () => {
     expect(mergeTlsLockSeverities('modern', 'deprecated')).toBe('deprecated');
     expect(mergeTlsLockSeverities('pqc', 'modern')).toBe('pqc');
+    expect(mergeTlsLockSeverities('pqc', 'deprecated')).toBe('deprecated');
     expect(mergeTlsLockSeverities('legacy', undefined)).toBe('legacy');
   });
 });

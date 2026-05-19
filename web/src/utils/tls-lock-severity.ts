@@ -7,11 +7,12 @@ export type TlsLockSeverity = 'deprecated' | 'legacy' | 'modern' | 'pqc' | 'unkn
 /** Post-quantum TLS groups (PQC compliance is based on TLSGroup + TLS 1.3). */
 export const PQC_TLS_GROUPS = new Set(['X25519MLKEM768', 'Secp256r1MLKEM768', 'Secp384r1MLKEM1024']);
 
+/** Higher rank = worse / more alarming for edge lock coloring (deprecated wins over pqc). */
 const SEVERITY_RANK: Record<TlsLockSeverity, number> = {
   deprecated: 5,
   legacy: 4,
-  modern: 3,
-  pqc: 6,
+  pqc: 3,
+  modern: 2,
   unknown: 1
 };
 
