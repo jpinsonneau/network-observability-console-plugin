@@ -143,14 +143,13 @@ export const ElementPanelContent: React.FC<ElementPanelContentProps> = ({
     (d: EdgeTlsPanelData | undefined) => {
       const hasTlsData = (panel?: EdgeTlsPanelData) =>
         Boolean(panel?.tagTlsSecure) ||
-        Boolean(panel?.tlsTypeLabels?.length) ||
         Boolean(panel?.tlsVersionLabels?.length) ||
         Boolean(panel?.tlsGroupLabels?.length);
       const panel = hasTlsData(d) ? d : undefined;
       if (!panel || !hasTlsData(panel)) {
         return <></>;
       }
-      const { tagTlsSecure, tlsTypeLabels, tlsVersionLabels, tlsGroupLabels } = panel;
+      const { tagTlsSecure, tlsVersionLabels, tlsGroupLabels } = panel;
       const versionLabels = tlsVersionLabels ?? [];
 
       const renderTlsQuickFilter = (filterId: FilterId, value: string, buttonId: string) => {
@@ -227,32 +226,6 @@ export const ElementPanelContent: React.FC<ElementPanelContentProps> = ({
                 })}
               </Flex>
             </>
-          ) : null}
-          {tlsTypeLabels && tlsTypeLabels.length > 0 ? (
-            <>
-              <Content component={ContentVariants.h4}>{t('TLS message types')}</Content>
-              <Flex direction={{ default: 'column' }} gap={{ default: 'gapSm' }}>
-                {tlsTypeLabels.map((label, i) => {
-                  const typeFilterBtn = renderTlsQuickFilter('tls_types', label, `edge-tls-type-filter-${i}`);
-                  return (
-                    <Flex key={`${label}-${i}`} alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
-                      <FlexItem flex={{ default: 'flex_1' }}>
-                        <Content component={ContentVariants.p}>{label}</Content>
-                      </FlexItem>
-                      {typeFilterBtn ? <FlexItem>{typeFilterBtn}</FlexItem> : null}
-                    </Flex>
-                  );
-                })}
-              </Flex>
-            </>
-          ) : tagTlsSecure && !tlsTypeLabels?.length ? (
-            <Flex>
-              <FlexItem flex={{ default: 'flex_1' }}>
-                <Content component={ContentVariants.small}>
-                  {t('No TLS message type breakdown is available for this aggregation.')}
-                </Content>
-              </FlexItem>
-            </Flex>
           ) : null}
         </Content>
       );

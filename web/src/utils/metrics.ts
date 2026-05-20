@@ -47,14 +47,12 @@ export const mergeTlsIntoTopologyMetrics = (
   tlsRows: TopologyMetrics[]
 ): TopologyMetrics[] => {
   const mergeTls = (a: GenericMetricTls | undefined, b: GenericMetricTls | undefined): GenericMetricTls | undefined => {
-    const types = _.uniq([...(a?.types || []), ...(b?.types || [])]);
     const versions = _.uniq([...(a?.versions || []), ...(b?.versions || [])]);
     const groups = _.uniq([...(a?.groups || []), ...(b?.groups || [])]);
-    if (!types.length && !versions.length && !groups.length) {
+    if (!versions.length && !groups.length) {
       return undefined;
     }
     return {
-      ...(types.length ? { types } : {}),
       ...(versions.length ? { versions } : {}),
       ...(groups.length ? { groups } : {})
     };
@@ -236,7 +234,7 @@ const normalizeTlsMetricValue = (v: unknown): string | string[] | undefined => {
   return undefined;
 };
 
-/** Parse TLSVersion / TLSGroup / TLSTypes from Loki matrix metric JSON (string, JSON array string, or array). */
+/** Parse TLSVersion / TLSGroup from Loki matrix metric JSON (string, JSON array string, or array). */
 const extractTlsListField = (v: string[] | string | undefined | null): string[] => {
   if (v === undefined || v === null) {
     return [];
@@ -275,14 +273,12 @@ const extractTlsListField = (v: string[] | string | undefined | null): string[] 
 
 const tlsFromFlowMetricLabels = (metric: Flow): GenericMetricTls | undefined => {
   const m = metric as Record<string, unknown>;
-  const typesRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSTypes));
   const versionsRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSVersion));
   const groupsRaw = extractTlsListField(normalizeTlsMetricValue(m.TLSGroup));
-  if (!typesRaw.length && !versionsRaw.length && !groupsRaw.length) {
+  if (!versionsRaw.length && !groupsRaw.length) {
     return undefined;
   }
   return {
-    ...(typesRaw.length ? { types: typesRaw } : {}),
     ...(versionsRaw.length ? { versions: versionsRaw } : {}),
     ...(groupsRaw.length ? { groups: groupsRaw } : {})
   };

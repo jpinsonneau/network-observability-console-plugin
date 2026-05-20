@@ -96,6 +96,7 @@ export interface Flow {
   UdnId?: string;
   TLSTypes?: string[];
   TLSVersion?: string;
+  TLSGroup?: string;
 }
 
 export enum FlowDirection {

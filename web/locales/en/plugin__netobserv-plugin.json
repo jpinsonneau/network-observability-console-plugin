@@ -21,8 +21,6 @@
   "TLS-encrypted traffic was observed on this link for the selected scope and time range.": "TLS-encrypted traffic was observed on this link for the selected scope and time range.",
   "TLS versions": "TLS versions",
   "TLS groups": "TLS groups",
-  "TLS message types": "TLS message types",
-  "No TLS message type breakdown is available for this aggregation.": "No TLS message type breakdown is available for this aggregation.",
   "Endpoint A": "Endpoint A",
   "Source": "Source",
   "Endpoint B": "Endpoint B",

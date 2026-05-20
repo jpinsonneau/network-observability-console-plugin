@@ -477,7 +477,6 @@ export const TopologyContent: React.FC<TopologyContentProps> = ({
               tagTlsSecure: undefined,
               tagTlsLockSeverity: undefined,
               tagTlsCleartext: undefined,
-              tlsTypeLabels: undefined,
               tlsVersionLabels: undefined,
               tlsGroupLabels: undefined
             });

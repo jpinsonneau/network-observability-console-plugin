@@ -308,7 +308,6 @@ export type NodeData = {
 /** TLS fields on topology edge element data (tags, side panel). */
 export type EdgeTlsPanelData = {
   tagTlsSecure?: boolean;
-  tlsTypeLabels?: string[];
   tlsVersionLabels?: string[];
   tlsGroupLabels?: string[];
   tagTlsLockSeverity?: TlsLockSeverity;
@@ -319,35 +318,31 @@ function tlsPanelFromTopologyTls(tls: GenericMetricTls | undefined): EdgeTlsPane
   if (!tls) {
     return undefined;
   }
-  return tlsPanelFromLabelArrays(tls.types || [], tls.versions || [], tls.groups || []);
+  return tlsPanelFromLabelArrays(tls.versions || [], tls.groups || []);
 }
 
 function tlsPanelFromLabelArrays(
-  tlsTypeLabels: string[],
   tlsVersionLabels: string[],
   tlsGroupLabels: string[] = []
 ): EdgeTlsPanelData | undefined {
-  const tt = _.uniq(tlsTypeLabels.filter(Boolean));
   const tv = _.uniq(tlsVersionLabels.filter(Boolean));
   const tg = _.uniq(tlsGroupLabels.filter(Boolean));
-  if (!tt.length && !tv.length && !tg.length) {
+  if (!tv.length && !tg.length) {
     return undefined;
   }
   return {
     tagTlsSecure: true,
-    tlsTypeLabels: tt.length ? tt : undefined,
     tlsVersionLabels: tv.length ? tv : undefined,
     tlsGroupLabels: tg.length ? tg : undefined,
-    tagTlsLockSeverity: tv.length || tg.length ? aggregateTlsLockSeverity(tv, tg) ?? 'unknown' : 'unknown'
+    tagTlsLockSeverity: aggregateTlsLockSeverity(tv, tg) ?? 'unknown'
   };
 }
 
 function mergedTlsPanelForEdge(
-  prior: { tlsTypeLabels?: string[]; tlsVersionLabels?: string[]; tlsGroupLabels?: string[] } | undefined,
+  prior: { tlsVersionLabels?: string[]; tlsGroupLabels?: string[] } | undefined,
   row: EdgeTlsPanelData | undefined
 ): EdgeTlsPanelData | undefined {
   return tlsPanelFromLabelArrays(
-    [...(prior?.tlsTypeLabels || []), ...(row?.tlsTypeLabels || [])],
     [...(prior?.tlsVersionLabels || []), ...(row?.tlsVersionLabels || [])],
     [...(prior?.tlsGroupLabels || []), ...(row?.tlsGroupLabels || [])]
   );
@@ -505,7 +500,6 @@ const generateEdge = (
         ? {
             tagTlsSecure: true,
             tagTlsLockSeverity: tls.tagTlsLockSeverity,
-            ...(tls.tlsTypeLabels?.length ? { tlsTypeLabels: tls.tlsTypeLabels } : {}),
             ...(tls.tlsVersionLabels?.length ? { tlsVersionLabels: tls.tlsVersionLabels } : {}),
             ...(tls.tlsGroupLabels?.length ? { tlsGroupLabels: tls.tlsGroupLabels } : {})
           }
@@ -695,7 +689,6 @@ export const generateDataModel = (
         tagTlsCleartext: mergedCleartext ? true : undefined
       };
       if (!tls) {
-        delete edge.data.tlsTypeLabels;
         delete edge.data.tlsVersionLabels;
         delete edge.data.tlsGroupLabels;
       }

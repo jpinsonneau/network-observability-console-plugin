@@ -413,7 +413,27 @@ describe('parseTopologyMetrics', () => {
 });
 
 describe('parseGenericMetrics', () => {
-  it('should attach TLS label fields when TLSTypes / TLSVersion are on the series', () => {
+  it('should attach TLSVersion and TLSGroup from matrix labels', () => {
+    const metrics: RawTopologyMetrics[] = [
+      {
+        metric: {
+          SrcK8S_Name: 'A',
+          SrcK8S_Type: 'Pod',
+          DstK8S_Name: 'B',
+          DstK8S_Type: 'Pod',
+          TLSVersion: 'TLS 1.3',
+          TLSGroup: 'X25519MLKEM768'
+        },
+        values: [[1, 1]]
+      }
+    ];
+    const parsed = parseGenericMetrics(metrics, 300, 'SrcK8S_Name', 0, true);
+    expect(parsed[0].name).toBe('A');
+    expect(parsed[0].tls?.versions).toEqual(['TLS 1.3']);
+    expect(parsed[0].tls?.groups).toEqual(['X25519MLKEM768']);
+  });
+
+  it('should not attach TLSTypes (omitted from topology TLS aggregation)', () => {
     const metrics: RawTopologyMetrics[] = [
       {
         metric: {
@@ -428,47 +448,8 @@ describe('parseGenericMetrics', () => {
       }
     ];
     const parsed = parseGenericMetrics(metrics, 300, 'SrcK8S_Name', 0, true);
-    expect(parsed[0].name).toBe('A');
-    expect(parsed[0].tls?.types).toEqual(['ClientHello']);
     expect(parsed[0].tls?.versions).toEqual(['TLS 1.3']);
-  });
-
-  it('should parse TLSTypes as comma-separated label string', () => {
-    const metrics: RawTopologyMetrics[] = [
-      {
-        metric: {
-          SrcK8S_Name: 'A',
-          SrcK8S_Type: 'Pod',
-          DstK8S_Name: 'B',
-          DstK8S_Type: 'Pod',
-          TLSTypes: 'ClientHello, ServerHello',
-          TLSVersion: 'TLS 1.2'
-        } as unknown as RawTopologyMetrics['metric'],
-        values: [[1, 1]]
-      }
-    ];
-    const parsed = parseGenericMetrics(metrics, 300, 'SrcK8S_Name', 0, true);
-    expect(parsed[0].tls?.types).toEqual(['ClientHello', 'ServerHello']);
-    expect(parsed[0].tls?.versions).toEqual(['TLS 1.2']);
-  });
-
-  it('should parse TLSTypes from JSON array string and coerce numeric labels', () => {
-    const metrics: RawTopologyMetrics[] = [
-      {
-        metric: {
-          SrcK8S_Name: 'A',
-          SrcK8S_Type: 'Pod',
-          DstK8S_Name: 'B',
-          DstK8S_Type: 'Pod',
-          TLSTypes: '["ApplicationData","Handshake"]',
-          TLSVersion: 304
-        } as unknown as RawTopologyMetrics['metric'],
-        values: [[1, 1]]
-      }
-    ];
-    const parsed = parseGenericMetrics(metrics, 300, 'SrcK8S_Name', 0, true);
-    expect(parsed[0].tls?.types).toEqual(['ApplicationData', 'Handshake']);
-    expect(parsed[0].tls?.versions).toEqual(['304']);
+    expect(parsed[0].tls).not.toHaveProperty('types');
   });
 });
 
