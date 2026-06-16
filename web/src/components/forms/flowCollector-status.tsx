@@ -175,7 +175,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
                     <TextContent>
                       <Text component="p">
                         {hasLoadError
-                          ? t('An error occured while retreiving FlowCollector: {{error}}', { error: ctx.loadError })
+                          ? t('An error occurred while retrieving FlowCollector: {{error}}', { error: ctx.loadError })
                           : t('No FlowCollector resource was found. Create one to enable network flow collection.')}
                       </Text>
                     </TextContent>

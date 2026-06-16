@@ -19,6 +19,7 @@ import { exampleForModel, isK8sNotFoundError } from './utils';
 
 export type SupportedKind = 'FlowCollector' | 'FlowCollectorSlice' | 'FlowMetric';
 type DefaultFrom = 'CSVExample' | 'CRD' | 'None';
+const MISSING_RESOURCE_WATCH_CONFIRMATION_DELAY_MS = 1000;
 
 export type ResourceWatcherProps = {
   group: string;
@@ -151,8 +152,8 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
       return;
     }
     // useK8sWatchResource may never set loaded=true when the CR is absent; confirm after a short wait.
-    const timer = window.setTimeout(() => setMissingConfirmed(true), 1000);
-    return () => window.clearTimeout(timer);
+    const timer = setTimeout(() => setMissingConfirmed(true), MISSING_RESOURCE_WATCH_CONFIRMATION_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [skipCRLoading, name, cr, crLoaded, crLoadError]);
 
   if (!skipErrors && (csvLoadError || crdLoadError || (!skipCRError && crLoadError))) {
