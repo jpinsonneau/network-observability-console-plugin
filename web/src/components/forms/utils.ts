@@ -6,11 +6,20 @@ import { ClusterServiceVersionKind } from './types';
 
 export type FlowCollectorOverallStatus = 'ready' | 'degraded' | 'pending' | 'error' | 'onHold' | 'loading';
 
+/** True when a K8s watch/API error indicates the requested resource does not exist. */
+export const isK8sNotFoundError = (error: unknown): boolean => {
+  if (!error) {
+    return false;
+  }
+  const message = typeof error === 'string' ? error : error instanceof Error ? error.message : String(error);
+  return /not found/i.test(message);
+};
+
 export const getFlowCollectorOverallStatus = (
   cr: K8sResourceKind | undefined,
   loadError: unknown
 ): { status: FlowCollectorOverallStatus; message?: string } => {
-  if (loadError) {
+  if (loadError && !isK8sNotFoundError(loadError)) {
     return { status: 'error', message: String(loadError) };
   }
   if (!cr) {

@@ -3,22 +3,26 @@ import React, { FC } from 'react';
 import {
   Alert,
   AlertVariant,
+  Bullseye,
   Button,
   Flex,
   FlexItem,
   PageSection,
+  Spinner,
+  Text,
   TextContent,
   Title,
   Tooltip
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
-import { flowCollectorEditPath, flowCollectorNewPath, netflowTrafficPath, useNavigate } from '../../utils/url';
+import { flowCollectorEditPath, flowCollectorSetupPath, netflowTrafficPath, useNavigate } from '../../utils/url';
 import FlowCollectorStatusIndicator from '../status/flowcollector-status-indicator';
 import './forms.css';
 import { Pipeline } from './pipeline';
+import { ResourceDeleteModal } from './resource-delete-modal';
 import { ResourceStatus } from './resource-status';
 import { Consumer, ResourceWatcher } from './resource-watcher';
-import { getFlowCollectorOverallStatus } from './utils';
+import { getFlowCollectorOverallStatus, isK8sNotFoundError } from './utils';
 
 export type FlowCollectorStatusProps = {};
 
@@ -26,6 +30,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const navigate = useNavigate();
   const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
+  const [isDeleteModalOpen, setDeleteModalOpen] = React.useState(false);
 
   return (
     <ResourceWatcher
@@ -34,11 +39,20 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
       kind="FlowCollector"
       name="cluster"
       skipErrors
+      skipCRLoading
       defaultFrom="None"
     >
       <Consumer>
         {ctx => {
-          const { status } = getFlowCollectorOverallStatus(ctx.data, ctx.loadError);
+          const flowCollectorExists = ctx.isUpdate;
+          const flowCollectorPending = !ctx.crResolved;
+          const flowCollectorMissing = ctx.crResolved && !flowCollectorExists;
+          const hasLoadError = Boolean(ctx.loadError && !isK8sNotFoundError(ctx.loadError));
+          const { status } = flowCollectorExists
+            ? getFlowCollectorOverallStatus(ctx.data, ctx.loadError)
+            : hasLoadError
+            ? { status: 'error' as const }
+            : { status: 'pending' as const };
           const showTrafficButton = status === 'ready' || status === 'degraded';
           const configIssue = (
             (ctx.data?.status?.conditions as Array<{
@@ -58,12 +72,19 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
                       {t('Network Observability FlowCollector status')}
                     </Title>
                   </FlexItem>
-                  <FlexItem>
-                    <FlowCollectorStatusIndicator handleClick={false} />
-                  </FlexItem>
+                  {flowCollectorExists && (
+                    <FlexItem>
+                      <FlowCollectorStatusIndicator handleClick={false} />
+                    </FlexItem>
+                  )}
                 </Flex>
               </div>
-              {ctx.data && (
+              {flowCollectorPending && (
+                <Bullseye>
+                  <Spinner size="xl" />
+                </Bullseye>
+              )}
+              {flowCollectorExists && (
                 <Flex className="status-container" direction={{ default: 'column' }}>
                   {configIssue && (
                     <FlexItem>
@@ -126,25 +147,52 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
                           </Button>
                         </Tooltip>
                       </FlexItem>
+                      <FlexItem>
+                        <Button
+                          id="delete-flow-collector"
+                          data-test-id="delete-flow-collector"
+                          variant="danger"
+                          onClick={() => setDeleteModalOpen(true)}
+                        >
+                          {t('Delete FlowCollector')}
+                        </Button>
+                      </FlexItem>
                     </Flex>
                   </FlexItem>
+                  {isDeleteModalOpen && (
+                    <ResourceDeleteModal
+                      data={ctx.data}
+                      kind={ctx.kind}
+                      onDelete={() => ctx.onSubmit(ctx.data, true)}
+                      onCancel={() => setDeleteModalOpen(false)}
+                    />
+                  )}
                 </Flex>
               )}
-              {ctx.loadError && (
-                <Flex direction={{ default: 'column' }}>
+              {flowCollectorMissing && (
+                <Flex className="status-container" direction={{ default: 'column' }}>
                   <FlexItem>
                     <TextContent>
-                      {t('An error occured while retreiving FlowCollector: {{error}}', { error: ctx.loadError })}
+                      <Text component="p">
+                        {hasLoadError
+                          ? t('An error occured while retreiving FlowCollector: {{error}}', { error: ctx.loadError })
+                          : t('No FlowCollector resource was found. Create one to enable network flow collection.')}
+                      </Text>
                     </TextContent>
                   </FlexItem>
-                  <FlexItem alignSelf={{ default: 'alignSelfCenter' }}>
-                    <Button
-                      id="create-flow-collector"
-                      data-test-id="create-flow-collector"
-                      onClick={() => navigate(flowCollectorNewPath)}
-                    >
-                      {t('Create FlowCollector')}
-                    </Button>
+                  <FlexItem>
+                    <Flex>
+                      <FlexItem>
+                        <Button
+                          id="create-flow-collector"
+                          data-test-id="create-flow-collector"
+                          variant="primary"
+                          onClick={() => navigate(flowCollectorSetupPath)}
+                        >
+                          {t('Create FlowCollector')}
+                        </Button>
+                      </FlexItem>
+                    </Flex>
                   </FlexItem>
                 </Flex>
               )}

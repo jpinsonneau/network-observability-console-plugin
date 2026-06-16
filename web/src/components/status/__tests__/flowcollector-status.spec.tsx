@@ -1,7 +1,7 @@
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { render } from '@testing-library/react';
 import * as React from 'react';
-import { getFlowCollectorOverallStatus } from '../../forms/utils';
+import { getFlowCollectorOverallStatus, isK8sNotFoundError } from '../../forms/utils';
 import { FlowCollectorStatusIndicator } from '../flowcollector-status-indicator';
 
 describe('getFlowCollectorOverallStatus', () => {
@@ -11,6 +11,12 @@ describe('getFlowCollectorOverallStatus', () => {
 
   it('should return error on load error', () => {
     expect(getFlowCollectorOverallStatus(undefined, 'some error')).toEqual({ status: 'error', message: 'some error' });
+  });
+
+  it('should ignore not-found load errors', () => {
+    expect(getFlowCollectorOverallStatus(undefined, 'flowcollectors.flows.netobserv.io "cluster" not found')).toEqual({
+      status: 'loading'
+    });
   });
 
   it('should return onHold when execution mode is OnHold', () => {
@@ -81,6 +87,15 @@ describe('getFlowCollectorOverallStatus', () => {
       }
     };
     expect(getFlowCollectorOverallStatus(cr, null)).toEqual({ status: 'ready' });
+  });
+});
+
+describe('isK8sNotFoundError', () => {
+  it('should detect not-found messages', () => {
+    expect(isK8sNotFoundError('flowcollectors.flows.netobserv.io "cluster" not found')).toBe(true);
+    expect(isK8sNotFoundError(new Error('resource not found'))).toBe(true);
+    expect(isK8sNotFoundError(null)).toBe(false);
+    expect(isK8sNotFoundError('permission denied')).toBe(false);
   });
 });
 

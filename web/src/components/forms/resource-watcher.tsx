@@ -15,7 +15,7 @@ import { ErrorComponent } from '../messages/error';
 import { prune } from './dynamic-form/utils';
 import './forms.css';
 import { ClusterServiceVersionKind, CustomResourceDefinitionKind } from './types';
-import { exampleForModel } from './utils';
+import { exampleForModel, isK8sNotFoundError } from './utils';
 
 export type SupportedKind = 'FlowCollector' | 'FlowCollectorSlice' | 'FlowMetric';
 type DefaultFrom = 'CSVExample' | 'CRD' | 'None';
@@ -30,6 +30,8 @@ export type ResourceWatcherProps = {
   children: JSX.Element;
   skipErrors?: boolean;
   skipCRError?: boolean;
+  /** Render children without waiting for the CR watch to finish (e.g. missing resource). */
+  skipCRLoading?: boolean;
   defaultFrom: DefaultFrom;
 };
 
@@ -38,6 +40,10 @@ export type ResourceWatcherContext = {
   version: string;
   kind: SupportedKind;
   isUpdate: boolean;
+  /** True when the CR watch returned data or reported loaded. */
+  crLoaded: boolean;
+  /** True when the CR presence is known (exists, missing, or errored). */
+  crResolved: boolean;
   schema: JSONSchema7 | null;
   data: K8sResourceKind;
   onSubmit: (data: K8sResourceKind, isDelete?: boolean) => void;
@@ -52,6 +58,8 @@ export const { Provider, Consumer } = React.createContext<ResourceWatcherContext
   version: '',
   kind: '' as SupportedKind,
   isUpdate: false,
+  crLoaded: false,
+  crResolved: false,
   schema: null,
   data: {},
   onSubmit: () => {
@@ -75,6 +83,7 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
   children,
   skipErrors,
   skipCRError,
+  skipCRLoading,
   defaultFrom
 }) => {
   if (!group || !version || !kind) {
@@ -125,6 +134,26 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
 
   const model = useK8sModel(group, version, kind);
   const [errors, setErrors] = React.useState<string[]>([]);
+  const [missingConfirmed, setMissingConfirmed] = React.useState(false);
+
+  const isCRPresent = Boolean(cr?.metadata?.name || cr?.metadata?.uid);
+  const isCRLoaded = Boolean(!name || crLoaded || isCRPresent);
+  const isCRResolved = Boolean(isCRLoaded || crLoadError || (skipCRLoading && missingConfirmed));
+  const crLoadErrorEffective = isCRPresent || isK8sNotFoundError(crLoadError) ? null : crLoadError;
+
+  React.useEffect(() => {
+    if (!skipCRLoading || !name) {
+      setMissingConfirmed(false);
+      return;
+    }
+    if (cr || crLoaded || crLoadError) {
+      setMissingConfirmed(false);
+      return;
+    }
+    // useK8sWatchResource may never set loaded=true when the CR is absent; confirm after a short wait.
+    const timer = window.setTimeout(() => setMissingConfirmed(true), 1000);
+    return () => window.clearTimeout(timer);
+  }, [skipCRLoading, name, cr, crLoaded, crLoadError]);
 
   if (!skipErrors && (csvLoadError || crdLoadError || (!skipCRError && crLoadError))) {
     return (
@@ -133,7 +162,7 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
         error={`${csvLoadError || crdLoadError || crLoadError}`}
       />
     );
-  } else if (!csvLoaded || !crdLoaded || (!skipCRError && !crLoaded)) {
+  } else if (!csvLoaded || !crdLoaded || (!skipCRError && !skipCRLoading && !crLoaded)) {
     return (
       <Bullseye data-test="loading-resource">
         <Spinner size="xl" />
@@ -143,7 +172,7 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
 
   let data: K8sResourceKind = { apiVersion: `${group}/${version}`, kind, metadata: { name: '' } };
   let useCRDDefaults = false;
-  if (cr) {
+  if (isCRPresent) {
     data = { apiVersion: `${group}/${version}`, kind, ...cr };
   } else if (defaultFrom === 'CSVExample') {
     const csv = matchingCSVs?.find(csv => csv.spec.customresourcedefinitions?.owned?.some(crd => crd.kind === kind));
@@ -181,10 +210,12 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
         group,
         version,
         kind,
-        isUpdate: cr ? true : false,
+        isUpdate: isCRPresent,
+        crLoaded: isCRLoaded,
+        crResolved: isCRResolved,
         schema,
         data,
-        loadError: csvLoadError || crdLoadError || crLoadError,
+        loadError: csvLoadError || crdLoadError || crLoadErrorEffective,
         errors,
         setErrors,
         skipDefaults: !useCRDDefaults,
@@ -203,7 +234,7 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
               })
               .catch(e => setErrors([e.message]));
           } else {
-            const apiFunc = cr ? k8sUpdate : k8sCreate;
+            const apiFunc = isCRPresent ? k8sUpdate : k8sCreate;
             apiFunc({
               data: prune(data),
               model
