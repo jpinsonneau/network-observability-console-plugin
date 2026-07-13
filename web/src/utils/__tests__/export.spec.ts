@@ -158,6 +158,12 @@ describe('saveAndInlineSvgStyles', () => {
 
     restoreSvgStyles(saved);
   });
+});
+
+describe('chart layout readiness', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
 
   it('detects when chart svg dimensions match their containers', () => {
     document.body.innerHTML = `

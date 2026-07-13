@@ -72,15 +72,17 @@ export const ViewOptionsToolbar = React.forwardRef<SearchHandle, ViewOptionsTool
     const layoutRoot = document.getElementById('overview-graph-list') ?? overviewRoot;
 
     const runExport = async () => {
-      if (prevFocusState) {
-        props.setOverviewFocus(false);
-        await waitForExportLayout(layoutRoot, { requireResize: true });
-      } else if (!areChartsSizedForExport(layoutRoot ?? document.body)) {
-        await waitForExportLayout(layoutRoot);
+      try {
+        if (prevFocusState) {
+          props.setOverviewFocus(false);
+          await waitForExportLayout(layoutRoot, { requireResize: true });
+        } else if (!areChartsSizedForExport(layoutRoot ?? document.body)) {
+          await waitForExportLayout(layoutRoot);
+        }
+        await exportToPng('overview_page', overviewRoot ?? undefined, isDarkTheme);
+      } finally {
+        props.setOverviewFocus(prevFocusState);
       }
-      exportToPng('overview_page', overviewRoot ?? undefined, isDarkTheme, undefined, () =>
-        props.setOverviewFocus(prevFocusState)
-      );
     };
 
     void runExport();

@@ -418,13 +418,13 @@ export const exportToPng = (
   isDark?: boolean,
   id?: string,
   callback?: () => void
-) => {
+): Promise<void> => {
   if (element) {
     const savedStyles = saveAndInlineSvgStyles(element);
     const dimensions = getExportDimensions(element);
 
     // html-to-image typings only list HTMLElement, but SVGSVGElement is supported at runtime.
-    toPng(element as unknown as HTMLElement, {
+    return toPng(element as unknown as HTMLElement, {
       cacheBust: true,
       backgroundColor: isDark ? EXPORT_BACKGROUND.dark : EXPORT_BACKGROUND.light,
       ...dimensions
@@ -438,17 +438,17 @@ export const exportToPng = (
         }
         link.href = dataUrl;
         link.click();
-        if (callback) {
-          callback();
-        }
       })
       .catch(err => {
         console.error(err);
       })
       .finally(() => {
         restoreSvgStyles(savedStyles);
+        callback?.();
       });
-  } else {
-    console.error('exportToPng called but element is undefined');
   }
+
+  console.error('exportToPng called but element is undefined');
+  callback?.();
+  return Promise.resolve();
 };
