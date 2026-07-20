@@ -165,4 +165,35 @@ describe('<NetflowTraffic />', () => {
       expect(getGenericMetricsMock).toHaveBeenCalledTimes(0);
     });
   });
+
+  it('shows Limited retention banner only on Traffic flows tab', async () => {
+    getConfigMock.mockReturnValue(
+      Promise.resolve({
+        ...FullConfigResultSample,
+        dataSources: ['flp', 'prom'],
+        flowBufferOnly: true
+      })
+    );
+
+    const { container } = render(<NetflowTrafficParent />);
+    await waitFor(() => {
+      expect(container.querySelector('#filter-toolbar')).toBeTruthy();
+    });
+
+    expect(container.querySelector('[data-test="flow-buffer-only-banner"]')).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(container.querySelector('.tableTabButton button')!);
+    });
+    await waitFor(() => {
+      expect(container.querySelector('[data-test="flow-buffer-only-banner"]')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.click(container.querySelector('.topologyTabButton button')!);
+    });
+    await waitFor(() => {
+      expect(container.querySelector('[data-test="flow-buffer-only-banner"]')).toBeNull();
+    });
+  });
 });

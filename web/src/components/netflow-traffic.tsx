@@ -1,5 +1,5 @@
 import { isModelFeatureFlag, ModelFeatureFlag, useResolvedExtensions } from '@openshift-console/dynamic-plugin-sdk';
-import { Button, Content, ContentVariants, Flex, FlexItem, PageSection, Title } from '@patternfly/react-core';
+import { Button, Content, ContentVariants, Flex, FlexItem, PageSection, Title, Alert } from '@patternfly/react-core';
 import { SyncAltIcon } from '@patternfly/react-icons';
 import * as _ from 'lodash';
 import * as React from 'react';
@@ -264,7 +264,8 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     updateTableFilters,
     setFlows,
     setMetrics,
-    setError
+    setError,
+    setWarning
   } = useDataFetching({
     drawerRef,
     initState,
@@ -338,6 +339,8 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     setMetricScope,
     topologyMetricType,
     setTopologyMetricType,
+    selectedViewId,
+    setSelectedViewId,
     setColumns,
     setPanels,
     setFiltersFromURL
@@ -396,6 +399,11 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
       if (!initState.current.includes('configLoadError')) {
         setError(undefined);
       }
+    }
+    // S3 is raw-flows only: fall back to auto for Overview/Topology (Prom/Loki metrics).
+    // Traffic flows keeps the current S3 selection.
+    if ((view === 'overview' || view === 'topology') && dataSource === 's3') {
+      setDataSource('auto');
     }
     setSelectedViewId(view);
   };
@@ -473,8 +481,8 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   const isShowViewOptions = selectedViewId === 'table' ? showViewOptions && !showHistogram : showViewOptions;
 
   const fetchCallbacks: FetchCallbacks = React.useMemo(
-    () => ({ metricsRef, setFlows, setMetrics, setError }),
-    [metricsRef, setFlows, setMetrics, setError]
+    () => ({ metricsRef, setFlows, setMetrics, setError, setWarning }),
+    [metricsRef, setFlows, setMetrics, setError, setWarning]
   );
 
   const contextValue: NetflowContextValue = React.useMemo(
@@ -490,6 +498,19 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
         className={`${isDarkTheme ? 'dark' : 'light'} ${isTab ? 'tab' : ''}`}
       >
         {!hideTitle && pageHeader()}
+        {caps.isFlowBufferOnly && selectedViewId === 'table' && (
+          <Alert
+            data-test="flow-buffer-only-banner"
+            variant="warning"
+            isInline
+            title={t('Limited retention')}
+            style={{ marginBottom: '1rem' }}
+          >
+            {t(
+              'Only the most recent flows held in memory on the collectors are available. Older flows were discarded. To keep history, enable S3 export (recommended) or Loki.'
+            )}
+          </Alert>
+        )}
         {!_.isEmpty(caps.filterDefs) && (
           <Flex direction={{ default: 'row' }} style={{ paddingRight: hideTitle ? '1.5rem' : undefined }}>
             <FlexItem style={{ paddingTop: hideTitle ? '1.8rem' : undefined }} flex={{ default: 'flex_1' }}>
@@ -511,6 +532,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
                   setPacketLoss,
                   allowLoki: caps.allowLoki,
                   allowProm: caps.allowProm,
+                  allowS3: caps.allowS3,
                   allowFlow: caps.isFlow,
                   allowConnection: caps.isConnectionTracking,
                   allowPktDrops: caps.isPktDrop,
@@ -618,7 +640,9 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
             setRecordType={setRecordType}
             stats={stats}
             lastDuration={lastDuration}
-            warning={warning}
+            warning={
+              warning?.type === 'rawFlowsBufferOnly' && selectedViewId !== 'table' ? undefined : warning
+            }
             setShowQuerySummary={setShowQuerySummary}
             clearSelections={clearSelections}
             setSelectedRecord={setSelectedRecord}

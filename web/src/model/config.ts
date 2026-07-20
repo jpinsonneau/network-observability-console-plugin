@@ -42,6 +42,8 @@ export type Config = {
   promLabels: string[];
   maxChunkAgeMs?: number;
   recordingAnnotations?: RecordingAnnotations;
+  /** True when raw flows come only from FLP memory (no Loki, no S3). */
+  flowBufferOnly?: boolean;
 };
 
 export const defaultConfig: Config = {
@@ -66,5 +68,6 @@ export const defaultConfig: Config = {
   lokiLabels: [],
   promLabels: [],
   maxChunkAgeMs: undefined,
-  recordingAnnotations: {}
+  recordingAnnotations: {},
+  flowBufferOnly: false
 };

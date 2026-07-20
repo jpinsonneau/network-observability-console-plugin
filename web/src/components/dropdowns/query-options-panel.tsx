@@ -20,6 +20,7 @@ export const QueryOptionsPanel: React.FC<QueryOptionsProps> = ({
   setDataSource,
   allowLoki,
   allowProm,
+  allowS3,
   allowFlow,
   allowConnection,
   allowPktDrops,
@@ -43,6 +44,7 @@ export const QueryOptionsPanel: React.FC<QueryOptionsProps> = ({
     () => [
       { label: t('Loki'), value: 'loki' },
       { label: t('Prometheus'), value: 'prom' },
+      { label: t('S3'), value: 's3' },
       { label: t('Auto'), value: 'auto' }
     ],
     [t]
@@ -117,7 +119,7 @@ export const QueryOptionsPanel: React.FC<QueryOptionsProps> = ({
         <Tooltip
           content={t(
             // eslint-disable-next-line max-len
-            'Which datasource to query from console plugin pod. Prometheus holds a subset of metrics compared to Loki with better performances. Select "Auto" to pick the best datasource automatically.'
+            'Which datasource to query from console plugin pod. Prometheus holds a subset of metrics compared to Loki with better performances. S3 reads cold Parquet storage. Select "Auto" to pick the best datasource automatically.'
           )}
         >
           <div className="pf-v6-c-menu__group-title">
@@ -127,7 +129,10 @@ export const QueryOptionsPanel: React.FC<QueryOptionsProps> = ({
           </div>
         </Tooltip>
         {dataSourceOptions.map(opt => {
-          const disabled = (!allowProm && opt.value === 'prom') || (!allowLoki && opt.value === 'loki');
+          const disabled =
+            (!allowProm && opt.value === 'prom') ||
+            (!allowLoki && opt.value === 'loki') ||
+            (!allowS3 && opt.value === 's3');
           return (
             <div key={`dataSource-${opt.value}`}>
               <label className="display-dropdown-padding pf-v6-c-menu__menu-item">
@@ -144,6 +149,11 @@ export const QueryOptionsPanel: React.FC<QueryOptionsProps> = ({
                         ? t(
                             // eslint-disable-next-line max-len
                             'Only available when FlowCollector.loki.enable is true'
+                          )
+                        : opt.value === 's3'
+                        ? t(
+                            // eslint-disable-next-line max-len
+                            'Only available on the Traffic flows tab when FlowCollector.consolePlugin.s3.enable is true with an S3 exporter'
                           )
                         : undefined
                       : undefined

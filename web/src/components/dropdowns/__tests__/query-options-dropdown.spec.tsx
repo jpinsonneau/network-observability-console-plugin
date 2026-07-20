@@ -10,6 +10,7 @@ describe('<QueryOptionsDropdown />', () => {
     dataSource: 'auto',
     allowProm: true,
     allowLoki: true,
+    allowS3: true,
     allowFlow: true,
     allowConnection: true,
     allowPktDrops: true,
@@ -34,6 +35,7 @@ describe('<QueryOptionsPanel />', () => {
     dataSource: 'auto',
     allowProm: true,
     allowLoki: true,
+    allowS3: true,
     allowFlow: true,
     allowConnection: true,
     allowPktDrops: true,
@@ -54,7 +56,7 @@ describe('<QueryOptionsPanel />', () => {
     const { container } = render(<QueryOptionsPanel {...props} />);
     expect(container.querySelectorAll('.pf-v6-c-menu__group').length).toBe(4);
     expect(container.querySelectorAll('.pf-v6-c-menu__group-title').length).toBe(4);
-    expect(container.querySelectorAll('input[type="radio"]')).toHaveLength(13);
+    expect(container.querySelectorAll('input[type="radio"]')).toHaveLength(14);
 
     expect(props.setLimit).toHaveBeenCalledTimes(0);
   });
@@ -68,5 +70,17 @@ describe('<QueryOptionsPanel />', () => {
     });
     expect(props.setLimit).toHaveBeenNthCalledWith(1, 1000);
     rerender(<QueryOptionsPanel {...props} limit={1000} />);
+  });
+
+  it('disables S3 radio when allowS3 is false (e.g. Overview/Topology)', () => {
+    const { container } = render(<QueryOptionsPanel {...props} allowS3={false} />);
+    expect(container.querySelector('#dataSource-s3')).toBeDisabled();
+    expect(container.querySelector('#dataSource-auto')).not.toBeDisabled();
+  });
+
+  it('keeps S3 radio enabled when allowS3 is true (Traffic flows)', () => {
+    const { container } = render(<QueryOptionsPanel {...props} allowS3={true} dataSource="s3" />);
+    expect(container.querySelector('#dataSource-s3')).not.toBeDisabled();
+    expect(container.querySelector('#dataSource-s3')).toBeChecked();
   });
 });

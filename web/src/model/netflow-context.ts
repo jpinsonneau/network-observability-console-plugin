@@ -5,12 +5,14 @@ import { defaultNetflowMetrics, NetflowMetrics } from '../api/query-response';
 import { StructuredError } from '../utils/errors';
 import { ConfigCapabilities } from '../utils/netflow-capabilities-hook';
 import { Config, defaultConfig } from './config';
+import { Warning } from './warnings';
 
 export interface FetchCallbacks {
   metricsRef: React.MutableRefObject<NetflowMetrics>;
   setFlows: (v: Record[]) => void;
   setMetrics: React.Dispatch<React.SetStateAction<NetflowMetrics>>;
   setError: (err?: StructuredError | string) => void;
+  setWarning?: (w: Warning | undefined) => void;
 }
 
 export interface NetflowContextValue {
@@ -23,6 +25,10 @@ export interface NetflowContextValue {
 const defaultCaps: ConfigCapabilities = {
   allowLoki: false,
   allowProm: false,
+  allowS3: false,
+  allowMetrics: false,
+  allowRawFlows: false,
+  isFlowBufferOnly: false,
   isFlow: false,
   isConnectionTracking: false,
   isDNSTracking: false,

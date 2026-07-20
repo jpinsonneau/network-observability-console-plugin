@@ -2,7 +2,7 @@ import { Field } from '../api/ipfix';
 import { Filter, Filters } from './filters';
 
 export type RecordType = 'allConnections' | 'newConnection' | 'heartbeat' | 'endConnection' | 'flowLog';
-export type DataSource = 'auto' | 'loki' | 'prom';
+export type DataSource = 'auto' | 'loki' | 'prom' | 's3';
 export type Match = 'any' | 'all' | 'bidirectional';
 export type PacketLoss = 'dropped' | 'hasDrops' | 'sent' | 'all';
 export type MetricFunction = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'p90' | 'p99' | 'rate';

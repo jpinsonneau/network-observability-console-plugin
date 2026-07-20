@@ -19,6 +19,25 @@ loki:
     #    - SrcK8S_Zone
     #    - DstK8S_Zone
   tenantID: netobserv
+# Phase 1 raw flows without Loki (operator injects these when configured):
+# flowBuffer:
+#   enable: true
+#   url: http://flowlogs-pipeline.netobserv.svc:9200   # FLP query Service (one hop; default port 9200)
+#   timeout: 2s
+# s3:
+#   enable: true
+#   endpoint: http://localhost:9000
+#   bucket: netobserv-flows
+#   prefix: ""
+#   account: production-cluster
+#   region: us-east-1
+#   skipTls: true
+#   maxObjects: 75   # cap Parquet objects per query (newest first); 0 = default 75
+#   accessKey: minioadmin
+#   secretKey: minioadmin
+#   # Prefer mounted Secret paths in-cluster:
+#   # accessKeyPath: /var/s3-creds/accessKey
+#   # secretKeyPath: /var/s3-creds/secretKey
 prometheus:
   url: https://localhost:9090
   timeout: 30s

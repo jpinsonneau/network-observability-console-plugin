@@ -51,6 +51,7 @@ export interface DispatchFetchParams {
   topologyMetricFunction: StatFunction;
   topologyOptions: TopologyOptions;
   allowLoki: boolean;
+  allowRawFlows: boolean;
   setError: (err?: StructuredError | string) => void;
   setTopologyUDNIds: (ids: string[]) => void;
   setLoading: (v: boolean) => void;
@@ -70,6 +71,7 @@ export function dispatchFetch(params: DispatchFetchParams): Promise<Stats[]> | u
     topologyMetricFunction,
     topologyOptions,
     allowLoki,
+    allowRawFlows,
     setError,
     setTopologyUDNIds,
     setLoading,
@@ -79,10 +81,12 @@ export function dispatchFetch(params: DispatchFetchParams): Promise<Stats[]> | u
   let promises: Promise<Stats[]> | undefined = undefined;
   switch (selectedViewId) {
     case 'table':
-      if (allowLoki) {
+      if (allowRawFlows || allowLoki) {
         promises = drawerRef.current?.getTableHandle()?.fetch(range, histogramRange, showHistogram, showDuplicates);
       } else {
-        setError(t('Only available when FlowCollector.loki.enable is true'));
+        setError(
+          t('Only available when Loki, flowBuffer, or S3 query is enabled in the FlowCollector')
+        );
       }
       break;
     case 'overview':
@@ -207,6 +211,7 @@ export interface UseDataFetchingResult {
   setFlows: React.Dispatch<React.SetStateAction<Record[]>>;
   setMetrics: React.Dispatch<React.SetStateAction<NetflowMetrics>>;
   setError: React.Dispatch<React.SetStateAction<string | StructuredError | undefined>>;
+  setWarning: React.Dispatch<React.SetStateAction<Warning | undefined>>;
 }
 
 export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingResult {
@@ -315,6 +320,7 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
       topologyMetricFunction,
       topologyOptions,
       allowLoki: caps.allowLoki,
+      allowRawFlows: caps.allowRawFlows,
       setError,
       setTopologyUDNIds,
       setLoading,
@@ -354,6 +360,7 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
     topologyOptions,
     selectedViewId,
     caps.allowLoki,
+    caps.allowRawFlows,
     manageWarnings,
     errorHandlers
   ]);
@@ -419,6 +426,7 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
     updateTableFilters,
     setFlows,
     setMetrics,
-    setError
+    setError,
+    setWarning
   };
 }

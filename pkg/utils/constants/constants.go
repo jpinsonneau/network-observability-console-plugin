@@ -43,7 +43,18 @@ const (
 	DataSourceAuto    DataSource = "auto"
 	DataSourceProm    DataSource = "prom"
 	DataSourceLoki    DataSource = "loki"
+	DataSourceFLP     DataSource = "flp"
+	DataSourceS3      DataSource = "s3"
 	DefaultDataSource DataSource = DataSourceAuto
+
+	// WarningCodeRawFlowsBufferOnly is returned when Loki and S3 are off and
+	// the requested range is not fully covered by the FLP flowBuffer.
+	WarningCodeRawFlowsBufferOnly = "RAW_FLOWS_BUFFER_ONLY"
+	// WarningCodePeerQueryFailed is forwarded from FLP when a sibling buffer query fails.
+	WarningCodePeerQueryFailed = "PEER_QUERY_FAILED"
+	// WarningCodeRawFlowsS3ObjectCap is returned when S3 Parquet scan hit
+	// maxObjects and skipped remaining objects (partial cold results).
+	WarningCodeRawFlowsS3ObjectCap = "RAW_FLOWS_S3_OBJECT_CAP"
 
 	PacketLossDropped PacketLoss = "dropped"
 	PacketLossHasDrop PacketLoss = "hasDrops"

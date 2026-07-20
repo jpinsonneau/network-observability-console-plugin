@@ -87,7 +87,8 @@ func getDatasource(params url.Values) (constants.DataSource, error) {
 	dataSource := constants.DataSource(ds)
 	if dataSource == constants.DataSourceAuto ||
 		dataSource == constants.DataSourceLoki ||
-		dataSource == constants.DataSourceProm {
+		dataSource == constants.DataSourceProm ||
+		dataSource == constants.DataSourceS3 {
 		return dataSource, nil
 	}
 	return "", fmt.Errorf("invalid data source: %s", ds)

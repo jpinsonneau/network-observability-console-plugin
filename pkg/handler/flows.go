@@ -15,6 +15,7 @@ import (
 	"github.com/netobserv/network-observability-console-plugin/pkg/model"
 	"github.com/netobserv/network-observability-console-plugin/pkg/model/fields"
 	"github.com/netobserv/network-observability-console-plugin/pkg/model/filters"
+	"github.com/netobserv/network-observability-console-plugin/pkg/utils/constants"
 )
 
 const (
@@ -31,23 +32,61 @@ const (
 
 func (h *Handlers) GetFlows(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !h.Cfg.IsLokiEnabled() {
-			err := apierrors.NewLokiDisabledError("cannot perform flows query with disabled Loki")
-			err.Write(w, http.StatusBadRequest)
+		params := r.URL.Query()
+		ds, err := getDatasource(params)
+		if err != nil {
+			apierrors.Write(w, http.StatusBadRequest, err)
 			return
 		}
 
-		cl := newLokiClient(&h.Cfg.Loki, r.Header, false, h.Cfg.ConsoleMode == config.Mock)
 		var code int
 		startTime := time.Now()
 		defer func() {
 			metrics.ObserveHTTPCall("GetFlows", code, startTime)
 		}()
 
-		params := r.URL.Query()
-		hlog.Debugf("GetFlows query params: %s", params)
+		hlog.Debugf("GetFlows query params: %s (dataSource=%s)", params, ds)
 
-		flows, code, err := h.getFlows(ctx, cl, params)
+		// Explicit S3: cold Parquet path (S3-primary), even when Loki is enabled.
+		if ds == constants.DataSourceS3 {
+			if !h.Cfg.IsS3Enabled() {
+				err := apierrors.NewLokiDisabledError("cannot perform flows query: s3 datasource is not configured")
+				err.Write(w, http.StatusBadRequest)
+				return
+			}
+			var flows *model.AggregatedQueryResponse
+			flows, code, err = h.getRawFlowsTiered(ctx, params, rawFlowsModeS3Primary)
+			if err != nil {
+				apierrors.Write(w, code, err)
+				return
+			}
+			code = http.StatusOK
+			writeJSON(w, code, flows)
+			return
+		}
+
+		if h.Cfg.IsLokiEnabled() {
+			cl := newLokiClient(&h.Cfg.Loki, r.Header, false, h.Cfg.ConsoleMode == config.Mock)
+			var flows *model.AggregatedQueryResponse
+			flows, code, err = h.getFlows(ctx, cl, params)
+			if err != nil {
+				apierrors.Write(w, code, err)
+				return
+			}
+			code = http.StatusOK
+			writeJSON(w, code, flows)
+			return
+		}
+
+		// Loki off: tiered raw path via flowBuffer then S3 (auto).
+		if !h.Cfg.IsFlowBufferEnabled() && !h.Cfg.IsS3Enabled() {
+			err := apierrors.NewLokiDisabledError("cannot perform flows query: Loki is disabled and neither flowBuffer nor s3 is configured")
+			err.Write(w, http.StatusBadRequest)
+			return
+		}
+
+		var flows *model.AggregatedQueryResponse
+		flows, code, err = h.getRawFlowsTiered(ctx, params, rawFlowsModeAuto)
 		if err != nil {
 			apierrors.Write(w, code, err)
 			return

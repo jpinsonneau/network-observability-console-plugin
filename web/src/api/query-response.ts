@@ -1,4 +1,5 @@
 import { FlowScope, MetricType, StatFunction } from '../model/flow-query';
+import { QueryWarning } from '../model/warnings';
 import { StructuredError } from '../utils/errors';
 import { cyrb53 } from '../utils/hash';
 import { getFunctionFromId, getRateFunctionFromId } from '../utils/overview-panels';
@@ -9,6 +10,7 @@ export interface AggregatedQueryResponse {
   resultType: string;
   result: StreamResult[] | RawTopologyMetrics[];
   stats: Stats;
+  warnings?: QueryWarning[];
   unixTimestamp: number;
 }
 
@@ -16,6 +18,7 @@ export interface Stats {
   numQueries: number;
   limitReached: boolean;
   dataSources: string[];
+  truncated?: boolean;
   // Here, more (raw) stats available in queriesStats array
 }
 
@@ -27,6 +30,7 @@ export interface StreamResult {
 export interface RecordsResult {
   records: Record[];
   stats: Stats;
+  warnings?: QueryWarning[];
 }
 
 export interface FlowMetricsResult {

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Config } from '../model/config';
 import { Filters } from '../model/filters';
+import { ViewId } from '../components/netflow-traffic';
 import { DataSource, FlowScope, MetricType, PacketLoss, RecordType } from '../model/flow-query';
 import { Column, getDefaultColumns } from './columns';
 import {
@@ -31,6 +32,8 @@ export function useConfigValidation(params: {
   setMetricScope: React.Dispatch<React.SetStateAction<FlowScope>>;
   topologyMetricType: MetricType;
   setTopologyMetricType: React.Dispatch<React.SetStateAction<MetricType>>;
+  selectedViewId: ViewId;
+  setSelectedViewId: React.Dispatch<React.SetStateAction<ViewId>>;
   setColumns: React.Dispatch<React.SetStateAction<Column[]>>;
   setPanels: React.Dispatch<React.SetStateAction<OverviewPanel[]>>;
   setFiltersFromURL: () => void;
@@ -51,6 +54,8 @@ export function useConfigValidation(params: {
     setMetricScope,
     topologyMetricType,
     setTopologyMetricType,
+    selectedViewId,
+    setSelectedViewId,
     setColumns,
     setPanels,
     setFiltersFromURL
@@ -78,16 +83,31 @@ export function useConfigValidation(params: {
   }, [config.recordTypes, caps.isConnectionTracking, caps.isFlow, recordType]);
 
   // invalidate datasource if not available
+  // (includes s3 → auto when leaving Traffic flows: allowS3 is false on Overview/Topology)
   React.useEffect(() => {
     if (
       initState.current.includes('configLoaded') &&
-      ((dataSource === 'loki' && !caps.allowLoki && caps.allowProm) ||
-        (dataSource === 'prom' && caps.allowLoki && !caps.allowProm))
+      ((dataSource === 'loki' && !caps.allowLoki) ||
+        (dataSource === 'prom' && !caps.allowProm) ||
+        (dataSource === 's3' && !caps.allowS3))
     ) {
       setDataSource('auto');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caps.allowLoki, caps.allowProm, dataSource]);
+  }, [caps.allowLoki, caps.allowProm, caps.allowS3, dataSource]);
+
+  // force Traffic flows when Overview/Topology cannot be served (e.g. S3-only, no Prom/Loki)
+  React.useEffect(() => {
+    if (
+      initState.current.includes('configLoaded') &&
+      !caps.allowMetrics &&
+      caps.allowRawFlows &&
+      selectedViewId !== 'table'
+    ) {
+      setSelectedViewId('table');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caps.allowMetrics, caps.allowRawFlows, selectedViewId]);
 
   // invalidate packet loss if not available
   React.useEffect(() => {

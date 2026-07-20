@@ -19,6 +19,7 @@ type AggregatedQueryResponse struct {
 	ResultType    ResultType      `json:"resultType"`
 	Result        ResultValue     `json:"result"`
 	Stats         AggregatedStats `json:"stats"`
+	Warnings      []QueryWarning  `json:"warnings,omitempty"`
 	UnixTimestamp int64           `json:"unixTimestamp"`
 }
 
@@ -30,6 +31,9 @@ type AggregatedStats struct {
 	LimitReached bool                   `json:"limitReached"`
 	QueriesStats []interface{}          `json:"queriesStats"`
 	DataSources  []constants.DataSource `json:"dataSources"`
+	// Truncated is true when results do not fully cover the requested window
+	// (e.g. buffer-only retention shorter than the query range).
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // ResultType holds the type of the result
@@ -104,12 +108,28 @@ func (q *QueryResponseData) UnmarshalJSON(data []byte) error {
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (q *AggregatedQueryResponse) UnmarshalJSON(data []byte) error {
-	t, result, _, err := unmarshalQueryResponseData(data)
+	unmarshal := struct {
+		Type          ResultType      `json:"resultType"`
+		Result        json.RawMessage `json:"result"`
+		Stats         AggregatedStats `json:"stats"`
+		Warnings      []QueryWarning  `json:"warnings"`
+		UnixTimestamp int64           `json:"unixTimestamp"`
+	}{}
+
+	err := json.Unmarshal(data, &unmarshal)
 	if err != nil {
 		return err
 	}
-	q.ResultType = t
+
+	_, result, _, err := unmarshalQueryResponseData(data)
+	if err != nil {
+		return err
+	}
+	q.ResultType = unmarshal.Type
 	q.Result = result
+	q.Stats = unmarshal.Stats
+	q.Warnings = unmarshal.Warnings
+	q.UnixTimestamp = unmarshal.UnixTimestamp
 
 	return nil
 }

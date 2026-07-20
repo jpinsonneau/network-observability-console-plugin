@@ -2,11 +2,13 @@ import { Bullseye, Spinner } from '@patternfly/react-core';
 import { SortByDirection, Table, Tbody } from '@patternfly/react-table';
 import * as _ from 'lodash';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Record } from '../../../api/ipfix';
 import { defaultNetflowMetrics, Stats } from '../../../api/query-response';
 import { Config } from '../../../model/config';
 import { useNetflowContext } from '../../../model/netflow-context';
+import { RAW_FLOWS_BUFFER_ONLY, PEER_QUERY_FAILED } from '../../../model/warnings';
 import { Column, ColumnsId, ColumnSizeMap } from '../../../utils/columns';
 import { TimeRange } from '../../../utils/datetime';
 import { getStructuredHTTPError } from '../../../utils/errors';
@@ -53,6 +55,7 @@ export interface NetflowTableProps {
 // eslint-disable-next-line react/display-name
 export const NetflowTable = React.forwardRef<NetflowTableHandle, NetflowTableProps>((props, ref) => {
   const { caps, fetchCallbacks } = useNetflowContext();
+  const { t } = useTranslation('plugin__netobserv-plugin');
 
   //default to 300 to allow content to be rendered in tests
   const [containerHeight, setContainerHeight] = React.useState(300);
@@ -81,7 +84,7 @@ export const NetflowTable = React.forwardRef<NetflowTableHandle, NetflowTablePro
     ) => {
       const fq = caps.flowQuery;
       const { getRecords, getMetrics } = caps.fetchFunctions;
-      const { metricsRef, setFlows, setMetrics } = fetchCallbacks;
+      const { metricsRef, setFlows, setMetrics, setWarning } = fetchCallbacks;
 
       if (!showHistogram) {
         setMetrics(defaultNetflowMetrics);
@@ -99,6 +102,25 @@ export const NetflowTable = React.forwardRef<NetflowTableHandle, NetflowTablePro
         getRecords(tableQuery).then(res => {
           const flows = showDuplicates ? res.records : mergeFlowReporters(res.records);
           setFlows(flows);
+          const bufferOnly = res.warnings?.find(w => w.code === RAW_FLOWS_BUFFER_ONLY);
+          const peerFail = res.warnings?.find(w => w.code === PEER_QUERY_FAILED);
+          if (bufferOnly && setWarning) {
+            setWarning({
+              type: 'rawFlowsBufferOnly',
+              summary: t('Limited retention'),
+              details: t(
+                'Only the most recent flows held in memory on the collectors are available. Older flows were discarded. To keep history, enable S3 export (recommended) or Loki.'
+              )
+            });
+          } else if (peerFail && setWarning) {
+            setWarning({
+              type: 'peerQueryFailed',
+              summary: t('Partial collector results'),
+              details:
+                peerFail.message ||
+                t('Some collector instances could not be queried; results may be incomplete.')
+            });
+          }
           return res.stats;
         })
       ];
@@ -119,7 +141,7 @@ export const NetflowTable = React.forwardRef<NetflowTableHandle, NetflowTablePro
       }
       return Promise.all(promises);
     },
-    [caps.flowQuery, caps.fetchFunctions, fetchCallbacks]
+    [caps.flowQuery, caps.fetchFunctions, fetchCallbacks, t]
   );
 
   React.useImperativeHandle(ref, () => ({

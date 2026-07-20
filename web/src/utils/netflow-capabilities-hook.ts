@@ -18,6 +18,13 @@ import { dnsIdMatcher, droppedIdMatcher, OverviewPanel, rttIdMatcher, tlsIdMatch
 export interface ConfigCapabilities {
   allowLoki: boolean;
   allowProm: boolean;
+  allowS3: boolean;
+  /** Overview/Topology metrics available via Prometheus and/or Loki. */
+  allowMetrics: boolean;
+  /** Raw flow table available via Loki, flowBuffer, and/or s3. */
+  allowRawFlows: boolean;
+  /** Persistent banner: buffer-only retention (no Loki, no S3). */
+  isFlowBufferOnly: boolean;
   isFlow: boolean;
   isConnectionTracking: boolean;
   isDNSTracking: boolean;
@@ -78,9 +85,28 @@ export function useConfigCapabilities(params: {
   // Boolean capabilities
   const allowLoki = React.useMemo(() => config.dataSources.some(ds => ds === 'loki'), [config.dataSources]);
 
+  const allowRawFlows = React.useMemo(
+    () =>
+      config.dataSources.some(ds => ds === 'loki' || ds === 'flp' || ds === 's3') || !!config.flowBufferOnly,
+    [config.dataSources, config.flowBufferOnly]
+  );
+
+  const isFlowBufferOnly = React.useMemo(() => !!config.flowBufferOnly, [config.flowBufferOnly]);
+
   const allowProm = React.useMemo(
     () => config.dataSources.some(ds => ds === 'prom') && selectedViewId !== 'table',
     [config.dataSources, selectedViewId]
+  );
+
+  // S3 serves raw flows only — disable on Overview/Topology so validation falls back to auto.
+  const allowS3 = React.useMemo(
+    () => config.dataSources.some(ds => ds === 's3') && selectedViewId === 'table',
+    [config.dataSources, selectedViewId]
+  );
+
+  const allowMetrics = React.useMemo(
+    () => config.dataSources.some(ds => ds === 'prom' || ds === 'loki'),
+    [config.dataSources]
   );
 
   const isFlow = React.useMemo(() => config.recordTypes.some(rt => rt === 'flowLog'), [config.recordTypes]);
@@ -243,6 +269,10 @@ export function useConfigCapabilities(params: {
   return {
     allowLoki,
     allowProm,
+    allowS3,
+    allowMetrics,
+    allowRawFlows,
+    isFlowBufferOnly,
     isFlow,
     isConnectionTracking,
     isDNSTracking,

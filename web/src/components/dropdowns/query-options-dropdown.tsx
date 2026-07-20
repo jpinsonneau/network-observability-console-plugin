@@ -13,6 +13,7 @@ export interface QueryOptionsProps {
   setDataSource: (dataSource: DataSource) => void;
   allowLoki: boolean;
   allowProm: boolean;
+  allowS3: boolean;
   allowFlow: boolean;
   allowConnection: boolean;
   allowPktDrops: boolean;

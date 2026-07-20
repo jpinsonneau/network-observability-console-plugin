@@ -168,17 +168,26 @@ type Frontend struct {
 	PromLabels           []string                     `yaml:"promLabels" json:"promLabels"`
 	MaxChunkAgeMs        int                          `yaml:"maxChunkAgeMs,omitempty" json:"maxChunkAgeMs,omitempty"` // populated at query time
 	RecordingAnnotations map[string]map[string]string `yaml:"recordingAnnotations,omitempty" json:"recordingAnnotations,omitempty"`
+	// FlowBufferOnly is true when raw flows come only from FLP memory (no Loki, no S3).
+	// Frontend shows a persistent retention banner in Network Traffic.
+	FlowBufferOnly bool `yaml:"flowBufferOnly,omitempty" json:"flowBufferOnly,omitempty"`
 }
 
 type Config struct {
 	ConsoleMode ConsoleMode `yaml:"consoleMode" json:"consoleMode"`
 	Loki        Loki        `yaml:"loki" json:"loki"`
 	Prometheus  Prometheus  `yaml:"prometheus" json:"prometheus"`
-	Kubernetes  K8SConfig   `yaml:"kubernetes" json:"kubernetes"`
-	Frontend    Frontend    `yaml:"frontend" json:"frontend"`
-	Server      Server      `yaml:"server,omitempty" json:"server,omitempty"`
-	Path        string      `yaml:"-" json:"-"`
-	Static      bool
+	// FlowBuffer: console → FLP Service for hot raw flows (Loki off).
+	FlowBuffer FlowBuffer `yaml:"flowBuffer,omitempty" json:"flowBuffer,omitempty"`
+	// S3: cold Parquet datasource (Hive layout on object storage).
+	S3 S3 `yaml:"s3,omitempty" json:"s3,omitempty"`
+	// S3Query is a legacy alias for S3 (operator ConfigMaps may still emit s3Query).
+	S3Query    S3        `yaml:"s3Query,omitempty" json:"-"`
+	Kubernetes K8SConfig `yaml:"kubernetes" json:"kubernetes"`
+	Frontend   Frontend  `yaml:"frontend" json:"frontend"`
+	Server     Server    `yaml:"server,omitempty" json:"server,omitempty"`
+	Path       string    `yaml:"-" json:"-"`
+	Static     bool
 }
 
 func ReadFile(version, date, filename string) (*Config, error) {
@@ -247,6 +256,11 @@ func ReadFile(version, date, filename string) (*Config, error) {
 		return nil, err
 	}
 
+	// Accept legacy s3Query key until the operator emits s3.
+	if !cfg.S3.Enable && cfg.S3Query.Enable {
+		cfg.S3 = cfg.S3Query
+	}
+
 	cfg.Frontend.ConsoleMode = cfg.ConsoleMode
 	if cfg.IsLokiEnabled() {
 		cfg.Frontend.DataSources = append(cfg.Frontend.DataSources, string(constants.DataSourceLoki))
@@ -274,6 +288,14 @@ func ReadFile(version, date, filename string) (*Config, error) {
 		}
 	}
 
+	if cfg.IsFlowBufferEnabled() {
+		cfg.Frontend.DataSources = append(cfg.Frontend.DataSources, string(constants.DataSourceFLP))
+	}
+	if cfg.IsS3Enabled() {
+		cfg.Frontend.DataSources = append(cfg.Frontend.DataSources, string(constants.DataSourceS3))
+	}
+	cfg.Frontend.FlowBufferOnly = cfg.IsFlowBufferOnly()
+
 	return &cfg, err
 }
 
@@ -285,9 +307,31 @@ func (c *Config) IsPromEnabled() bool {
 	return c.Prometheus.URL != "" || c.Prometheus.DevURL != ""
 }
 
+// IsFlowBufferEnabled reports whether the console can query FLP for hot raw flows.
+func (c *Config) IsFlowBufferEnabled() bool {
+	return c.FlowBuffer.Enable && c.FlowBuffer.URL != ""
+}
+
+// IsS3Enabled reports whether the console can query S3 Parquet as a datasource.
+func (c *Config) IsS3Enabled() bool {
+	return c.S3.Enable && c.S3.Bucket != "" && c.S3.Endpoint != ""
+}
+
+// IsRawFlowsAvailable is true when GetFlows can serve raw records without Loki
+// (flowBuffer and/or s3) or via Loki itself.
+func (c *Config) IsRawFlowsAvailable() bool {
+	return c.IsLokiEnabled() || c.IsFlowBufferEnabled() || c.IsS3Enabled()
+}
+
+// IsFlowBufferOnly is true when only the in-memory FLP buffer backs raw flows
+// (no Loki, no S3) — UI must show a retention warning banner.
+func (c *Config) IsFlowBufferOnly() bool {
+	return c.IsFlowBufferEnabled() && !c.IsLokiEnabled() && !c.IsS3Enabled()
+}
+
 func (c *Config) Validate() error {
-	if !c.Static && !c.IsLokiEnabled() && !c.IsPromEnabled() {
-		return errors.New("neither Loki nor Prometheus is configured; at least one of them should have a URL defined")
+	if !c.Static && !c.IsLokiEnabled() && !c.IsPromEnabled() && !c.IsFlowBufferEnabled() && !c.IsS3Enabled() {
+		return errors.New("neither Loki, Prometheus, flowBuffer, nor s3 is configured; at least one should be defined")
 	}
 
 	var configErrors []string
@@ -330,6 +374,30 @@ func (c *Config) Validate() error {
 		}
 	} else {
 		log.Info("Prometheus is disabled")
+	}
+
+	if c.FlowBuffer.Enable {
+		if c.FlowBuffer.URL == "" {
+			configErrors = append(configErrors, "flowBuffer.enable is true but url is empty")
+		} else if _, err := url.Parse(c.FlowBuffer.URL); err != nil {
+			configErrors = append(configErrors, "wrong flowBuffer URL")
+		} else {
+			log.Infof("flowBuffer is enabled (%s)", c.FlowBuffer.URL)
+		}
+	} else {
+		log.Info("flowBuffer is disabled")
+	}
+
+	if c.S3.Enable {
+		if c.S3.Endpoint == "" || c.S3.Bucket == "" {
+			configErrors = append(configErrors, "s3.enable is true but endpoint or bucket is empty")
+		} else if _, err := url.Parse(c.S3.Endpoint); err != nil {
+			configErrors = append(configErrors, "wrong s3 endpoint URL")
+		} else {
+			log.Infof("s3 is enabled (bucket=%s endpoint=%s)", c.S3.Bucket, c.S3.Endpoint)
+		}
+	} else {
+		log.Info("s3 is disabled")
 	}
 
 	if len(configErrors) > 0 {

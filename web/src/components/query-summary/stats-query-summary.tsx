@@ -31,7 +31,24 @@ export const StatsQuerySummary: React.FC<StatsQuerySummaryProps> = ({
   const durationText = lastDuration ? formatDurationAboveMillisecond(lastDuration) : '';
 
   const formatDatasources = React.useCallback(() => {
-    return dataSources?.map(ds => (ds === 'prom' ? 'Prometheus' : ds === 'loki' ? 'Loki' : ds)).join(', ') || '';
+    return (
+      dataSources
+        ?.map(ds => {
+          switch (ds) {
+            case 'prom':
+              return 'Prometheus';
+            case 'loki':
+              return 'Loki';
+            case 's3':
+              return 'S3';
+            case 'flp':
+              return 'FLP';
+            default:
+              return ds;
+          }
+        })
+        .join(', ') || ''
+    );
   }, [dataSources]);
 
   return (

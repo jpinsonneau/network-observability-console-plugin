@@ -27,7 +27,8 @@ export const getFlowRecords = (params: FlowQuery): Promise<RecordsResult> => {
     const aggQR: AggregatedQueryResponse = r.data;
     return {
       records: (aggQR.result as StreamResult[]).flatMap(r => parseStream(r)),
-      stats: aggQR.stats
+      stats: aggQR.stats,
+      warnings: aggQR.warnings
     };
   });
 };
@@ -247,7 +248,8 @@ export const getConfig = (): Promise<Config> => {
       lokiLabels: r.data.lokiLabels || defaultConfig.lokiLabels,
       consoleMode: r.data.consoleMode || defaultConfig.consoleMode,
       maxChunkAgeMs: r.data.maxChunkAgeMs,
-      recordingAnnotations: r.data.recordingAnnotations || defaultConfig.recordingAnnotations
+      recordingAnnotations: r.data.recordingAnnotations || defaultConfig.recordingAnnotations,
+      flowBufferOnly: !!r.data.flowBufferOnly
     };
   });
 };
