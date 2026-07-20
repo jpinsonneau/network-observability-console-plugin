@@ -118,7 +118,7 @@
     "axios": "^1.16.0",
     "classnames": "^2.5.1",
     "i18next": "^21.8.14",
-    "i18next-http-backend": "^1.0.21",
+    "i18next-http-backend": "^4.0.0",
     "js-yaml": "^4.1.1",
     "murmurhash-js": "^1.0.0",
     "percentile": "^1.6.0",
