@@ -16,79 +16,117 @@ const (
 	receivedTimeCol = timePrefix + "Received"
 )
 
-func GetCSVData(qr *model.AggregatedQueryResponse, columns []string) ([][]string, error) {
-	if streams, ok := qr.Result.(model.Streams); ok { // make csv datas containing header as first line + rows
-		data := make([][]string, 1)
-
-		// set time columns first data
-		data[0] = append(data[0], startTimeCol, endTimeCol, receivedTimeCol)
-
-		// prepare columns for faster lookup
-		columnsMap := utils.GetMapInterface(columns)
-		// keep ordered labels / field names between each lines
-		// filtered by columns parameter if specified
-		var labels []string
-		var fields []string
-		for _, stream := range streams {
-			// get labels from first stream
-			if labels == nil {
-				labels = make([]string, 0, len(stream.Labels))
-				for name := range stream.Labels {
-					if _, exists := columnsMap[name]; exists || len(columns) == 0 {
-						labels = append(labels, name)
-					}
-				}
-				data[0] = append(data[0], labels...)
-			}
-
-			// apply timestamp & labels for each entries and add json line fields
-			for _, entry := range stream.Entries {
-				// get json line
-				var line map[string]interface{}
-				err := json.Unmarshal([]byte(entry.Line), &line)
-				if err != nil {
-					return nil, fmt.Errorf("cannot unmarshal line %s", entry.Line)
-				}
-
-				// get fields from first line
-				if fields == nil {
-					fields = make([]string, 0, len(line))
-					for name := range line {
-						if !strings.HasPrefix(name, timePrefix) {
-							if _, exists := columnsMap[name]; exists || len(columns) == 0 {
-								fields = append(fields, name)
-							}
-						}
-					}
-					data[0] = append(data[0], fields...)
-				}
-
-				data = append(data, getRowDatas(stream, labels, fields, line, len(data[0])))
-			}
-		}
-		return data, nil
-	}
-	return nil, fmt.Errorf("loki returned an unexpected type: %T", qr.Result)
+// FlowRecord is one parsed flow entry used by CSV and JSON exports.
+type FlowRecord struct {
+	Labels map[string]string
+	Fields map[string]interface{}
 }
 
-func getRowDatas(stream model.Stream, labels, fields []string,
-	line map[string]interface{}, size int) []string {
-	rowDatas := make([]string, 0, size)
+type flowExportData struct {
+	labels  []string
+	fields  []string
+	records []FlowRecord
+}
 
-	// set time columns
-	rowDatas = append(rowDatas, fmt.Sprint(line[startTimeCol]))
-	rowDatas = append(rowDatas, fmt.Sprint(line[endTimeCol]))
-	rowDatas = append(rowDatas, fmt.Sprint(line[receivedTimeCol]))
+// GetFlowRecords parses stream results into structured flow records.
+func GetFlowRecords(qr *model.AggregatedQueryResponse, columns []string) ([]FlowRecord, error) {
+	data, err := getFlowExportData(qr, columns)
+	if err != nil {
+		return nil, err
+	}
+	return data.records, nil
+}
 
-	// set labels values
-	for _, label := range labels {
-		rowDatas = append(rowDatas, stream.Labels[label])
+// GetCSVData builds CSV rows (header + data) from stream results.
+func GetCSVData(qr *model.AggregatedQueryResponse, columns []string) ([][]string, error) {
+	data, err := getFlowExportData(qr, columns)
+	if err != nil {
+		return nil, err
 	}
 
-	// set field values
-	for _, field := range fields {
-		rowDatas = append(rowDatas, fmt.Sprint(line[field]))
+	rows := make([][]string, 0, len(data.records)+1)
+	header := append([]string{startTimeCol, endTimeCol, receivedTimeCol}, data.labels...)
+	header = append(header, data.fields...)
+	rows = append(rows, header)
+
+	for _, record := range data.records {
+		row := []string{
+			fmt.Sprint(record.Fields[startTimeCol]),
+			fmt.Sprint(record.Fields[endTimeCol]),
+			fmt.Sprint(record.Fields[receivedTimeCol]),
+		}
+		for _, label := range data.labels {
+			row = append(row, record.Labels[label])
+		}
+		for _, field := range data.fields {
+			row = append(row, fmt.Sprint(record.Fields[field]))
+		}
+		rows = append(rows, row)
 	}
 
-	return rowDatas
+	return rows, nil
+}
+
+func getFlowExportData(qr *model.AggregatedQueryResponse, columns []string) (*flowExportData, error) {
+	streams, ok := qr.Result.(model.Streams)
+	if !ok {
+		return nil, fmt.Errorf("loki returned an unexpected type: %T", qr.Result)
+	}
+
+	columnsMap := utils.GetMapInterface(columns)
+	data := &flowExportData{records: make([]FlowRecord, 0)}
+
+	for _, stream := range streams {
+		if data.labels == nil {
+			data.labels = make([]string, 0, len(stream.Labels))
+			for name := range stream.Labels {
+				if _, exists := columnsMap[name]; exists || len(columns) == 0 {
+					data.labels = append(data.labels, name)
+				}
+			}
+		}
+
+		for _, entry := range stream.Entries {
+			var line map[string]interface{}
+			if err := json.Unmarshal([]byte(entry.Line), &line); err != nil {
+				return nil, fmt.Errorf("cannot unmarshal line %s", entry.Line)
+			}
+
+			if data.fields == nil {
+				data.fields = make([]string, 0, len(line))
+				for name := range line {
+					if strings.HasPrefix(name, timePrefix) {
+						continue
+					}
+					if _, exists := columnsMap[name]; exists || len(columns) == 0 {
+						data.fields = append(data.fields, name)
+					}
+				}
+			}
+
+			labels := make(map[string]string, len(data.labels))
+			for _, label := range data.labels {
+				labels[label] = stream.Labels[label]
+			}
+
+			fields := make(map[string]interface{}, len(data.fields)+3)
+			fields[startTimeCol] = line[startTimeCol]
+			fields[endTimeCol] = line[endTimeCol]
+			fields[receivedTimeCol] = line[receivedTimeCol]
+			for _, field := range data.fields {
+				fields[field] = line[field]
+			}
+
+			data.records = append(data.records, FlowRecord{Labels: labels, Fields: fields})
+		}
+	}
+
+	if data.labels == nil {
+		data.labels = []string{}
+	}
+	if data.fields == nil {
+		data.fields = []string{}
+	}
+
+	return data, nil
 }

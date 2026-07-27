@@ -279,7 +279,11 @@ func buildTopologyQuery(
 	isDev bool,
 ) (string, *prometheus.Query, int, error) {
 	search, unsupportedReason := getEligiblePromMetric(cfg.Frontend.GetAggregateKeyLabels(), promInventory, filters, in, isDev)
-	if unsupportedReason != "" {
+	if cfg.ConsoleMode == config.Mock {
+		// Mock data is served from Loki fixtures only.
+		search = nil
+		unsupportedReason = ""
+	} else if unsupportedReason != "" {
 		hlog.Debugf("Unsupported Prometheus query; reason: %s.", unsupportedReason)
 	} else if search != nil && len(search.Found) > 0 {
 		// Success, we can use Prometheus

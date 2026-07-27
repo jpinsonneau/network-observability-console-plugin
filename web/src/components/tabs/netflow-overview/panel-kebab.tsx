@@ -365,7 +365,7 @@ export const PanelKebab: React.FC<PanelKebabProps> = ({ id, options, setOptions,
   }
   items.push(
     <DropdownItem key={`${id}-export`} onClick={onOverviewExport}>
-      {t('Export panel')}
+      {t('Save panel as image')}
     </DropdownItem>
   );
 
