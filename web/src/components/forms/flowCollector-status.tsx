@@ -41,6 +41,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
       skipErrors
       skipCRLoading
       defaultFrom="None"
+      onSuccess={() => setDeleteModalOpen(false)}
     >
       <Consumer>
         {ctx => {

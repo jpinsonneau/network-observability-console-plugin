@@ -231,7 +231,11 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
               }
             })
               .then(() => {
-                window.history.back();
+                if (onSuccess) {
+                  onSuccess(null);
+                } else {
+                  window.history.back();
+                }
               })
               .catch(e => setErrors([e.message]));
           } else {
