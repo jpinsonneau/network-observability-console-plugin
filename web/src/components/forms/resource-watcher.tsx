@@ -47,7 +47,7 @@ export type ResourceWatcherContext = {
   crResolved: boolean;
   schema: JSONSchema7 | null;
   data: K8sResourceKind;
-  onSubmit: (data: K8sResourceKind, isDelete?: boolean) => void;
+  onSubmit: (data: K8sResourceKind, isDelete?: boolean) => void | Promise<void>;
   loadError: any;
   errors: string[];
   setErrors: (errors: string[]) => void;
@@ -222,7 +222,7 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
         skipDefaults: !useCRDDefaults,
         onSubmit: (data, isDelete) => {
           if (isDelete) {
-            k8sDelete({
+            return k8sDelete({
               model,
               resource: {
                 apiVersion: data.apiVersion,
@@ -237,21 +237,26 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
                   window.history.back();
                 }
               })
-              .catch(e => setErrors([e.message]));
-          } else {
-            const apiFunc = isCRPresent ? k8sUpdate : k8sCreate;
-            apiFunc({
-              data: prune(data),
-              model
-            })
-              .then(res => {
-                setErrors([]);
-                if (onSuccess) {
-                  onSuccess(res);
-                }
-              })
-              .catch(e => setErrors([e.message]));
+              .catch(e => {
+                setErrors([e.message]);
+                throw e;
+              });
           }
+          const apiFunc = isCRPresent ? k8sUpdate : k8sCreate;
+          return apiFunc({
+            data: prune(data),
+            model
+          })
+            .then(res => {
+              setErrors([]);
+              if (onSuccess) {
+                onSuccess(res);
+              }
+            })
+            .catch(e => {
+              setErrors([e.message]);
+              throw e;
+            });
         }
       }}
     >

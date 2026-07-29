@@ -4,7 +4,7 @@ import { UiSchema } from '@rjsf/utils';
 import _ from 'lodash';
 import { ClusterServiceVersionKind } from './types';
 
-export type FlowCollectorOverallStatus = 'ready' | 'degraded' | 'pending' | 'error' | 'onHold' | 'loading';
+export type FlowCollectorOverallStatus = 'ready' | 'degraded' | 'pending' | 'error' | 'onHold' | 'deleting' | 'loading';
 
 /** True when a K8s watch/API error indicates the requested resource does not exist. */
 export const isK8sNotFoundError = (error: unknown): boolean => {
@@ -24,6 +24,9 @@ export const getFlowCollectorOverallStatus = (
   }
   if (!cr) {
     return { status: 'loading' };
+  }
+  if (cr.metadata?.deletionTimestamp) {
+    return { status: 'deleting' };
   }
   if (cr.spec?.execution?.mode === 'OnHold') {
     return { status: 'onHold' };

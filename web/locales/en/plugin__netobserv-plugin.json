@@ -211,6 +211,8 @@
   "Cancel": "Cancel",
   "Delete": "Delete",
   "Network Observability FlowCollector status": "Network Observability FlowCollector status",
+  "FlowCollector is being deleted": "FlowCollector is being deleted",
+  "The FlowCollector resource has been marked for deletion. Remaining operator-managed workloads are being cleaned up.": "The FlowCollector resource has been marked for deletion. Remaining operator-managed workloads are being cleaned up.",
   "Configuration error": "Configuration error",
   "Configuration warnings": "Configuration warnings",
   "Network Observability is on hold": "Network Observability is on hold",

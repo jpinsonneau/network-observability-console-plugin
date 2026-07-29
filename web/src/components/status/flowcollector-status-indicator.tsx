@@ -40,6 +40,8 @@ export const FlowCollectorStatusIndicator: React.FC<{ handleClick?: boolean }> =
         return t('FlowCollector has errors') + appendMsg;
       case 'onHold':
         return t('FlowCollector is on hold');
+      case 'deleting':
+        return t('FlowCollector is being deleted');
       case 'loading':
         return t('Loading FlowCollector status...');
     }
@@ -57,6 +59,7 @@ export const FlowCollectorStatusIndicator: React.FC<{ handleClick?: boolean }> =
         return <ExclamationCircleIcon color="var(--pf-v5-global--danger-color--100)" />;
       case 'onHold':
         return <PauseCircleIcon color="var(--pf-v5-global--info-color--100)" />;
+      case 'deleting':
       case 'loading':
         return <Spinner size="md" />;
     }

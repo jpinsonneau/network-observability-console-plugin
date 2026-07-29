@@ -54,6 +54,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
             : hasLoadError
             ? { status: 'error' as const }
             : { status: 'pending' as const };
+          const isDeleting = status === 'deleting';
           const showTrafficButton = status === 'ready' || status === 'degraded';
           const configIssue = (
             (ctx.data?.status?.conditions as Array<{
@@ -87,7 +88,17 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
               )}
               {flowCollectorExists && (
                 <Flex className="status-container" direction={{ default: 'column' }}>
-                  {configIssue && (
+                  {isDeleting && (
+                    <FlexItem>
+                      <Alert variant={AlertVariant.info} isInline title={t('FlowCollector is being deleted')}>
+                        {t(
+                          // eslint-disable-next-line max-len
+                          'The FlowCollector resource has been marked for deletion. Remaining operator-managed workloads are being cleaned up.'
+                        )}
+                      </Alert>
+                    </FlexItem>
+                  )}
+                  {configIssue && !isDeleting && (
                     <FlexItem>
                       <Alert
                         variant={configIssue.reason === 'Error' ? AlertVariant.danger : AlertVariant.warning}
@@ -99,27 +110,34 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
                     </FlexItem>
                   )}
                   <FlexItem flex={{ default: 'flex_1' }}>
-                    {status === 'onHold' ? (
-                      <Alert variant={AlertVariant.info} isInline title={t('Network Observability is on hold')}>
-                        {t(
-                          // eslint-disable-next-line max-len
-                          'Execution mode is set to OnHold. All operator-managed workloads have been deleted, while preserving other resources. To change execution mode, update or remove "spec.execution.mode" in the FlowCollector resource.'
-                        )}
-                      </Alert>
-                    ) : (
-                      <Pipeline existing={ctx.data} selectedTypes={selectedTypes} setSelectedTypes={setSelectedTypes} />
-                    )}
+                    {!isDeleting &&
+                      (status === 'onHold' ? (
+                        <Alert variant={AlertVariant.info} isInline title={t('Network Observability is on hold')}>
+                          {t(
+                            // eslint-disable-next-line max-len
+                            'Execution mode is set to OnHold. All operator-managed workloads have been deleted, while preserving other resources. To change execution mode, update or remove "spec.execution.mode" in the FlowCollector resource.'
+                          )}
+                        </Alert>
+                      ) : (
+                        <Pipeline
+                          existing={ctx.data}
+                          selectedTypes={selectedTypes}
+                          setSelectedTypes={setSelectedTypes}
+                        />
+                      ))}
                   </FlexItem>
-                  <FlexItem className="status-list-container" flex={{ default: 'flex_1' }}>
-                    <ResourceStatus
-                      group={ctx.group}
-                      version={ctx.version}
-                      kind={ctx.kind}
-                      existing={ctx.data}
-                      selectedTypes={selectedTypes}
-                      setSelectedTypes={setSelectedTypes}
-                    />
-                  </FlexItem>
+                  {!isDeleting && (
+                    <FlexItem className="status-list-container" flex={{ default: 'flex_1' }}>
+                      <ResourceStatus
+                        group={ctx.group}
+                        version={ctx.version}
+                        kind={ctx.kind}
+                        existing={ctx.data}
+                        selectedTypes={selectedTypes}
+                        setSelectedTypes={setSelectedTypes}
+                      />
+                    </FlexItem>
+                  )}
                   <FlexItem>
                     <Flex>
                       <FlexItem>
@@ -127,6 +145,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
                           id="edit-flow-collector"
                           data-test-id="edit-flow-collector"
                           variant="primary"
+                          isDisabled={isDeleting}
                           onClick={() => navigate(flowCollectorEditPath)}
                         >
                           {t('Edit FlowCollector')}
@@ -153,6 +172,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
                           id="delete-flow-collector"
                           data-test-id="delete-flow-collector"
                           variant="danger"
+                          isDisabled={isDeleting}
                           onClick={() => setDeleteModalOpen(true)}
                         >
                           {t('Delete FlowCollector')}

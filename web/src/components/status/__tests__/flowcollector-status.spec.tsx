@@ -24,6 +24,14 @@ describe('getFlowCollectorOverallStatus', () => {
     expect(getFlowCollectorOverallStatus(cr, null)).toEqual({ status: 'onHold' });
   });
 
+  it('should return deleting when deletionTimestamp is set', () => {
+    const cr = {
+      metadata: { deletionTimestamp: '2026-07-29T10:00:00Z' },
+      status: { conditions: [{ type: 'Ready', status: 'True', reason: 'Ready' }] }
+    };
+    expect(getFlowCollectorOverallStatus(cr, null)).toEqual({ status: 'deleting' });
+  });
+
   it('should return pending when no conditions', () => {
     const cr = { spec: {} };
     expect(getFlowCollectorOverallStatus(cr, null)).toEqual({ status: 'pending' });
@@ -160,5 +168,11 @@ describe('<FlowCollectorStatusIndicator />', () => {
     useK8sWatchResourceMock.mockReturnValue([{ spec: { execution: { mode: 'OnHold' } } }, true, null]);
     const { container } = render(<FlowCollectorStatusIndicator />);
     expect(container.querySelector('svg')).toBeTruthy();
+  });
+
+  it('should render spinner when CR is deleting', () => {
+    useK8sWatchResourceMock.mockReturnValue([{ metadata: { deletionTimestamp: '2026-07-29T10:00:00Z' } }, true, null]);
+    const { container } = render(<FlowCollectorStatusIndicator />);
+    expect(container.querySelector('[role="progressbar"]')).toBeTruthy();
   });
 });
