@@ -1,5 +1,5 @@
 import { Feature } from '../config';
-import { getAvailableViews, getViewPreset, viewPresets, ViewPresetId } from '../views';
+import { getAvailableViews, getViewPreset, ViewPresetId, viewPresets } from '../views';
 
 describe('viewPresets', () => {
   it('always includes "all" as first preset', () => {

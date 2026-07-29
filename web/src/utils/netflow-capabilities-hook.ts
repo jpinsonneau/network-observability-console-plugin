@@ -8,13 +8,20 @@ import { DataSource, FlowScope, MetricType, PacketLoss, RecordType, StructuredFl
 import { parseQuickFilters, QuickFilter } from '../model/quick-filters';
 import { resolveGroupTypes, ScopeConfigDef } from '../model/scope';
 import { TopologyOptions } from '../model/topology';
+import { getAvailableViews, getViewPreset, ViewPreset, ViewPresetId } from '../model/views';
 import { getFetchFunctions as getBackAndForthFetch } from './back-and-forth';
 import { Column, ColumnsId } from './columns';
 import { ContextSingleton } from './context';
 import { computeStepInterval, TimeRange } from './datetime';
 import { checkFilterAvailable, getFilterDefinitions } from './filter-definitions';
-import { defaultPanelIds, dnsIdMatcher, droppedIdMatcher, OverviewPanel, rttIdMatcher, tlsIdMatcher } from './overview-panels';
-import { getAvailableViews, getViewPreset, ViewPreset, ViewPresetId } from '../model/views';
+import {
+  defaultPanelIds,
+  dnsIdMatcher,
+  droppedIdMatcher,
+  OverviewPanel,
+  rttIdMatcher,
+  tlsIdMatcher
+} from './overview-panels';
 
 export interface ConfigCapabilities {
   allowLoki: boolean;

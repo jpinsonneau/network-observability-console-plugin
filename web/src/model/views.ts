@@ -1,17 +1,9 @@
-import { Feature } from './config';
 import { ColumnsId } from '../utils/columns';
 import { OverviewPanelId } from '../utils/overview-panels';
+import { Feature } from './config';
 import { MetricType } from './flow-query';
 
-export type ViewPresetId =
-  | 'all'
-  | 'pktdrop'
-  | 'dns'
-  | 'rtt'
-  | 'tls'
-  | 'udn'
-  | 'networkEvents'
-  | 'packetTranslation';
+export type ViewPresetId = 'all' | 'pktdrop' | 'dns' | 'rtt' | 'tls' | 'udn' | 'networkEvents' | 'packetTranslation';
 
 export interface ViewPreset {
   id: ViewPresetId;
@@ -76,13 +68,7 @@ export const viewPresets: ViewPreset[] = [
       'name_dns_latency_flows',
       'rcode_dns_latency_flows'
     ],
-    columns: [
-      ...baseColumns,
-      ColumnsId.dnsid,
-      ColumnsId.dnslatency,
-      ColumnsId.dnsresponsecode,
-      ColumnsId.dnserrno
-    ],
+    columns: [...baseColumns, ColumnsId.dnsid, ColumnsId.dnslatency, ColumnsId.dnsresponsecode, ColumnsId.dnserrno],
     topologyMetricType: 'DnsLatencyMs'
   },
   {
@@ -118,7 +104,7 @@ export const viewPresets: ViewPreset[] = [
       'state_dropped_packet_rates',
       'cause_dropped_packet_rates'
     ],
-    columns: [...baseColumns, ColumnsId.bytes, ColumnsId.packets, ColumnsId.dropstate, ColumnsId.dropcause]
+    columns: [...baseColumns, ColumnsId.bytes, ColumnsId.packets, ColumnsId.dropstate, ColumnsId.dropcause, 'NetworkEvents']
   },
   {
     id: 'packetTranslation',

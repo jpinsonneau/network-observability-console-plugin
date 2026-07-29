@@ -38,7 +38,6 @@ const getFlowsMock = getFlowRecords as jest.Mock;
 const getMetricsMock = getFlowMetrics as jest.Mock;
 const getGenericMetricsMock = getFlowGenericMetrics as jest.Mock;
 
-
 describe('<NetflowTraffic />', () => {
   beforeAll(() => {
     useResolvedExtensionsMock.mockReturnValue(extensionsMock);

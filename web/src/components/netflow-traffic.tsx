@@ -19,8 +19,8 @@ import {
 } from '../model/flow-query';
 import { FetchCallbacks, NetflowContext, NetflowContextValue } from '../model/netflow-context';
 import { getGroupsForScope } from '../model/scope';
-import { getViewPreset, ViewPresetId } from '../model/views';
 import { DefaultOptions, GraphElementPeer, TopologyOptions } from '../model/topology';
+import { getViewPreset, ViewPresetId } from '../model/views';
 import { Column, ColumnSizeMap } from '../utils/columns';
 import { useConfigValidation } from '../utils/config-validation-hook';
 import { ContextSingleton } from '../utils/context';
@@ -75,8 +75,8 @@ import { rateMetricFunctions, timeMetricFunctions } from './dropdowns/metric-fun
 import { limitValues, topValues } from './dropdowns/query-options-panel';
 import { RefreshDropdown } from './dropdowns/refresh-dropdown';
 import TimeRangeDropdown from './dropdowns/time-range-dropdown';
-import { ViewSelector } from './dropdowns/view-selector';
 import { TruncateLength } from './dropdowns/truncate-dropdown';
+import { ViewSelector } from './dropdowns/view-selector';
 import GuidedTourPopover, { GuidedTourHandle } from './guided-tour/guided-tour';
 import Modals from './modals/modals';
 import './netflow-traffic.css';
@@ -438,11 +438,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
                 <Content component={ContentVariants.h4}>{t('View')}</Content>
               </FlexItem>
               <FlexItem>
-                <ViewSelector
-                  activeView={activeView}
-                  setActiveView={applyView}
-                  availableViews={caps.availableViews}
-                />
+                <ViewSelector activeView={activeView} setActiveView={applyView} availableViews={caps.availableViews} />
               </FlexItem>
             </Flex>
           </FlexItem>

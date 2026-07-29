@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Config } from '../model/config';
 import { Filters } from '../model/filters';
 import { DataSource, FlowScope, MetricType, PacketLoss, RecordType } from '../model/flow-query';
+import { ViewPresetId } from '../model/views';
 import { Column, getDefaultColumns } from './columns';
 import {
   defaultArraySelectionOptions,
@@ -12,7 +13,6 @@ import {
 import { ConfigCapabilities } from './netflow-capabilities-hook';
 import { getDefaultOverviewPanels, OverviewPanel } from './overview-panels';
 import { defaultMetricScope, defaultMetricType, setURLFilters } from './router';
-import { ViewPresetId } from '../model/views';
 
 type InitState = React.MutableRefObject<string[]>;
 

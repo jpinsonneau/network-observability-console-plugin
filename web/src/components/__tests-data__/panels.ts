@@ -1,4 +1,3 @@
-import * as _ from 'lodash';
 import { getDefaultOverviewPanels, OverviewPanel } from '../../utils/overview-panels';
 
 export const CustomPanelsSample = ['Flows', 'DnsFlows'];

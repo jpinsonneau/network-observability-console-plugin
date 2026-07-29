@@ -25,7 +25,7 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({ activeView, setActiv
     setOpen(false);
   };
 
-  const activeLabel = availableViews.find(v => v.id === activeView)?.label ?? t('All Traffic');
+  const activeLabel = availableViews.find(v => v.id === activeView)?.label ?? 'All Traffic';
   const isNonDefault = activeView !== 'all';
 
   return (
@@ -37,7 +37,7 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({ activeView, setActiv
         onSelect={onSelect}
         selected={activeView}
         toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-          <MenuToggle ref={toggleRef} onClick={() => setOpen(!isOpen)} isExpanded={isOpen}>
+          <MenuToggle ref={toggleRef} onClick={() => setOpen(!isOpen)} isExpanded={isOpen} data-test="view-selector-dropdown">
             <>
               {t('View')}: {t(activeLabel)}
               {isNonDefault && <Badge isRead>{1}</Badge>}
