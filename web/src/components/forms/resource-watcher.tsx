@@ -2,6 +2,7 @@
 import {
   k8sCreate,
   k8sDelete,
+  k8sGet,
   K8sResourceKind,
   k8sUpdate,
   useK8sWatchResource
@@ -20,6 +21,8 @@ import { exampleForModel, isK8sNotFoundError } from './utils';
 export type SupportedKind = 'FlowCollector' | 'FlowCollectorSlice' | 'FlowMetric';
 type DefaultFrom = 'CSVExample' | 'CRD' | 'None';
 const MISSING_RESOURCE_WATCH_CONFIRMATION_DELAY_MS = 1000;
+/** Poll interval after delete: Console watch cache can miss DELETED and stay stale until remount. */
+const DELETE_ABSENCE_POLL_MS = 1500;
 
 export type ResourceWatcherProps = {
   group: string;
@@ -136,25 +139,78 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
   const model = useK8sModel(group, version, kind);
   const [errors, setErrors] = React.useState<string[]>([]);
   const [missingConfirmed, setMissingConfirmed] = React.useState(false);
+  // After delete: Console useK8sWatchResource can miss DELETED and keep a stale CR until remount.
+  // Track the deleted uid, keep a local snapshot for UI, and confirm absence with k8sGet.
+  const [deletingSnapshot, setDeletingSnapshot] = React.useState<K8sResourceKind | null>(null);
+  const [deletedUid, setDeletedUid] = React.useState<string | undefined>();
 
-  const isCRPresent = Boolean(cr?.metadata?.name || cr?.metadata?.uid);
-  const isCRLoaded = Boolean(!name || crLoaded || isCRPresent);
-  const isCRResolved = Boolean(isCRLoaded || crLoadError || (skipCRLoading && missingConfirmed));
-  const crLoadErrorEffective = isCRPresent || isK8sNotFoundError(crLoadError) ? null : crLoadError;
+  const watchUid = cr?.metadata?.uid;
+  const watchHasCR = Boolean(cr?.metadata?.name || watchUid);
+  // Ignore watch data that still points at the resource we just deleted.
+  const isStaleWatchAfterDelete = Boolean(deletedUid && watchUid === deletedUid);
+  const isCRPresent = watchHasCR && !isStaleWatchAfterDelete;
+  const isDeleteInProgress = Boolean(deletingSnapshot);
+  const deleteConfirmedAbsent = Boolean(deletedUid && !deletingSnapshot);
+  const isCRLoaded = Boolean(!name || crLoaded || isCRPresent || isDeleteInProgress || deleteConfirmedAbsent);
+  const isCRResolved = Boolean(
+    isCRLoaded || crLoadError || deleteConfirmedAbsent || (skipCRLoading && missingConfirmed)
+  );
+  const crLoadErrorEffective =
+    isCRPresent || isDeleteInProgress || isK8sNotFoundError(crLoadError) ? null : crLoadError;
+
+  // Recreated CR (new uid) or watch finally cleared: stop treating watch as stale.
+  React.useEffect(() => {
+    if (deletedUid && !deletingSnapshot && (!watchUid || watchUid !== deletedUid)) {
+      setDeletedUid(undefined);
+    }
+  }, [deletedUid, deletingSnapshot, watchUid]);
+
+  // Confirm absence via GET — do not rely on the watch alone after delete.
+  React.useEffect(() => {
+    if (!deletingSnapshot || !model || !name) {
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const pollUntilGone = () => {
+      k8sGet({ model, name, ns: namespace })
+        .then(() => {
+          if (!cancelled) {
+            timer = setTimeout(pollUntilGone, DELETE_ABSENCE_POLL_MS);
+          }
+        })
+        .catch(err => {
+          if (!cancelled && isK8sNotFoundError(err)) {
+            setDeletingSnapshot(null);
+          } else if (!cancelled) {
+            timer = setTimeout(pollUntilGone, DELETE_ABSENCE_POLL_MS);
+          }
+        });
+    };
+
+    pollUntilGone();
+    return () => {
+      cancelled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [deletingSnapshot, model, name, namespace]);
 
   React.useEffect(() => {
     if (!skipCRLoading || !name) {
       setMissingConfirmed(false);
       return;
     }
-    if (cr || crLoaded || crLoadError) {
+    if (isCRPresent || isDeleteInProgress || crLoaded || crLoadError || deleteConfirmedAbsent) {
       setMissingConfirmed(false);
       return;
     }
     // useK8sWatchResource may never set loaded=true when the CR is absent; confirm after a short wait.
     const timer = setTimeout(() => setMissingConfirmed(true), MISSING_RESOURCE_WATCH_CONFIRMATION_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [skipCRLoading, name, cr, crLoaded, crLoadError]);
+  }, [skipCRLoading, name, isCRPresent, isDeleteInProgress, crLoaded, crLoadError, deleteConfirmedAbsent]);
 
   if (!skipErrors && (csvLoadError || crdLoadError || (!skipCRError && crLoadError))) {
     return (
@@ -163,7 +219,11 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
         error={`${csvLoadError || crdLoadError || crLoadError}`}
       />
     );
-  } else if (!csvLoaded || !crdLoaded || (!skipCRError && !skipCRLoading && !crLoaded)) {
+  } else if (
+    !csvLoaded ||
+    !crdLoaded ||
+    (!skipCRError && !skipCRLoading && !crLoaded && !isDeleteInProgress && !deleteConfirmedAbsent)
+  ) {
     return (
       <Bullseye data-test="loading-resource">
         <Spinner size="xl" />
@@ -173,8 +233,20 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
 
   let data: K8sResourceKind = { apiVersion: `${group}/${version}`, kind, metadata: { name: '' } };
   let useCRDDefaults = false;
-  if (isCRPresent) {
-    data = { apiVersion: `${group}/${version}`, kind, ...cr };
+  if (isDeleteInProgress || isCRPresent) {
+    // While deleting, prefer the snapshot so a stale watch cannot hide deletionTimestamp.
+    const source = (deletingSnapshot || cr) as K8sResourceKind;
+    data = { apiVersion: `${group}/${version}`, kind, ...source };
+    const deletionTimestamp = deletingSnapshot?.metadata?.deletionTimestamp || source.metadata?.deletionTimestamp;
+    if (deletionTimestamp) {
+      data = {
+        ...data,
+        metadata: {
+          ...data.metadata,
+          deletionTimestamp
+        }
+      };
+    }
   } else if (defaultFrom === 'CSVExample') {
     const csv = matchingCSVs?.find(csv => csv.spec.customresourcedefinitions?.owned?.some(crd => crd.kind === kind));
     if (csv) {
@@ -211,7 +283,7 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
         group,
         version,
         kind,
-        isUpdate: isCRPresent,
+        isUpdate: isCRPresent || isDeleteInProgress,
         crLoaded: isCRLoaded,
         crResolved: isCRResolved,
         schema,
@@ -231,6 +303,14 @@ export const ResourceWatcher: FC<ResourceWatcherProps> = ({
               }
             })
               .then(() => {
+                setDeletedUid(data.metadata?.uid);
+                setDeletingSnapshot({
+                  ...data,
+                  metadata: {
+                    ...data.metadata,
+                    deletionTimestamp: data.metadata?.deletionTimestamp || new Date().toISOString()
+                  }
+                });
                 if (onSuccess) {
                   onSuccess(null);
                 } else {

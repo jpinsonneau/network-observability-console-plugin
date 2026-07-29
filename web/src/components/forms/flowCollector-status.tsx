@@ -49,7 +49,7 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
           const flowCollectorPending = !ctx.crResolved;
           const flowCollectorMissing = ctx.crResolved && !flowCollectorExists;
           const hasLoadError = Boolean(ctx.loadError && !isK8sNotFoundError(ctx.loadError));
-          const { status } = flowCollectorExists
+          const { status, message } = flowCollectorExists
             ? getFlowCollectorOverallStatus(ctx.data, ctx.loadError)
             : hasLoadError
             ? { status: 'error' as const }
@@ -76,7 +76,11 @@ export const FlowCollectorStatus: FC<FlowCollectorStatusProps> = () => {
                   </FlexItem>
                   {flowCollectorExists && (
                     <FlexItem>
-                      <FlowCollectorStatusIndicator handleClick={false} />
+                      <FlowCollectorStatusIndicator
+                        handleClick={false}
+                        overallStatus={status}
+                        overallMessage={message}
+                      />
                     </FlexItem>
                   )}
                 </Flex>

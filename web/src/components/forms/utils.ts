@@ -25,6 +25,9 @@ export const getFlowCollectorOverallStatus = (
   if (!cr) {
     return { status: 'loading' };
   }
+  // Prefer this over watch-only: operator ≥1.5 no longer keeps a finalizer, so the
+  // terminating window is often invisible to useK8sWatchResource. Callers can stamp
+  // deletionTimestamp locally after k8sDelete succeeds.
   if (cr.metadata?.deletionTimestamp) {
     return { status: 'deleting' };
   }
