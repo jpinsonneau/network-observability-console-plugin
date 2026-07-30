@@ -104,7 +104,14 @@ export const viewPresets: ViewPreset[] = [
       'state_dropped_packet_rates',
       'cause_dropped_packet_rates'
     ],
-    columns: [...baseColumns, ColumnsId.bytes, ColumnsId.packets, ColumnsId.dropstate, ColumnsId.dropcause, 'NetworkEvents']
+    columns: [
+      ...baseColumns,
+      ColumnsId.bytes,
+      ColumnsId.packets,
+      ColumnsId.dropstate,
+      ColumnsId.dropcause,
+      'NetworkEvents'
+    ]
   },
   {
     id: 'packetTranslation',

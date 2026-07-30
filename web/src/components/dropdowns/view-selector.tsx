@@ -37,7 +37,12 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({ activeView, setActiv
         onSelect={onSelect}
         selected={activeView}
         toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-          <MenuToggle ref={toggleRef} onClick={() => setOpen(!isOpen)} isExpanded={isOpen} data-test="view-selector-dropdown">
+          <MenuToggle
+            ref={toggleRef}
+            onClick={() => setOpen(!isOpen)}
+            isExpanded={isOpen}
+            data-test="view-selector-dropdown"
+          >
             <>
               {t('View')}: {t(activeLabel)}
               {isNonDefault && <Badge isRead>{1}</Badge>}
