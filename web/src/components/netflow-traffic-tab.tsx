@@ -122,7 +122,9 @@ export const NetflowTrafficTab: React.FC<NetflowTrafficTabProps> = ({ match, obj
       case 'StatefulSet':
       case 'DaemonSet':
       case 'Job':
-      case 'CronJob': {
+      case 'CronJob':
+      case 'VirtualMachine':
+      case 'VirtualMachineInstance': {
         // Check for Gateway label on Deployments
         if (obj.kind === 'Deployment') {
           const gatewayLabel = obj.metadata?.labels?.['gateway.networking.k8s.io/gateway-name'];
