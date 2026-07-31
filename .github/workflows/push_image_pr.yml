@@ -53,7 +53,7 @@ jobs:
           docker load --input ./image.tar
           docker load --input ./image-standalone.tar
           docker image tag ${{ env.WF_REGISTRY }}/${{ env.WF_IMAGE }}:tmp ${{ env.main_image }}
-          docker image tag ${{ env.WF_REGISTRY }}/${{ env.WF_IMAGE }}:tmp ${{ env.sa_image }}
+          docker image tag ${{ env.WF_REGISTRY }}/${{ env.WF_IMAGE_SA }}:tmp ${{ env.sa_image }}
       - name: docker login to quay.io
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
