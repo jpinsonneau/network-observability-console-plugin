@@ -12,9 +12,6 @@ import { ExportApiFormat } from './export-format';
 import { resolveExportLimit } from './export-limit';
 import { MetricFunction, MetricType, StructuredFlowQuery, structuredToRawQuery } from './flow-query';
 
-/** @deprecated Import EXPORT_MAX_LIMIT from './export-limit' instead. */
-export { EXPORT_MAX_LIMIT as METRICS_EXPORT_ALL_SERIES_LIMIT } from './export-limit';
-
 export type MetricsExportApiFormat = ExportApiFormat;
 
 /**

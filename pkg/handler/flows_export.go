@@ -43,8 +43,8 @@ func (h *Handlers) ExportFlows(ctx context.Context) func(w http.ResponseWriter, 
 			return
 		}
 
-		exportFormat := export.ParseFormat(params.Get(export.FormatKey), export.FormatCSV)
-		if err := export.ValidateFormat(exportFormat); err != nil {
+		exportFormat, err := export.ParseFormat(params.Get(export.FormatKey), export.FormatCSV)
+		if err != nil {
 			code = http.StatusBadRequest
 			apierrors.Write(w, code, err)
 			return

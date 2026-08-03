@@ -75,8 +75,8 @@ func (h *Handlers) ExportMetrics(ctx context.Context) func(w http.ResponseWriter
 
 func (h *Handlers) exportMetricsGet(ctx context.Context, w http.ResponseWriter, r *http.Request) int {
 	params := r.URL.Query()
-	format := export.ParseFormat(params.Get(export.FormatKey), export.FormatCSV)
-	if err := export.ValidateFormat(format); err != nil {
+	format, err := export.ParseFormat(params.Get(export.FormatKey), export.FormatCSV)
+	if err != nil {
 		apierrors.Write(w, http.StatusBadRequest, err)
 		return http.StatusBadRequest
 	}
@@ -115,8 +115,8 @@ func (h *Handlers) exportMetricsPost(ctx context.Context, w http.ResponseWriter,
 		return http.StatusBadRequest
 	}
 
-	format := export.ParseFormat(req.Format, export.FormatCSV)
-	if err := export.ValidateFormat(format); err != nil {
+	format, err := export.ParseFormat(req.Format, export.FormatCSV)
+	if err != nil {
 		apierrors.Write(w, http.StatusBadRequest, err)
 		return http.StatusBadRequest
 	}

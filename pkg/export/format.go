@@ -9,22 +9,15 @@ const (
 	FormatKey = "format"
 )
 
-// ParseFormat returns the requested export format or the provided default.
-func ParseFormat(raw, defaultFormat string) string {
+// ParseFormat returns a validated export format. Empty raw uses defaultFormat.
+func ParseFormat(raw, defaultFormat string) (string, error) {
+	if raw == "" {
+		raw = defaultFormat
+	}
 	switch raw {
-	case "", defaultFormat:
-		return defaultFormat
 	case FormatJSON, FormatCSV:
-		return raw
+		return raw, nil
 	default:
-		return ""
+		return "", fmt.Errorf("export format %q is not valid", raw)
 	}
-}
-
-// ValidateFormat returns an error when format is not json or csv.
-func ValidateFormat(format string) error {
-	if format == FormatJSON || format == FormatCSV {
-		return nil
-	}
-	return fmt.Errorf("export format %q is not valid", format)
 }
