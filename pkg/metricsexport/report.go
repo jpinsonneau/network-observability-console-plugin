@@ -134,14 +134,11 @@ func sampleValue(pair pmodel.SamplePair) float64 {
 func normalizeSeriesName(series string) string {
 	s := strings.TrimSpace(series)
 	switch s {
-	case "", "{}", "->":
+	case "", "{}":
 		return totalSeriesName
+	default:
+		return s
 	}
-	// topologySeriesName with empty peers: " -> "
-	if strings.TrimSpace(strings.ReplaceAll(s, "->", "")) == "" {
-		return totalSeriesName
-	}
-	return s
 }
 
 // AppendMatrix appends export rows from a matrix query response.

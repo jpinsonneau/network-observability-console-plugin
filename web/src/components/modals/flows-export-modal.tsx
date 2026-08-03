@@ -242,6 +242,7 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
         <FormGroup label={t('Format')} fieldId="flows-export-format">
           <Radio
             id="flows-export-format-csv"
+            data-test="flows-export-format-csv"
             name="flows-export-format"
             label={t('CSV')}
             isChecked={format === 'csv'}
@@ -249,6 +250,7 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
           />
           <Radio
             id="flows-export-format-json"
+            data-test="flows-export-format-json"
             name="flows-export-format"
             label={t('JSON')}
             isChecked={format === 'json'}
@@ -256,6 +258,7 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
           />
           <Radio
             id="flows-export-format-spreadsheet"
+            data-test="flows-export-format-spreadsheet"
             name="flows-export-format"
             label={t('Spreadsheet')}
             isChecked={format === 'spreadsheet'}
@@ -283,12 +286,12 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
             id="export-all"
             isChecked={isExportAll}
             onChange={(event, checked) => setExportAll(checked)}
-            label={t('Export all datas')}
+            label={t('Export all data')}
             aria-label="Export all"
             description={
               <Content className="netobserv-no-child-margin">
                 <Content component={ContentVariants.p}>
-                  {t('Use this option to export every fields and labels from flows.')}
+                  {t('Use this option to export every field and label from flows.')}
                 </Content>
                 <Content component={ContentVariants.p}>{t('Else pick from available columns.')}</Content>
               </Content>
@@ -296,7 +299,7 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
             body={
               !isExportAll && (
                 <>
-                  <Button isInline onClick={onSelectAll} variant="link">
+                  <Button data-test="flows-export-select-all" isInline onClick={onSelectAll} variant="link">
                     {isAllSelected ? t('Unselect all') : t('Select all')}
                   </Button>
                   <DataList aria-label="Exported fields" id="exported-fields" className="centered-list" isCompact>
@@ -304,7 +307,7 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
                     {selectedColumns.map((column, i) => (
                       <DataListItem
                         key={'data-list-item-' + i}
-                        aria-labelledby={'table-column-management-item' + i}
+                        aria-labelledby={`${column.id}-name`}
                         className="data-list-item"
                         data-test={'data-' + i}
                         id={'data-' + i}
@@ -312,7 +315,7 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
                         <DataListItemRow key={'data-list-item-row-' + i}>
                           <DataListControl>
                             <DataListCheck
-                              aria-labelledby={'table-column-management-item-' + i}
+                              aria-labelledby={`${column.id}-name`}
                               checked={column.isSelected}
                               data-test={column.id}
                               id={column.id}
@@ -322,7 +325,9 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
                           <DataListItemCells
                             dataListCells={[
                               <DataListCell key={'data-list-cell-' + i} className="center">
-                                <label htmlFor={column.id}>{getFullColumnName(column)}</label>
+                                <label htmlFor={column.id} id={`${column.id}-name`}>
+                                  {getFullColumnName(column)}
+                                </label>
                               </DataListCell>
                             ]}
                           />

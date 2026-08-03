@@ -12,7 +12,6 @@ import (
 	"github.com/netobserv/network-observability-console-plugin/pkg/handler/csv"
 	"github.com/netobserv/network-observability-console-plugin/pkg/handler/flowexport"
 	"github.com/netobserv/network-observability-console-plugin/pkg/metrics"
-	"github.com/netobserv/network-observability-console-plugin/pkg/model"
 )
 
 const (
@@ -58,9 +57,15 @@ func (h *Handlers) ExportFlows(ctx context.Context) func(w http.ResponseWriter, 
 		code = http.StatusOK
 		switch exportFormat {
 		case export.FormatCSV:
-			if err := writeFlowsCSV(w, code, flows, exportColumns); err != nil {
-				apierrors.Write(w, http.StatusInternalServerError, err)
+			data, csvErr := csv.GetCSVData(flows, exportColumns)
+			if csvErr != nil {
 				code = http.StatusInternalServerError
+				apierrors.Write(w, code, csvErr)
+				return
+			}
+			hlog.Tracef("CSV data rows: %d", len(data))
+			if err := export.WriteCSVAttachment(w, code, flowsExportPrefix, data); err != nil {
+				hlog.Errorf("Error while writing flows CSV export: %v", err)
 			}
 		case export.FormatJSON:
 			timeRange, err := encodeExportTimeRangeFromParams(params)
@@ -80,13 +85,4 @@ func (h *Handlers) ExportFlows(ctx context.Context) func(w http.ResponseWriter, 
 			}
 		}
 	}
-}
-
-func writeFlowsCSV(w http.ResponseWriter, code int, qr *model.AggregatedQueryResponse, columns []string) error {
-	data, err := csv.GetCSVData(qr, columns)
-	if err != nil {
-		return err
-	}
-	hlog.Tracef("CSV data: %v", data)
-	return export.WriteCSVAttachment(w, code, flowsExportPrefix, data)
 }

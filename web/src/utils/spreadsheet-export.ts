@@ -10,7 +10,11 @@ export const cellXml = (value: string | number | boolean | undefined | null): st
   if (typeof value === 'number') {
     return `<Cell><Data ss:Type="Number">${value}</Data></Cell>`;
   }
-  return `<Cell><Data ss:Type="String">${escapeXml(String(value))}</Data></Cell>`;
+  let text = String(value);
+  if (/^[=+\-@\t\r]/.test(text)) {
+    text = `'${text}`;
+  }
+  return `<Cell><Data ss:Type="String">${escapeXml(text)}</Data></Cell>`;
 };
 
 export const rowsToWorksheetXml = (

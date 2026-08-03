@@ -38,13 +38,13 @@ func readPeerLabels(m pmodel.Metric, prefix string) peerLabels {
 		namespace:   labelString(m, prefix+fields.Namespace),
 		hostName:    labelString(m, prefix+fields.HostName),
 		zone:        labelString(m, prefix+fields.Zone),
-		networkName: labelString(m, prefix+"K8S_NetworkName"),
+		networkName: labelString(m, prefix+fields.NetworkName),
 		name:        labelString(m, prefix+fields.Name),
 		typ:         labelString(m, prefix+fields.Type),
 		ownerName:   labelString(m, prefix+fields.OwnerName),
 		ownerType:   labelString(m, prefix+fields.OwnerType),
 		addr:        labelString(m, prefix+fields.Addr),
-		subnet:      labelString(m, prefix+"SubnetLabel"),
+		subnet:      labelString(m, prefix+fields.SubnetLabel),
 	}
 }
 
@@ -123,5 +123,10 @@ func formatPeer(peer peerInfo) string {
 }
 
 func topologySeriesName(source, destination peerInfo) string {
-	return formatPeer(source) + " -> " + formatPeer(destination)
+	src := formatPeer(source)
+	dst := formatPeer(destination)
+	if src == "" && dst == "" {
+		return ""
+	}
+	return strings.TrimSpace(src + " -> " + dst)
 }

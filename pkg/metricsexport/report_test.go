@@ -58,7 +58,9 @@ func TestBuildReportOmitsEdgesWhenDisabled(t *testing.T) {
 func TestNormalizeSeriesName(t *testing.T) {
 	assert.Equal(t, "total", normalizeSeriesName("{}"))
 	assert.Equal(t, "total", normalizeSeriesName(""))
-	assert.Equal(t, "total", normalizeSeriesName(" -> "))
+	assert.Equal(t, "total", normalizeSeriesName(topologySeriesName(peerInfo{}, peerInfo{})))
+	assert.Equal(t, "Namespace/a ->", normalizeSeriesName(topologySeriesName(peerInfo{kind: "Namespace", name: "a"}, peerInfo{})))
+	assert.Equal(t, "-> Namespace/b", normalizeSeriesName(topologySeriesName(peerInfo{}, peerInfo{kind: "Namespace", name: "b"})))
 	assert.Equal(t, "Namespace/a -> Namespace/b", normalizeSeriesName("Namespace/a -> Namespace/b"))
 	assert.Equal(t, "dns-error", normalizeSeriesName("dns-error"))
 }

@@ -189,9 +189,15 @@ export const MetricsExportModal: React.FC<MetricsExportModalProps> = ({
       )}
       {!canExport && <Content component={ContentVariants.p}>{t('No metrics data available to export.')}</Content>}
       <Form>
-        <FormGroup label={t('Format')} fieldId="metrics-export-format">
+        <FormGroup
+          label={t('Format')}
+          fieldId="metrics-export-format"
+          role="radiogroup"
+          aria-labelledby="metrics-export-format"
+        >
           <Radio
             id="metrics-export-format-csv"
+            data-test="metrics-export-format-csv"
             name="metrics-export-format"
             label={t('CSV')}
             isChecked={format === 'csv'}
@@ -199,6 +205,7 @@ export const MetricsExportModal: React.FC<MetricsExportModalProps> = ({
           />
           <Radio
             id="metrics-export-format-json"
+            data-test="metrics-export-format-json"
             name="metrics-export-format"
             label={t('JSON')}
             isChecked={format === 'json'}
@@ -206,6 +213,7 @@ export const MetricsExportModal: React.FC<MetricsExportModalProps> = ({
           />
           <Radio
             id="metrics-export-format-spreadsheet"
+            data-test="metrics-export-format-spreadsheet"
             name="metrics-export-format"
             label={t('Spreadsheet')}
             isChecked={format === 'spreadsheet'}
@@ -230,6 +238,7 @@ export const MetricsExportModal: React.FC<MetricsExportModalProps> = ({
         {allowTopologyEdges && (
           <FormGroup fieldId="metrics-export-topology-edges">
             <Checkbox
+              data-test="metrics-export-topology-edges"
               id="metrics-export-topology-edges"
               isDisabled={!topologyEdgesSupported}
               isChecked={topologyEdgesSupported && includeTopologyEdges}

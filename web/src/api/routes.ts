@@ -1,5 +1,4 @@
 import axios from 'axios';
-import _ from 'lodash';
 import { Config, defaultConfig } from '../model/config';
 import { ExportApiFormat } from '../model/export-format';
 import { buildExportQuery } from '../model/export-query';
@@ -111,21 +110,6 @@ export const exportFlows = (
       }
       return r.data;
     });
-};
-
-export const getExportMetricsURL = (
-  q: StructuredFlowQuery,
-  options: { format: ExportApiFormat; includeTopologyEdges: boolean }
-): string => {
-  const params = {
-    ...structuredToRawQuery(q),
-    format: options.format,
-    includeTopologyEdges: String(options.includeTopologyEdges)
-  };
-  const omitEmpty = _.omitBy(params, value => value === undefined);
-  return `${ContextSingleton.getHost()}/api/flow/metrics/export?${new URLSearchParams(
-    omitEmpty as Record<string, string>
-  ).toString()}`;
 };
 
 export const exportMetricsReport = (request: MetricsExportRequest): Promise<Blob> => {

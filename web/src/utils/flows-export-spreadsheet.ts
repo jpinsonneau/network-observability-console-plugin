@@ -46,7 +46,7 @@ export const flowToSheetRow = (flow: FlowsExportRecord, headers: string[]): Reco
     if (TIME_COLUMNS.includes(header)) {
       const value = flow.fields[header];
       row[header] = value === undefined || value === null ? '' : String(value);
-    } else if (header in flow.labels) {
+    } else if (Object.prototype.hasOwnProperty.call(flow.labels, header)) {
       row[header] = flow.labels[header];
     } else {
       const value = flow.fields[header];

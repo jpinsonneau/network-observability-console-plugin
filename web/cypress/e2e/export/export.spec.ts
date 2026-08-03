@@ -1,17 +1,26 @@
 /// <reference types="cypress" />
 
-import * as c from '../../support/const';
+const downloadsDir = 'cypress/downloads';
 
 const expectSingleDownload = (extension: string, alias: string) => {
-  cy.exec('ls cypress/downloads', { timeout: 15000 }).then(response => {
-    const files = response.stdout
-      .trim()
-      .split('\n')
-      .filter(file => file.endsWith(`.${extension}`));
-    expect(files, `Expected one .${extension} download`).to.have.length(1);
-    cy.exec(`mv "cypress/downloads/${files[0]}" "cypress/downloads/${alias}.${extension}"`);
-    cy.readFile(`cypress/downloads/${alias}.${extension}`, { timeout: 10000 }).should('exist');
-    cy.exec(`rm cypress/downloads/${alias}.${extension}`);
+  const dest = `${downloadsDir}/${alias}.${extension}`;
+
+  const pollForDownload = (attempt = 0): Cypress.Chainable<string> => {
+    return cy.task<string[]>('listDownloadsByExtension', { dir: downloadsDir, extension }, { timeout: 15000 }).then(files => {
+      if (files.length === 1) {
+        return cy.wrap(files[0]);
+      }
+      if (attempt >= 30) {
+        throw new Error(`Expected one .${extension} download, found ${files.length}: ${files.join(', ')}`);
+      }
+      return cy.wait(500).then(() => pollForDownload(attempt + 1));
+    });
+  };
+
+  pollForDownload().then(file => {
+    cy.task('renameDownload', { from: `${downloadsDir}/${file}`, to: dest });
+    cy.readFile(dest, { timeout: 10000 }).should('exist');
+    cy.task('deleteDownload', dest);
   });
 };
 
