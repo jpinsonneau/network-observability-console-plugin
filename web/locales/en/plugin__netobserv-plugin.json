@@ -269,6 +269,7 @@
   "Reason": "Reason",
   "Message": "Message",
   "Changed": "Changed",
+  "Timed out waiting for resource deletion": "Timed out waiting for resource deletion",
   "Unable to get {{kind}}": "Unable to get {{kind}}",
   "Step {{step}}/{{total}}": "Step {{step}}/{{total}}",
   "Previous tip": "Previous tip",
