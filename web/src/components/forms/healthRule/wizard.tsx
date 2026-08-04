@@ -614,9 +614,9 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
                 primaryLabel={submitting ? t('Saving...') : isEdit ? t('Save') : t('Create')}
                 onPrimary={() => {
                   if (isTemplate) {
-                    void onSaveTemplate();
+                    void onSaveTemplate(previewYAML);
                   } else {
-                    void onSaveCustom();
+                    void onSaveCustom(previewYAML);
                   }
                 }}
                 showDanger={showDangerAction}
@@ -644,13 +644,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
             ) : (
               <ResourceYAMLEditor
                 initialResource={previewObject() as object}
-                onSave={content => {
-                  if (isTemplate) {
-                    void onSaveTemplate(content);
-                  } else {
-                    void onSaveCustom(content);
-                  }
-                }}
+                onChange={content => setPreviewYAML(content)}
               />
             )}
             {warnings.map(w => (
