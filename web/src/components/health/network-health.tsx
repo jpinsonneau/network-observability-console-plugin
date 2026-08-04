@@ -47,6 +47,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const isDarkTheme = useTheme();
   const [loading, setLoading] = React.useState(false);
+  const [initialized, setInitialized] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>();
   const [interval, setInterval] = useLocalStorage<number | undefined>(localStorageHealthRefreshKey, undefined);
   const [rules, setRules] = React.useState<Rule[]>([]);
@@ -85,6 +86,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       })
       .finally(() => {
         setLoading(false);
+        setInitialized(true);
       });
   }, [config]);
 
@@ -102,6 +104,9 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       fetch();
     }
   }, [configLoaded, fetch]);
+
+  // Avoid flashing empty/zero stats before the first successful (or failed) load.
+  const isInitialLoading = !configLoaded || !initialized;
 
   const panelContent = () => {
     if (isRulesManagerOpen) {
@@ -168,13 +173,16 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                 </Button>
               </FlexItem>
             </Flex>
-            {activeTabKey === 'global' && <HealthGlobal info={health.global} isDark={isDarkTheme} />}
+            {activeTabKey === 'global' && (
+              <HealthGlobal info={health.global} isDark={isDarkTheme} isLoading={isInitialLoading} />
+            )}
             {activeTabKey === 'per-node' && (
               <HealthDrawerContainer
                 title={t('Rule violations per node')}
                 stats={health.byNode}
                 kind={'Node'}
                 isDark={isDarkTheme}
+                isLoading={isInitialLoading}
               />
             )}
             {activeTabKey === 'per-namespace' && (
@@ -183,6 +191,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                 stats={health.byNamespace}
                 kind={'Namespace'}
                 isDark={isDarkTheme}
+                isLoading={isInitialLoading}
               />
             )}
             {activeTabKey === 'per-owner' && (
@@ -191,6 +200,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                 stats={health.byOwner}
                 kind={'Owner'}
                 isDark={isDarkTheme}
+                isLoading={isInitialLoading}
               />
             )}
           </>
@@ -224,6 +234,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                           rules={rules}
                           stats={unfilteredHealth}
                           forceCollapsed={isScoringDrawerOpen || isRulesManagerOpen}
+                          isLoading={isInitialLoading}
                         />
                       </FlexItem>
                     </Flex>

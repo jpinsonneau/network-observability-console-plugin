@@ -1,4 +1,4 @@
-import { Bullseye, Content, ContentVariants, EmptyState, Grid, GridItem, Title } from '@patternfly/react-core';
+import { Bullseye, Content, ContentVariants, EmptyState, Grid, GridItem, Spinner, Title } from '@patternfly/react-core';
 import { CheckCircleIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,9 +9,10 @@ import { RuleDetails } from './rule-details';
 export interface HealthGlobalProps {
   info: HealthStat;
   isDark: boolean;
+  isLoading?: boolean;
 }
 
-export const HealthGlobal: React.FC<HealthGlobalProps> = ({ info, isDark }) => {
+export const HealthGlobal: React.FC<HealthGlobalProps> = ({ info, isDark, isLoading }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const all = getAllHealthItems(info);
 
@@ -20,7 +21,11 @@ export const HealthGlobal: React.FC<HealthGlobalProps> = ({ info, isDark }) => {
       <Content>
         <Content component={ContentVariants.h3}>{t('Global rule violations')}</Content>
       </Content>
-      {all.length === 0 ? (
+      {isLoading ? (
+        <Bullseye data-test="health-global-loading">
+          <Spinner size="lg" aria-label={t('Loading network health')} />
+        </Bullseye>
+      ) : all.length === 0 ? (
         <Bullseye>
           <EmptyState
             titleText={<Title headingLevel="h2">{t('No violations found')}</Title>}

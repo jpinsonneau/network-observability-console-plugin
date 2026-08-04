@@ -8,7 +8,8 @@ import {
   Flex,
   FlexItem,
   Grid,
-  GridItem
+  GridItem,
+  Spinner
 } from '@patternfly/react-core';
 import { AngleDownIcon, AngleRightIcon } from '@patternfly/react-icons';
 import * as React from 'react';
@@ -23,14 +24,29 @@ export interface HealthSummaryProps {
   rules: Rule[];
   stats: HealthStats;
   forceCollapsed?: boolean;
+  isLoading?: boolean;
 }
 
-export const HealthSummary: React.FC<HealthSummaryProps> = ({ rules, stats, forceCollapsed }) => {
+export const HealthSummary: React.FC<HealthSummaryProps> = ({ rules, stats, forceCollapsed, isLoading }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const [isExpanded, setIsExpanded] = useLocalStorage<boolean>(localStorageHealthSummaryExpandedKey, false);
 
   // Determine the actual display state: forced collapsed or user's preference
   const displayExpanded = forceCollapsed ? false : isExpanded;
+
+  if (isLoading) {
+    return (
+      <Flex
+        className="health-summary-dashboard"
+        alignItems={{ default: 'alignItemsCenter' }}
+        data-test="health-summary-loading"
+      >
+        <FlexItem>
+          <Spinner size="lg" aria-label={t('Loading network health')} />
+        </FlexItem>
+      </Flex>
+    );
+  }
 
   // Helper function to format metric details
   const formatMetricDetail = (firingAlerts: number, pendingAlerts: number, recordingRules: number): string => {
