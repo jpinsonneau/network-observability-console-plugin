@@ -89,9 +89,20 @@ module.exports = {
     ),
     new CopyWebpackPlugin({
       patterns: [
-        { from: path.resolve(__dirname, 'locales'), to: 'locales' },
-        { from: path.resolve(__dirname, 'assets'), to: 'assets' },
-      ],
+        // context must be the source dir: webpack compiler.context is `src/`, so absolute
+        // `from: path.resolve(__dirname, 'locales')` can yield empty tinyglobby results
+        // via inputFileSystem and fail with "unable to locate '.../locales/**/*' glob".
+        {
+          from: '**/*',
+          to: 'locales',
+          context: path.resolve(__dirname, 'locales')
+        },
+        {
+          from: '**/*',
+          to: 'assets',
+          context: path.resolve(__dirname, 'assets')
+        }
+      ]
     }),
     new HtmlWebpackPlugin({
       favicon: path.join(__dirname, "static", "favicon.ico"),

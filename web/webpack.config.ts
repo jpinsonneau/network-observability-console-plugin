@@ -453,9 +453,18 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: path.resolve(__dirname, 'locales'), to: 'locales' },
-        { from: path.resolve(__dirname, 'assets'), to: 'assets' },
-      ],
+        // See webpack.standalone.js — avoid absolute directory `from` with CWP 14 / tinyglobby.
+        {
+          from: '**/*',
+          to: 'locales',
+          context: path.resolve(__dirname, 'locales')
+        },
+        {
+          from: '**/*',
+          to: 'assets',
+          context: path.resolve(__dirname, 'assets')
+        }
+      ]
     }),
   ],
   devtool: 'source-map',
@@ -476,14 +485,15 @@ if (process.env.FLAVOR === 'static') {
         name: "netobserv-plugin-static",
         version: "0.1.0",
         displayName: "NetObserv Static Plugin for the OpenShift Console",
-        description: "This plugin adds custom forms for FlowCollector, FlowCollectorSlice and FlowMetrics APIs",
+        description: "This plugin adds custom forms and wizards for FlowCollector, FlowCollectorSlice, FlowMetric and Health Rules APIs",
         exposedModules: {
-          "flowCollectorWizard": "./components/forms/flowCollector-wizard.tsx",
-          "flowCollectorForm": "./components/forms/flowCollector.tsx",
-          "flowCollectorStatus": "./components/forms/flowCollector-status.tsx",
-          "flowCollectorSliceForm": "./components/forms/flowCollectorSlice.tsx",
-          "flowMetricWizard": "./components/forms/flowMetric-wizard.tsx",
-          "flowMetricForm": "./components/forms/flowMetric.tsx"
+          "flowCollectorWizard": "./components/forms/flowCollector/wizard.tsx",
+          "flowCollectorForm": "./components/forms/flowCollector/form.tsx",
+          "flowCollectorStatus": "./components/forms/flowCollector/status.tsx",
+          "flowCollectorSliceForm": "./components/forms/flowCollectorSlice/form.tsx",
+          "flowMetricWizard": "./components/forms/flowMetric/wizard.tsx",
+          "flowMetricForm": "./components/forms/flowMetric/form.tsx",
+          "healthRuleWizard": "./components/forms/healthRule/wizard.tsx",
         },
       },
       extensions: [
@@ -568,14 +578,37 @@ if (process.env.FLAVOR === 'static') {
               "$codeRef": "flowMetricForm.default"
             }
           }
+        },
+        {
+          type: "console.page/route",
+          properties: {
+            path: [
+              "/network-health/rules/setup",
+              "/network-health/rules/template/:template",
+              "/network-health/rules/ns/:namespace/name/:name"
+            ],
+            component: {
+              "$codeRef": "healthRuleWizard.default"
+            }
+          },
+          "flags": { "required": ["CAN_LIST_NS"] }
         }
       ],
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: path.resolve(__dirname, 'locales'), to: 'locales' },
-        { from: path.resolve(__dirname, 'assets'), to: 'assets' },
-      ],
+        // See webpack.standalone.js — avoid absolute directory `from` with CWP 14 / tinyglobby.
+        {
+          from: '**/*',
+          to: 'locales',
+          context: path.resolve(__dirname, 'locales')
+        },
+        {
+          from: '**/*',
+          to: 'assets',
+          context: path.resolve(__dirname, 'assets')
+        }
+      ]
     }),
   ];
 }
