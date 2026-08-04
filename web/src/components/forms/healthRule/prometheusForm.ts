@@ -6,15 +6,19 @@ import * as _ from 'lodash';
 import { prometheusRuleUISchema } from './prometheusUISchema';
 import {
   CustomRuleForm,
+  DEFAULT_NAMESPACE_SUGGESTION,
+  defaultCustomForm,
   HealthAnnotationFields,
   HealthRuleMode,
   HealthRuleThresholds,
-  PrometheusRuleResource,
-  defaultCustomForm
+  PrometheusRuleResource
 } from './types';
 
 export const NETWORK_HEALTH_ANNOTATION_KEY = 'netobserv_io_network_health';
 export const RECORDING_METADATA_ANNOTATION = 'netobserv.io/network-health';
+
+const isPresentScalar = (value: string | number | undefined | null): boolean =>
+  value !== undefined && value !== null && value !== '';
 
 export const buildAlertHealthAnnotation = (fields: HealthAnnotationFields): string => {
   const payload: Record<string, unknown> = {};
@@ -33,11 +37,11 @@ export const buildAlertHealthAnnotation = (fields: HealthAnnotationFields): stri
   if (fields.unit) {
     payload.unit = fields.unit;
   }
-  if (fields.upperBound) {
+  if (isPresentScalar(fields.upperBound)) {
     payload.upperBound = fields.upperBound;
   }
   // Network Health / operator expect alertThreshold (not threshold).
-  if (fields.threshold) {
+  if (isPresentScalar(fields.threshold)) {
     payload.alertThreshold = fields.threshold;
   }
   return JSON.stringify(payload);
@@ -59,18 +63,18 @@ export const buildRecordingHealthInner = (fields: HealthAnnotationFields): strin
   if (fields.unit) {
     payload.unit = fields.unit;
   }
-  if (fields.upperBound) {
+  if (isPresentScalar(fields.upperBound)) {
     payload.upperBound = fields.upperBound;
   }
   if (fields.recordingThresholds) {
     const rt: HealthRuleThresholds = {};
-    if (fields.recordingThresholds.info) {
+    if (isPresentScalar(fields.recordingThresholds.info)) {
       rt.info = fields.recordingThresholds.info;
     }
-    if (fields.recordingThresholds.warning) {
+    if (isPresentScalar(fields.recordingThresholds.warning)) {
       rt.warning = fields.recordingThresholds.warning;
     }
-    if (fields.recordingThresholds.critical) {
+    if (isPresentScalar(fields.recordingThresholds.critical)) {
       rt.critical = fields.recordingThresholds.critical;
     }
     payload.recordingThresholds = rt;
@@ -226,7 +230,7 @@ export const defaultPrometheusRuleFormData = (mode: HealthRuleMode = 'Alert') =>
     kind: 'PrometheusRule',
     metadata: {
       name: '',
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE_SUGGESTION,
       labels: {
         netobserv: 'true'
       }
@@ -268,6 +272,48 @@ export const defaultPrometheusRuleFormData = (mode: HealthRuleMode = 'Alert') =>
       ]
     }
   };
+};
+
+/** Preserve shared form fields while switching Alert ↔ Recording mode. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const applyPrometheusRuleMode = (pr: any, mode: HealthRuleMode): any => {
+  const next = _.cloneDeep(pr || defaultPrometheusRuleFormData(mode));
+  const rule = next.spec?.groups?.[0]?.rules?.[0] as PrometheusRuleFormRule | undefined;
+  if (!rule) {
+    return defaultPrometheusRuleFormData(mode);
+  }
+  if (mode === 'Alert') {
+    const previousRecord = rule.record;
+    delete rule.record;
+    rule.alert = rule.alert || previousRecord || '';
+    rule.for = rule.for || '5m';
+    rule.labels = {
+      ...(rule.labels || {}),
+      severity: rule.labels?.severity || 'warning',
+      netobserv: 'true'
+    };
+    rule.annotations = {
+      ...(rule.annotations || {}),
+      summary: rule.annotations?.summary || '',
+      message: rule.annotations?.message || rule.annotations?.description || ''
+    };
+  } else {
+    const previousAlert = rule.alert;
+    delete rule.alert;
+    delete rule.for;
+    rule.record = rule.record || previousAlert || '';
+    rule.labels = {
+      ...(rule.labels || {}),
+      netobserv: 'true'
+    };
+    delete rule.labels.severity;
+    rule.annotations = {
+      ...(rule.annotations || {}),
+      summary: rule.annotations?.summary || '',
+      message: rule.annotations?.message || rule.annotations?.description || ''
+    };
+  }
+  return next;
 };
 
 /** Hide Alert-only or Recording-only fields based on wizard mode. */
@@ -333,6 +379,7 @@ export const ensureNetworkHealthLabels = (pr: any, mode: HealthRuleMode = 'Alert
       delete rule.healthDisplay;
 
       rule.labels = {
+        ...(rule.labels || {}),
         netobserv: 'true',
         ...(mode === 'Alert' ? { severity: rule.labels?.severity || 'warning' } : {})
       };
@@ -342,6 +389,7 @@ export const ensureNetworkHealthLabels = (pr: any, mode: HealthRuleMode = 'Alert
 
       if (mode === 'Alert') {
         rule.annotations = {
+          ...(rule.annotations || {}),
           ...(summary ? { summary } : {}),
           ...(message ? { message } : {})
         };
@@ -349,7 +397,16 @@ export const ensureNetworkHealthLabels = (pr: any, mode: HealthRuleMode = 'Alert
           rule.annotations[NETWORK_HEALTH_ANNOTATION_KEY] = buildAlertHealthAnnotation(fields);
         }
       } else {
-        delete rule.annotations;
+        const preserved = { ...(rule.annotations || {}) };
+        delete preserved.summary;
+        delete preserved.message;
+        delete preserved.description;
+        delete preserved[NETWORK_HEALTH_ANNOTATION_KEY];
+        if (Object.keys(preserved).length) {
+          rule.annotations = preserved;
+        } else {
+          delete rule.annotations;
+        }
         const recordName = rule.record as string | undefined;
         if (recordName) {
           recordingMeta[recordName] = {
@@ -490,60 +547,6 @@ export const buildPrometheusRule = (
         }
       ]
     }
-  };
-};
-
-export const prometheusRuleToCustomForm = (pr: PrometheusRuleResource): CustomRuleForm => {
-  const base = defaultCustomForm();
-  const group = pr.spec?.groups?.[0];
-  const rule = group?.rules?.[0];
-  if (!rule) {
-    return {
-      ...base,
-      name: pr.metadata?.name || '',
-      namespace: pr.metadata?.namespace || base.namespace
-    };
-  }
-
-  const isRecording = Boolean(rule.record);
-  if (isRecording) {
-    const meta = parseRecordingMetadata(pr.metadata?.annotations?.[RECORDING_METADATA_ANNOTATION]);
-    const entry = meta[rule.record!] || Object.values(meta)[0] || {};
-    const health = parseHealthAnnotation(entry.netobserv_io_network_health);
-    return {
-      ...base,
-      name: pr.metadata.name,
-      namespace: pr.metadata.namespace,
-      mode: 'Recording',
-      expr: rule.expr || '',
-      recordName: rule.record,
-      summary: entry.summary || '',
-      description: entry.description || '',
-      health: {
-        ...base.health,
-        ...health,
-        recordingThresholds: health.recordingThresholds || base.health.recordingThresholds
-      },
-      groupInterval: group.interval
-    };
-  }
-
-  return {
-    ...base,
-    name: pr.metadata.name,
-    namespace: pr.metadata.namespace,
-    mode: 'Alert',
-    expr: rule.expr || '',
-    alertName: rule.alert,
-    severity: (rule.labels?.severity as CustomRuleForm['severity']) || 'warning',
-    for: rule.for || '5m',
-    summary: rule.annotations?.summary || '',
-    description: rule.annotations?.message || rule.annotations?.description || '',
-    health: {
-      ...base.health,
-      ...parseHealthAnnotation(rule.annotations?.[NETWORK_HEALTH_ANNOTATION_KEY])
-    },
-    groupInterval: group.interval
   };
 };
 

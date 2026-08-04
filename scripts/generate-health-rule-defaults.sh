@@ -43,10 +43,15 @@ replace github.com/netobserv/netobserv-operator => ${OPERATOR_PATH}
 EOF
 
 echo "Generating ${OUT} from ${OPERATOR_PATH} ..."
+tmpout="$(mktemp "${OUT}.XXXXXX")"
+trap 'rm -rf "${tmpdir}"; rm -f "${tmpout}"' EXIT
 (
   cd "${tmpdir}"
   go mod tidy
-  go run .
-) > "${OUT}"
+  # Source uses //go:build ignore so the plugin module's go mod vendor skips it.
+  go run -tags=ignore .
+) > "${tmpout}"
+mv "${tmpout}" "${OUT}"
+trap 'rm -rf "${tmpdir}"' EXIT
 
 echo "Wrote ${OUT}"

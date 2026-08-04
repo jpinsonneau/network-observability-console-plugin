@@ -6,10 +6,7 @@ export const inferMonitoringQueryUnits = (query: string): string | undefined => 
   const q = query.trim();
 
   // 0–1 or 0–100 style ratios (health checks often use `100 * a / b`)
-  if (/\b100\s*\*|\*\s*100\b|percent/i.test(q) && /\//.test(q)) {
-    return 'percentunit';
-  }
-  if (/\b100\s*\*|\*\s*100\b/i.test(q)) {
+  if ((/\b100\s*\*|\*\s*100\b/i.test(q) && /\//.test(q)) || /percent/i.test(q)) {
     return 'percentunit';
   }
 

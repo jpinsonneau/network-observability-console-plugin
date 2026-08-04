@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { k8sGet, ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
+import { k8sCreate, k8sDelete, k8sGet, k8sUpdate, ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import {
   ActionList,
   ActionListGroup,
@@ -32,6 +32,7 @@ import ResourceWatcher, { Consumer, ResourceWatcherContext } from '../resource-w
 import { k8sErrorMessage } from '../utils';
 import { networkHealthCreatedPath, networkHealthPath, resolveHealthRuleWizardArgs } from './paths';
 import {
+  applyPrometheusRuleMode,
   defaultPrometheusRuleFormData,
   ensureNetworkHealthLabels,
   prometheusFormDataToCustomForm,
@@ -117,7 +118,12 @@ const HealthRuleWizardFooter: React.FC<HealthRuleWizardFooterProps> = ({
         <ActionListGroup>
           {!isFirst && (
             <ActionListItem>
-              <Button variant="secondary" onClick={goToPrevStep} isDisabled={submitting || deleting}>
+              <Button
+                variant="secondary"
+                data-test="health-rule-wizard-back"
+                onClick={goToPrevStep}
+                isDisabled={submitting || deleting}
+              >
                 {t('Back')}
               </Button>
             </ActionListItem>
@@ -125,6 +131,7 @@ const HealthRuleWizardFooter: React.FC<HealthRuleWizardFooterProps> = ({
           <ActionListItem>
             <Button
               variant="primary"
+              data-test="health-rule-wizard-primary"
               onClick={isLastStep ? onPrimary : goToNextStep}
               isDisabled={submitting || deleting}
               isLoading={isLastStep && submitting}
@@ -133,7 +140,12 @@ const HealthRuleWizardFooter: React.FC<HealthRuleWizardFooterProps> = ({
             </Button>
           </ActionListItem>
           <ActionListItem>
-            <Button variant="link" onClick={close} isDisabled={submitting || deleting}>
+            <Button
+              variant="link"
+              data-test="health-rule-wizard-cancel"
+              onClick={close}
+              isDisabled={submitting || deleting}
+            >
               {t('Cancel')}
             </Button>
           </ActionListItem>
@@ -188,6 +200,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
   const [confirmDanger, setConfirmDanger] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const seededTemplateFromFc = React.useRef(false);
+  const seededCustomCreate = React.useRef(false);
 
   const isTemplate = sourceState.source === 'template';
   const isEdit = Boolean(sourceState.isEdit || editTemplateParam || (editNamespace && editName));
@@ -292,16 +305,24 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
     }
   }, [flowCollectorData, sourceState.editTemplate, editTemplateParam]);
 
-  // Seed custom form when switching to custom / changing mode (create only)
+  // Seed custom form when switching to custom (create only); mode changes preserve shared fields
   React.useEffect(() => {
     if (sourceState.source !== 'custom' || sourceState.isEdit || existingPR) {
+      if (sourceState.source !== 'custom') {
+        seededCustomCreate.current = false;
+      }
       return;
     }
-    setPrometheusData(defaultPrometheusRuleFormData(sourceState.mode));
+    if (!seededCustomCreate.current) {
+      setPrometheusData(defaultPrometheusRuleFormData(sourceState.mode));
+      seededCustomCreate.current = true;
+      return;
+    }
+    setPrometheusData((prev: any) => applyPrometheusRuleMode(prev, sourceState.mode));
   }, [sourceState.source, sourceState.mode, sourceState.isEdit, existingPR]);
 
   /** Template review shows the single rule being created/edited. */
-  const previewObject = React.useCallback(() => {
+  const previewResource = React.useMemo(() => {
     if (isTemplate) {
       const rule = resolveTemplateRuleForSave(unwrapTemplateForm(templateData));
       return { healthRules: rule ? [rule] : [] };
@@ -332,8 +353,8 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
   );
 
   const refreshPreview = React.useCallback(() => {
-    setPreviewYAML(safeJSToYAML(previewObject(), '', { noRefs: true, lineWidth: -1 }));
-  }, [previewObject]);
+    setPreviewYAML(safeJSToYAML(previewResource, '', { noRefs: true, lineWidth: -1 }));
+  }, [previewResource]);
 
   const onStepChange = React.useCallback(
     (_event: React.MouseEvent<HTMLButtonElement>, step: WizardStepType) => {
@@ -372,16 +393,20 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
   };
 
   const navigateAfterSave = () => {
-    navigateTo(networkHealthCreatedPath());
-    if (!ContextSingleton.isStandalone()) {
-      navigate(networkHealthCreatedPath());
+    const path = networkHealthCreatedPath();
+    if (ContextSingleton.isStandalone()) {
+      navigateTo(path);
+    } else {
+      navigate(path);
     }
   };
 
   const navigateAfterDelete = () => {
-    navigateTo(networkHealthPath());
-    if (!ContextSingleton.isStandalone()) {
-      navigate(networkHealthPath());
+    const path = networkHealthPath();
+    if (ContextSingleton.isStandalone()) {
+      navigateTo(path);
+    } else {
+      navigate(path);
     }
   };
 
@@ -407,7 +432,6 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
       if (!name || !ns) {
         throw new Error(t('PrometheusRule API model is not available'));
       }
-      const { k8sDelete } = await import('@openshift-console/dynamic-plugin-sdk');
       await k8sDelete({
         model: prometheusRuleModel,
         resource: { metadata: { name, namespace: ns } }
@@ -463,10 +487,18 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
     setSubmitting(true);
     setErrors([]);
     try {
-      const { k8sCreate, k8sUpdate } = await import('@openshift-console/dynamic-plugin-sdk');
       let data: any;
       if (yamlOverride) {
         data = ensureNetworkHealthLabels(safeYAMLToJS(yamlOverride), sourceState.mode);
+        if (existingPR?.metadata) {
+          data.metadata = {
+            ...data.metadata,
+            ...(!data.metadata?.resourceVersion && existingPR.metadata.resourceVersion
+              ? { resourceVersion: existingPR.metadata.resourceVersion }
+              : {}),
+            ...(!data.metadata?.uid && existingPR.metadata.uid ? { uid: existingPR.metadata.uid } : {})
+          };
+        }
       } else {
         const ok = await validateCustom();
         if (!ok) {
@@ -639,11 +671,11 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
             </Alert>
             {ContextSingleton.isStandalone() ? (
               <pre data-test="health-rule-yaml-preview" className="wizard-yaml-preview">
-                {previewYAML || safeJSToYAML(previewObject())}
+                {previewYAML || safeJSToYAML(previewResource)}
               </pre>
             ) : (
               <ResourceYAMLEditor
-                initialResource={previewObject() as object}
+                initialResource={previewResource as object}
                 onChange={content => setPreviewYAML(content)}
               />
             )}
@@ -705,9 +737,11 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
 export const HealthRuleWizard: React.FC<HealthRuleWizardProps> = ({ initialState }) => {
   const navigate = useNavigate();
   const onSuccess = React.useCallback(() => {
-    navigateTo(networkHealthCreatedPath());
-    if (!ContextSingleton.isStandalone()) {
-      navigate(networkHealthCreatedPath());
+    const path = networkHealthCreatedPath();
+    if (ContextSingleton.isStandalone()) {
+      navigateTo(path);
+    } else {
+      navigate(path);
     }
   }, [navigate]);
 
