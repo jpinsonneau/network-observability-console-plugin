@@ -22,14 +22,14 @@ import {
   useNavigate,
   useParams,
   useSearchParams
-} from '../../utils/url';
-import { flowCollectorUISchema } from './config/uiSchema';
+} from '../../../utils/url';
+import { DynamicForm } from '../dynamic-form/dynamic-form';
+import { ErrorTemplate } from '../dynamic-form/templates';
+import '../forms.css';
+import ResourceWatcher, { Consumer } from '../resource-watcher';
+import { getFilteredUISchema } from '../utils';
 import Consumption from './consumption';
-import { DynamicForm } from './dynamic-form/dynamic-form';
-import { ErrorTemplate } from './dynamic-form/templates';
-import './forms.css';
-import ResourceWatcher, { Consumer } from './resource-watcher';
-import { getFilteredUISchema } from './utils';
+import { flowCollectorUISchema } from './uiSchema';
 
 export type FlowCollectorWizardProps = {
   name?: string;

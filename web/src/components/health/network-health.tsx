@@ -1,6 +1,9 @@
 import { Rule } from '@openshift-console/dynamic-plugin-sdk';
 import {
+  Alert,
+  AlertActionCloseButton,
   Button,
+  Content,
   ContentVariants,
   Drawer,
   DrawerContent,
@@ -12,7 +15,7 @@ import {
   Tabs,
   Title
 } from '@patternfly/react-core';
-import { QuestionCircleIcon, SyncAltIcon } from '@patternfly/react-icons';
+import { PlusCircleIcon, QuestionCircleIcon, SyncAltIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Config, defaultConfig } from '../../model/config';
@@ -21,7 +24,10 @@ import { getGenericHTTPError } from '../../utils/errors';
 import { localStorageHealthRefreshKey, useLocalStorage } from '../../utils/local-storage-hook';
 import { usePoll } from '../../utils/poll-hook';
 import { useTheme } from '../../utils/theme-hook';
+import { getURLParams, navigateTo } from '../../utils/url';
 import { RefreshDropdown } from '../dropdowns/refresh-dropdown';
+import { HealthRulesManager } from '../forms/healthRule/manager';
+import { healthRuleSetupPath } from '../forms/healthRule/paths';
 import FlowCollectorStatusIndicator from '../status/flowcollector-status-indicator';
 import { HealthDrawerContainer } from './health-drawer-container';
 import HealthError from './health-error';
@@ -46,6 +52,8 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const [config, setConfig] = React.useState<Config>(defaultConfig);
   const [configLoaded, setConfigLoaded] = React.useState(false);
   const [isScoringDrawerOpen, setIsScoringDrawerOpen] = React.useState<boolean>(false);
+  const [isRulesManagerOpen, setIsRulesManagerOpen] = React.useState(false);
+  const [showCreatedAlert, setShowCreatedAlert] = React.useState(() => getURLParams().get('ruleCreated') === '1');
 
   // Load config on mount
   React.useEffect(() => {
@@ -85,11 +93,16 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   }, [configLoaded, fetch]);
 
   const panelContent = () => {
+    if (isRulesManagerOpen) {
+      return <HealthRulesManager isOpen={isRulesManagerOpen} onClose={() => setIsRulesManagerOpen(false)} />;
+    }
     if (isScoringDrawerOpen) {
       return <HealthScoringDrawer isOpen={isScoringDrawerOpen} onClose={() => setIsScoringDrawerOpen(false)} />;
     }
     return null;
   };
+
+  const isDrawerOpen = isScoringDrawerOpen || isRulesManagerOpen;
 
   const mainContent = () => {
     return (
@@ -133,7 +146,10 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                   data-test="health-scoring-info-button"
                   className="overflow-button"
                   variant="link"
-                  onClick={() => setIsScoringDrawerOpen(!isScoringDrawerOpen)}
+                  onClick={() => {
+                    setIsRulesManagerOpen(false);
+                    setIsScoringDrawerOpen(!isScoringDrawerOpen);
+                  }}
                   icon={<QuestionCircleIcon />}
                 >
                   {isScoringDrawerOpen ? t('Hide scoring information') : t('Show scoring information')}
@@ -173,7 +189,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
 
   return (
     <PageSection hasBodyWrapper={false} id="health-page" className={`${isDarkTheme ? 'dark' : 'light'}`}>
-      <Drawer id="health-drawer" isInline isExpanded={isScoringDrawerOpen}>
+      <Drawer id="health-drawer" isInline={!isRulesManagerOpen} isExpanded={isDrawerOpen}>
         <DrawerContent id="healthDrawerContent" panelContent={panelContent()}>
           <DrawerContentBody id="healthDrawerBody">
             <Flex id="health-page-content-flex" direction={{ default: 'column' }}>
@@ -192,19 +208,52 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                         </Flex>
                       </FlexItem>
                       <FlexItem>
-                        <HealthSummary rules={rules} stats={health} forceCollapsed={isScoringDrawerOpen} />
+                        <HealthSummary
+                          rules={rules}
+                          stats={health}
+                          forceCollapsed={isScoringDrawerOpen || isRulesManagerOpen}
+                        />
                       </FlexItem>
                     </Flex>
                   </FlexItem>
                   <FlexItem>
-                    <Flex direction={{ default: 'row' }}>
-                      <FlexItem flex={{ default: 'flex_1' }}>
-                        <RefreshDropdown
-                          data-test="refresh-dropdown"
-                          id="refresh-dropdown"
-                          interval={interval}
-                          setInterval={setInterval}
-                        />
+                    <Flex direction={{ default: 'row' }} alignItems={{ default: 'alignItemsFlexEnd' }}>
+                      <FlexItem>
+                        <Button
+                          data-test="create-health-rule-button"
+                          variant="primary"
+                          icon={<PlusCircleIcon />}
+                          onClick={() => navigateTo(healthRuleSetupPath())}
+                        >
+                          {t('Create health rule')}
+                        </Button>
+                      </FlexItem>
+                      <FlexItem>
+                        <Button
+                          data-test="manage-health-rules-button"
+                          variant="secondary"
+                          onClick={() => {
+                            setIsScoringDrawerOpen(false);
+                            setIsRulesManagerOpen(!isRulesManagerOpen);
+                          }}
+                        >
+                          {isRulesManagerOpen ? t('Hide manage rules') : t('Manage rules')}
+                        </Button>
+                      </FlexItem>
+                      <FlexItem className="netobserv-refresh-interval-container">
+                        <Flex direction={{ default: 'column' }}>
+                          <FlexItem className="netobserv-action-title">
+                            <Content component={ContentVariants.h4}>{t('Refresh interval')}</Content>
+                          </FlexItem>
+                          <FlexItem flex={{ default: 'flex_1' }}>
+                            <RefreshDropdown
+                              data-test="refresh-dropdown"
+                              id="refresh-dropdown"
+                              interval={interval}
+                              setInterval={setInterval}
+                            />
+                          </FlexItem>
+                        </Flex>
                       </FlexItem>
                       <FlexItem className="netobserv-refresh-container">
                         <Button
@@ -219,6 +268,20 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                     </Flex>
                   </FlexItem>
                 </Flex>
+                {showCreatedAlert && (
+                  <Alert
+                    data-test="health-rule-created-alert"
+                    variant="info"
+                    isInline
+                    title={t('Health rule saved')}
+                    actionClose={<AlertActionCloseButton onClose={() => setShowCreatedAlert(false)} />}
+                    style={{ marginTop: '1rem' }}
+                  >
+                    {t(
+                      'It may take a short time for the rule to appear on Network Health after Prometheus reconciles.'
+                    )}
+                  </Alert>
+                )}
               </FlexItem>
               <FlexItem
                 id="health-content-container"

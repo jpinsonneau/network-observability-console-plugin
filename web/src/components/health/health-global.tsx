@@ -16,7 +16,7 @@ export const HealthGlobal: React.FC<HealthGlobalProps> = ({ info, isDark }) => {
   const all = getAllHealthItems(info);
 
   return (
-    <>
+    <div className="health-global-content">
       <Content>
         <Content component={ContentVariants.h3}>{t('Global rule violations')}</Content>
       </Content>
@@ -39,6 +39,6 @@ export const HealthGlobal: React.FC<HealthGlobalProps> = ({ info, isDark }) => {
           </GridItem>
         </Grid>
       )}
-    </>
+    </div>
   );
 };

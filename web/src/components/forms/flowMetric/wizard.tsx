@@ -6,15 +6,15 @@ import validator from '@rjsf/validator-ajv8';
 import _ from 'lodash';
 import React, { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextSingleton } from '../../utils/context';
-import { flowMetricNewPath, navigateTo, useNavigate, useParams } from '../../utils/url';
-import { safeYAMLToJS } from '../../utils/yaml';
-import { flowMetricUISchema } from './config/uiSchema';
-import { DynamicForm } from './dynamic-form/dynamic-form';
-import { ErrorTemplate } from './dynamic-form/templates';
-import './forms.css';
-import ResourceWatcher, { Consumer } from './resource-watcher';
-import { getFilteredUISchema } from './utils';
+import { ContextSingleton } from '../../../utils/context';
+import { flowMetricNewPath, navigateTo, useNavigate, useParams } from '../../../utils/url';
+import { safeYAMLToJS } from '../../../utils/yaml';
+import { DynamicForm } from '../dynamic-form/dynamic-form';
+import { ErrorTemplate } from '../dynamic-form/templates';
+import '../forms.css';
+import ResourceWatcher, { Consumer } from '../resource-watcher';
+import { getFilteredUISchema } from '../utils';
+import { flowMetricUISchema } from './uiSchema';
 
 export type FlowMetricWizardProps = {
   name?: string;

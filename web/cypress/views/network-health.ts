@@ -5,6 +5,9 @@ export namespace networkHealthSelectors {
     export const workload = '[id^="pf-tab-per-owner"]'
     export const nodeCard = '[data-test^="health-card-"]'
     export const sidePanel = '[data-test="health-drawer-content"]'
+    export const createRuleButton = '[data-test="create-health-rule-button"]'
+    export const manageRulesButton = '[data-test="manage-health-rules-button"]'
+    export const wizard = '#healthRuleWizard'
 }
 
 
