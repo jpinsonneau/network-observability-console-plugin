@@ -567,7 +567,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
           isVisitRequired={false}
         >
           {!isEdit && (
-            <WizardStep name={t('Source')} id="source">
+            <WizardStep name={t('Rule type')} id="source">
               <SourceModeStep
                 state={sourceState}
                 lockSource={false}
@@ -597,24 +597,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
               ) : undefined
             }
           >
-            <ConfigStepIntro
-              source={sourceState.source}
-              mode={sourceState.mode}
-              lockMode={Boolean(isEdit && !isTemplate)}
-              onModeChange={
-                isTemplate
-                  ? undefined
-                  : mode => {
-                      setSourceState(prev => ({
-                        ...prev,
-                        mode,
-                        custom: { ...prev.custom, mode }
-                      }));
-                      setErrors([]);
-                      setWarnings([]);
-                    }
-              }
-            />
+            <ConfigStepIntro source={sourceState.source} mode={sourceState.mode} />
             {isTemplate ? templateForm() : customForm()}
             {!isEmpty(errors) && <ErrorTemplate errors={errors} />}
             {warnings.map(w => (

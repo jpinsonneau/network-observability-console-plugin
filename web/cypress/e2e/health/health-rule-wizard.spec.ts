@@ -22,7 +22,8 @@ describe('health-rule-wizard', () => {
     cy.get('#healthRuleWizard', { timeout: 60000 }).should('exist');
     cy.contains('Create Network Health rule').should('exist');
     cy.get('[data-test="health-rule-source-template"]').should('exist');
-    cy.get('[data-test="health-rule-source-custom"]').should('exist');
+    cy.get('[data-test="health-rule-source-alert"]').should('exist');
+    cy.get('[data-test="health-rule-source-recording"]').should('exist');
   });
 
   it('adapts configuration for template vs custom via DynamicForm', () => {
@@ -34,12 +35,11 @@ describe('health-rule-wizard', () => {
     cy.contains('Template').should('exist');
     cy.contains('Variants').should('exist');
 
-    // go back and switch to custom — mode + PrometheusRule DynamicForm live on step 2
+    // go back and switch to custom alert — mode is chosen on step 1; no mode select on step 2
     cy.contains('Back').click();
-    cy.get('[data-test="health-rule-source-custom"]').click({ force: true });
-    cy.get('[data-test="health-rule-mode"]').should('not.exist');
+    cy.get('[data-test="health-rule-source-alert"]').click({ force: true });
     cy.contains('Next').click();
-    cy.get('[data-test="health-rule-mode"]').should('exist');
+    cy.get('[data-test="health-rule-mode"]').should('not.exist');
     cy.get('[data-test-id="dynamic-form"]').should('exist');
     cy.get('[data-test="promql-editor"]').should('exist');
   });
@@ -47,7 +47,8 @@ describe('health-rule-wizard', () => {
   it('opens configuration step with template seeded from manage-rules link', () => {
     cy.get('[data-test="manage-health-rules-button"]', { timeout: 60000 }).click();
     cy.get('[data-test="health-rules-manager"]').should('be.visible');
-    cy.contains('button', 'PacketDropsByKernel').click();
+    cy.get('[data-test="template-health-rule-actions-PacketDropsByKernel"]').find('button').first().click();
+    cy.contains('[role="menuitem"]', 'Edit').click();
     cy.get('#healthRuleWizard', { timeout: 60000 }).should('exist');
     cy.contains('Edit Network Health rule').should('exist');
     cy.get('[data-test="health-rule-source-template"]').should('not.exist');
@@ -102,7 +103,7 @@ describe('health-rule-wizard', () => {
     stubPromQL();
     cy.visit('/console-health-rule-wizard');
     cy.get('#healthRuleWizard', { timeout: 60000 }).should('exist');
-    cy.get('[data-test="health-rule-source-custom"]').click({ force: true });
+    cy.get('[data-test="health-rule-source-alert"]').click({ force: true });
     cy.contains('Next').click();
 
     cy.get('[data-test-id="dynamic-form"]', { timeout: 60000 }).should('exist');
