@@ -377,6 +377,18 @@
     margin: 0 !important;
 }
 
+/* Keep button leading icons optically centered with the label */
+#health-page .pf-v6-c-button__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+#health-page .pf-v6-c-button__icon > svg {
+    flex-shrink: 0;
+}
+
 /*hack to keep refresh button size while loading*/
 .co-action-refresh-button {
     width: 45px !important;

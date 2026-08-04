@@ -17,10 +17,28 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../utils/theme-hook';
 import { jsonSchemaNumberTypes } from './const';
 import { DescriptionField } from './fields';
+import { PromQLEditor } from './promql-editor';
 import { AtomicFieldTemplate } from './templates';
 
+const getPlaceholder = (uiSchema?: WidgetProps['uiSchema']): string | undefined => {
+  const fromUi = uiSchema?.['ui:placeholder'];
+  const fromOptions = uiSchema?.['ui:options']?.placeholder;
+  const value = fromUi ?? fromOptions;
+  return typeof value === 'string' && value !== '' ? value : undefined;
+};
+
 export const TextWidget: React.FC<WidgetProps> = props => {
-  const { disabled = false, id, onBlur, onChange, onFocus, readonly = false, schema = {}, value = '' } = props;
+  const {
+    disabled = false,
+    id,
+    onBlur,
+    onChange,
+    onFocus,
+    readonly = false,
+    schema = {},
+    value = '',
+    uiSchema
+  } = props;
   const schemaType = getSchemaType(schema);
   return jsonSchemaNumberTypes.includes(String(schemaType)) ? (
     <NumberWidget {...props} />
@@ -39,6 +57,7 @@ export const TextWidget: React.FC<WidgetProps> = props => {
         onBlur={onBlur && (event => onBlur(id, event.target.value))}
         onChange={({ currentTarget }) => onChange(currentTarget.value, undefined, id)}
         onFocus={onFocus && (event => onFocus(id, event.target.value))}
+        placeholder={getPlaceholder(uiSchema)}
         readOnly={readonly}
         type="text"
         value={value}
@@ -48,7 +67,7 @@ export const TextWidget: React.FC<WidgetProps> = props => {
 };
 
 export const NumberWidget: React.FC<WidgetProps> = props => {
-  const { value, id, onBlur, onChange, onFocus } = props;
+  const { value, id, onBlur, onChange, onFocus, uiSchema } = props;
   const numberValue = _.toNumber(value);
   return (
     <span className="pf-v6-c-form-control" data-test={id}>
@@ -60,6 +79,7 @@ export const NumberWidget: React.FC<WidgetProps> = props => {
           onChange(currentTarget.value !== '' ? _.toNumber(currentTarget.value) : '', undefined, id)
         }
         onFocus={onFocus && (event => onFocus(id, event.target.value))}
+        placeholder={getPlaceholder(uiSchema)}
         type="number"
         value={_.isFinite(numberValue) ? numberValue : ''}
       />
@@ -163,6 +183,18 @@ export const JSONWidget: React.FC<WidgetProps> = props => {
   );
 };
 
+export const PromQLWidget: React.FC<WidgetProps> = props => {
+  const { disabled = false, id, onChange, readonly = false, value = '' } = props;
+  return (
+    <PromQLEditor
+      id="promql-editor"
+      value={typeof value === 'string' ? value : ''}
+      onChange={v => onChange(v, undefined, id)}
+      isReadOnly={readonly || disabled}
+    />
+  );
+};
+
 export const ArrayCheckboxesWidget: React.FC<WidgetProps> = props => {
   const { schema, value, id, onBlur, onChange, onFocus } = props;
 
@@ -225,5 +257,6 @@ export default {
   int32: NumberWidget,
   int64: NumberWidget,
   map: JSONWidget,
-  arrayCheckboxes: ArrayCheckboxesWidget
+  arrayCheckboxes: ArrayCheckboxesWidget,
+  promql: PromQLWidget
 };
