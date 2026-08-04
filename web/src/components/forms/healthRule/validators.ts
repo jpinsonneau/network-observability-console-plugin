@@ -70,7 +70,7 @@ export const validateThresholds = (thresholds: HealthRuleThresholds, pathPrefix:
       continue;
     }
     if (value < 0) {
-      errors.push(`${pathPrefix}: ${name} threshold must be positive: "${value}"`);
+      errors.push(`${pathPrefix}: ${name} threshold must not be negative: "${value}"`);
     } else if (lastThreshold >= 0 && value > lastThreshold) {
       errors.push(`${pathPrefix}: ${name} threshold must be lower than or equal to ${lastThreshold} (higher severity)`);
     } else {
@@ -141,7 +141,7 @@ export const validateCustomForm = (form: CustomRuleForm, netobservNamespace?: st
 
   if (!form.name?.trim()) {
     result.errors.push('Resource name is required');
-  } else if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(form.name)) {
+  } else if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/.test(form.name)) {
     result.errors.push('Resource name must be a valid Kubernetes DNS subdomain name');
   }
 
@@ -167,7 +167,12 @@ export const validateCustomForm = (form: CustomRuleForm, netobservNamespace?: st
       result.errors.push('Record name must be a valid Prometheus metric name');
     }
     const rt = form.health.recordingThresholds;
-    if (!rt || (!rt.info && !rt.warning && !rt.critical)) {
+    if (
+      !rt ||
+      (parseThresholdFloat(rt.info) === undefined &&
+        parseThresholdFloat(rt.warning) === undefined &&
+        parseThresholdFloat(rt.critical) === undefined)
+    ) {
       result.errors.push('At least one recording threshold is required for recording rules');
     } else {
       result.errors.push(...validateThresholds(rt, 'recordingThresholds'));
@@ -186,7 +191,7 @@ export const validateCustomForm = (form: CustomRuleForm, netobservNamespace?: st
     result.warnings.push('workloadLabels and kindLabels should both be set for the Workloads tab');
   }
 
-  const ns = form.namespace.trim();
+  const ns = form.namespace?.trim() || '';
   const risky = (netobservNamespace && ns === netobservNamespace) || NETOBSERV_NAMESPACE_CANDIDATES.includes(ns);
   if (risky) {
     result.warnings.push(

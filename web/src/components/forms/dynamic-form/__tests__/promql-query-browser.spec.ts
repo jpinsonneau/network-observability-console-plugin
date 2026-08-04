@@ -21,6 +21,10 @@ describe('inferMonitoringQueryUnits', () => {
     expect(inferMonitoringQueryUnits(expr)).toBe('percentunit');
   });
 
+  it('does not treat bare 100 * byte rates as percentunit', () => {
+    expect(inferMonitoringQueryUnits('100 * rate(metric_bytes_total[5m])')).toBe('bps');
+  });
+
   it('returns undefined when unit cannot be inferred', () => {
     expect(inferMonitoringQueryUnits('up == 0')).toBeUndefined();
   });

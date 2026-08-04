@@ -118,7 +118,7 @@ export const HealthRulesManager: React.FC<HealthRulesManagerProps> = ({ isOpen, 
       }
       setPending(null);
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : String(e));
+      setActionError(k8sErrorMessage(e) || (e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -206,7 +206,10 @@ export const HealthRulesManager: React.FC<HealthRulesManagerProps> = ({ isOpen, 
                               ? [
                                   {
                                     title: t('Reset to defaults'),
-                                    onClick: () => setPending({ type: 'reset', template: def.template })
+                                    onClick: () => {
+                                      setActionError(null);
+                                      setPending({ type: 'reset', template: def.template });
+                                    }
                                   }
                                 ]
                               : [])
@@ -259,12 +262,12 @@ export const HealthRulesManager: React.FC<HealthRulesManagerProps> = ({ isOpen, 
                 const name = pr.metadata.name;
                 const namespace = pr.metadata.namespace;
                 return (
-                  <Tr key={`${namespace}/${name}`} data-test={`custom-health-rule-row-${name}`}>
+                  <Tr key={`${namespace}/${name}`} data-test={`custom-health-rule-row-${namespace}/${name}`}>
                     <Td dataLabel={t('Name')}>{name}</Td>
                     <Td dataLabel={t('Namespace')}>{namespace}</Td>
                     <Td dataLabel={t('Type')}>{type}</Td>
                     <Td isActionCell>
-                      <div data-test={`custom-health-rule-actions-${name}`}>
+                      <div data-test={`custom-health-rule-actions-${namespace}/${name}`}>
                         <ActionsColumn
                           items={[
                             {
@@ -277,12 +280,14 @@ export const HealthRulesManager: React.FC<HealthRulesManagerProps> = ({ isOpen, 
                             {
                               title: t('Delete'),
                               isDanger: true,
-                              onClick: () =>
+                              onClick: () => {
+                                setActionError(null);
                                 setPending({
                                   type: 'delete',
                                   namespace,
                                   name
-                                })
+                                });
+                              }
                             }
                           ]}
                         />

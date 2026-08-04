@@ -187,7 +187,7 @@ export const PromQLWidget: React.FC<WidgetProps> = props => {
   const { disabled = false, id, onChange, readonly = false, value = '' } = props;
   return (
     <PromQLEditor
-      id="promql-editor"
+      id={id}
       value={typeof value === 'string' ? value : ''}
       onChange={v => onChange(v, undefined, id)}
       isReadOnly={readonly || disabled}

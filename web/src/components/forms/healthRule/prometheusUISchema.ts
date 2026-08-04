@@ -134,6 +134,12 @@ export const prometheusRuleUISchema: UiSchema = {
                   'Comma-separated PromQL label names for owner/workload names. Pair with kind labels for the Workloads tab.',
                 'ui:placeholder': 'DstK8S_OwnerName'
               },
+              kindLabels: {
+                'ui:title': 'Kind labels',
+                'ui:description':
+                  'Comma-separated PromQL label names for owner kinds (for example Deployment, DaemonSet). Pair with workload labels for the Workloads tab.',
+                'ui:placeholder': 'DstK8S_OwnerType'
+              },
               infoThreshold: {
                 'ui:title': 'Info threshold',
                 'ui:description': 'Recording-rule score threshold for info severity coloring.',
@@ -156,6 +162,7 @@ export const prometheusRuleUISchema: UiSchema = {
                 'namespaceLabels',
                 'nodeLabels',
                 'workloadLabels',
+                'kindLabels',
                 'infoThreshold',
                 'warningThreshold',
                 'criticalThreshold',

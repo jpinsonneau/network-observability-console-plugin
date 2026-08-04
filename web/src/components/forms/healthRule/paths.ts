@@ -25,6 +25,14 @@ export const networkHealthPath = () =>
 export const networkHealthCreatedPath = () =>
   ContextSingleton.isStandalone() ? '/console-network-health?ruleCreated=1' : '/network-health?ruleCreated=1';
 
+const safeDecodeURIComponent = (value: string): string => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
 /**
  * Resolve wizard route args from react-router params, query string, or path segments.
  * Query is required for standalone (flat /console-health-rule-wizard route) and is a
@@ -44,19 +52,19 @@ export const resolveHealthRuleWizardArgs = (routeParams: {
   const template =
     routeParams.template ||
     search.get('template') ||
-    (templateFromPath ? decodeURIComponent(templateFromPath) : undefined) ||
+    (templateFromPath ? safeDecodeURIComponent(templateFromPath) : undefined) ||
     undefined;
 
   const namespace =
     routeParams.namespace ||
     search.get('namespace') ||
-    (customFromPath?.[1] ? decodeURIComponent(customFromPath[1]) : undefined) ||
+    (customFromPath?.[1] ? safeDecodeURIComponent(customFromPath[1]) : undefined) ||
     undefined;
 
   const name =
     routeParams.name ||
     search.get('name') ||
-    (customFromPath?.[2] ? decodeURIComponent(customFromPath[2]) : undefined) ||
+    (customFromPath?.[2] ? safeDecodeURIComponent(customFromPath[2]) : undefined) ||
     undefined;
 
   return { template, namespace, name };

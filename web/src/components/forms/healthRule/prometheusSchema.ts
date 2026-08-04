@@ -151,6 +151,10 @@ export const prometheusRuleSchema = {
                           type: 'string',
                           title: 'Workload labels'
                         },
+                        kindLabels: {
+                          type: 'string',
+                          title: 'Kind labels'
+                        },
                         infoThreshold: {
                           type: 'string',
                           title: 'Info threshold'

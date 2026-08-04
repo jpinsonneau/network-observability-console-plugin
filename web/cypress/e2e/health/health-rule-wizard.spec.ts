@@ -37,11 +37,11 @@ describe('health-rule-wizard', () => {
 
     // go back and switch to custom alert — mode is chosen on step 1; no mode select on step 2
     cy.contains('Back').click();
-    cy.get('[data-test="health-rule-source-alert"]').click({ force: true });
+    cy.get('[data-test="health-rule-source-alert"]').should('be.visible').click();
     cy.contains('Next').click();
     cy.get('[data-test="health-rule-mode"]').should('not.exist');
     cy.get('[data-test-id="dynamic-form"]').should('exist');
-    cy.get('[data-test="promql-editor"]').should('exist');
+    cy.get('[data-test="root_spec_groups_0_rules_0_expr"]').should('exist');
   });
 
   it('opens configuration step with template seeded from manage-rules link', () => {
@@ -103,7 +103,7 @@ describe('health-rule-wizard', () => {
     stubPromQL();
     cy.visit('/console-health-rule-wizard');
     cy.get('#healthRuleWizard', { timeout: 60000 }).should('exist');
-    cy.get('[data-test="health-rule-source-alert"]').click({ force: true });
+    cy.get('[data-test="health-rule-source-alert"]').should('be.visible').click();
     cy.contains('Next').click();
 
     cy.get('[data-test-id="dynamic-form"]', { timeout: 60000 }).should('exist');
@@ -112,7 +112,7 @@ describe('health-rule-wizard', () => {
     cy.get('[data-test="root_spec_groups_0_name"] input').clear().type('cypress-group');
     cy.get('[data-test="root_spec_groups_0_rules_0_alert"] input').clear().type('CypressCustomAlert');
 
-    cy.get('[data-test="promql-editor-snippets-toggle"]').click();
+    cy.get('[data-test="root_spec_groups_0_rules_0_expr-snippets-toggle"]').click();
     cy.contains('[role="menuitem"]', 'Incoming traffic surge').click();
 
     cy.contains('Next').click();
@@ -126,7 +126,9 @@ describe('health-rule-wizard', () => {
   it('edits a custom PrometheusRule from the manager', () => {
     cy.get('[data-test="manage-health-rules-button"]', { timeout: 60000 }).click();
     cy.get('[data-test="health-rules-manager"]').should('be.visible');
-    cy.get('[data-test="custom-health-rule-actions-netobserv-custom-surge"]', { timeout: 60000 })
+    cy.get('[data-test="custom-health-rule-actions-openshift-monitoring/netobserv-custom-surge"]', {
+      timeout: 60000
+    })
       .find('button')
       .first()
       .click();
@@ -137,7 +139,7 @@ describe('health-rule-wizard', () => {
     cy.get('[data-test="health-rule-source-template"]').should('not.exist');
     cy.get('[data-test-id="dynamic-form"]', { timeout: 60000 }).should('exist');
     cy.get('[data-test="root_metadata_name"] input').should('have.value', 'netobserv-custom-surge');
-    cy.get('[data-test="promql-editor"]').should('exist');
+    cy.get('[data-test="root_spec_groups_0_rules_0_expr"]').should('exist');
     cy.get('[data-test="health-rule-wizard-delete"]').should('be.visible').and('contain', 'Delete');
   });
 
