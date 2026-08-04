@@ -250,6 +250,8 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   const searchRef = React.useRef<SearchHandle>(null);
   const guidedTourRef = React.useRef<GuidedTourHandle>(null);
   const initState = React.useRef<InitState>([]);
+  // Stores the user's original metric type before a view preset overrides it
+  const savedMetricType = React.useRef<MetricType>(topologyMetricType);
 
   // Data-fetching hook
   const {
@@ -302,11 +304,19 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     updateTableFilters({ match: filters.match, list: caps.defaultFilters });
   }, [filters.match, caps.defaultFilters, updateTableFilters, setActiveView]);
 
+  // Keep savedMetricType in sync when user is on "All Traffic" and manually changes metric type
+  React.useEffect(() => {
+    if (activeView === 'all') {
+      savedMetricType.current = topologyMetricType;
+    }
+  }, [topologyMetricType, activeView]);
+
   const applyView = React.useCallback(
     (viewId: ViewPresetId) => {
       setActiveView(viewId);
       if (viewId === 'all') {
-        // Don't reset panels/columns — restore user's custom localStorage selection
+        // Restore user's original metric type
+        updateTopologyMetricType(savedMetricType.current);
         return;
       }
       const preset = getViewPreset(viewId);
