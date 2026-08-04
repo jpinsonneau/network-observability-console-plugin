@@ -1,4 +1,4 @@
-import { Form, FormGroup, FormSelect, FormSelectOption, Radio } from '@patternfly/react-core';
+import { Form, FormGroup, Radio } from '@patternfly/react-core';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { HealthRuleMode, HealthRuleSource, WizardState } from './types';
@@ -9,19 +9,40 @@ export type SourceModeStepProps = {
   lockSource?: boolean;
 };
 
+type RuleChoice = 'template' | 'alert' | 'recording';
+
+const choiceFromState = (state: WizardState): RuleChoice => {
+  if (state.source === 'template') {
+    return 'template';
+  }
+  return state.mode === 'Recording' ? 'recording' : 'alert';
+};
+
 /**
- * Source chooser only — mode is always configured in step 2
- * (template DynamicForm field, or custom mode select + PrometheusRule form).
+ * Step 1: choose NetObserv template, custom Alert, or custom Recording rule.
+ * Mode for custom paths is fixed here; template mode stays on the configuration form.
  */
 export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange, lockSource }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+  const choice = choiceFromState(state);
 
-  const setSource = (source: HealthRuleSource) => {
+  const setChoice = (next: RuleChoice) => {
+    if (next === 'template') {
+      onChange({
+        ...state,
+        source: 'template',
+        template: { ...state.template, mode: state.template.mode || state.mode },
+        custom: { ...state.custom, mode: state.mode }
+      });
+      return;
+    }
+    const mode: HealthRuleMode = next === 'recording' ? 'Recording' : 'Alert';
     onChange({
       ...state,
-      source,
-      template: { ...state.template, mode: state.mode },
-      custom: { ...state.custom, mode: state.mode }
+      source: 'custom',
+      mode,
+      template: { ...state.template, mode },
+      custom: { ...state.custom, mode }
     });
   };
 
@@ -36,7 +57,7 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
         <br />
         {t(
           // eslint-disable-next-line max-len
-          'This wizard helps you create or customize a health rule. Prefer a NetObserv template when possible: templates reuse built-in PromQL and only need thresholds or scopes. Choose a custom PromQL rule when you need a query that templates do not cover.'
+          'This wizard helps you create or customize a health rule. Prefer a NetObserv template when possible: templates reuse built-in PromQL and only need thresholds or scopes. Choose a custom alert or recording rule when you need a query that templates do not cover.'
         )}
         <br />
         <br />
@@ -46,17 +67,17 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
         )}
         <br />
         <br />
-        {t('Choose how to define the rule. You will set Alert vs Recording mode in the next step.')}
+        {t('Choose how to define the rule.')}
       </span>
       <Form>
-        <FormGroup role="radiogroup" isStack label={t('Rule source')} isRequired fieldId="health-rule-source">
+        <FormGroup role="radiogroup" isStack label={t('Rule type')} isRequired fieldId="health-rule-source">
           <Radio
             id="health-rule-source-template"
             name="health-rule-source"
             data-test="health-rule-source-template"
-            label={t('Use a NetObserv template (recommended)')}
+            label={t('NetObserv template (recommended)')}
             description={
-              state.source === 'template'
+              choice === 'template'
                 ? t(
                     // eslint-disable-next-line max-len
                     'Next: pick a template and optionally change its mode or variants. Leave variants empty to keep operator defaults.'
@@ -66,29 +87,49 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
                     'Templates configure FlowCollector healthRules without writing PromQL. Customizing a template replaces its defaults.'
                   )
             }
-            isChecked={state.source === 'template'}
+            isChecked={choice === 'template'}
             isDisabled={lockSource}
-            onChange={() => setSource('template')}
+            onChange={() => setChoice('template')}
           />
           <Radio
-            id="health-rule-source-custom"
+            id="health-rule-source-alert"
             name="health-rule-source"
-            data-test="health-rule-source-custom"
-            label={t('Write a custom PromQL rule')}
+            data-test="health-rule-source-alert"
+            label={t('Alert')}
             description={
-              state.source === 'custom'
+              choice === 'alert'
                 ? t(
                     // eslint-disable-next-line max-len
-                    'Next: choose Alert or Recording mode, then write PromQL and Network Health display fields. Prefer a namespace other than the NetObserv install namespace.'
+                    'Next: write PromQL and Alertmanager fields (severity, summary, description). Optional Network Health display fields control the dashboard.'
                   )
                 : t(
                     // eslint-disable-next-line max-len
-                    'Custom rules create a PrometheusRule with netobserv labels so it appears on Network Health. Prefer a namespace other than the NetObserv install namespace.'
+                    'Custom Prometheus alert with notifications via Alertmanager and Network Health. Prefer a namespace other than the NetObserv install namespace.'
                   )
             }
-            isChecked={state.source === 'custom'}
+            isChecked={choice === 'alert'}
             isDisabled={lockSource}
-            onChange={() => setSource('custom')}
+            onChange={() => setChoice('alert')}
+          />
+          <Radio
+            id="health-rule-source-recording"
+            name="health-rule-source"
+            data-test="health-rule-source-recording"
+            label={t('Recording rule')}
+            description={
+              choice === 'recording'
+                ? t(
+                    // eslint-disable-next-line max-len
+                    'Next: write PromQL and Network Health display fields. Recording rules do not notify; they feed the dashboard only.'
+                  )
+                : t(
+                    // eslint-disable-next-line max-len
+                    'Custom Prometheus recording rule for Network Health only (no Alertmanager notifications). Prefer a namespace other than the NetObserv install namespace.'
+                  )
+            }
+            isChecked={choice === 'recording'}
+            isDisabled={lockSource}
+            onChange={() => setChoice('recording')}
           />
         </FormGroup>
       </Form>
@@ -99,14 +140,10 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
 export type ConfigStepIntroProps = {
   source: HealthRuleSource;
   mode: HealthRuleMode;
-  /** When set (custom create/edit), mode is chosen here — same step as the form. */
-  onModeChange?: (mode: HealthRuleMode) => void;
-  /** Hide mode select when editing and mode is locked from the existing rule shape. */
-  lockMode?: boolean;
 };
 
-/** Intro copy above the configuration DynamicForm (template vs custom). Mode for custom lives here. */
-export const ConfigStepIntro: React.FC<ConfigStepIntroProps> = ({ source, mode, onModeChange, lockMode }) => {
+/** Intro copy above the configuration DynamicForm (template vs custom). */
+export const ConfigStepIntro: React.FC<ConfigStepIntroProps> = ({ source, mode }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
 
   if (source === 'template') {
@@ -130,44 +167,25 @@ export const ConfigStepIntro: React.FC<ConfigStepIntroProps> = ({ source, mode, 
   }
 
   return (
-    <>
-      {onModeChange && (
-        <Form style={{ marginBottom: '1rem' }}>
-          <FormGroup label={t('Rule mode')} isRequired fieldId="health-rule-mode">
-            <FormSelect
-              id="health-rule-mode"
-              data-test="health-rule-mode"
-              value={mode}
-              isDisabled={lockMode}
-              onChange={(_e, v) => onModeChange(v as HealthRuleMode)}
-              aria-label={t('Rule mode')}
-            >
-              <FormSelectOption value="Alert" label={t('Alert — notifies via Alertmanager and Network Health')} />
-              <FormSelectOption value="Recording" label={t('Recording — Network Health only, no notifications')} />
-            </FormSelect>
-          </FormGroup>
-        </Form>
+    <span className="co-pre-line" style={{ display: 'block', marginBottom: '1rem' }}>
+      {mode === 'Alert'
+        ? t(
+            // eslint-disable-next-line max-len
+            'Define a Prometheus alert with PromQL. Set severity, summary, and description for Alertmanager. Optional Network Health display fields control how the rule appears on the dashboard.'
+          )
+        : t(
+            // eslint-disable-next-line max-len
+            'Define a Prometheus recording rule with PromQL. Recording rules do not notify; they feed Network Health. Summary, description, and display thresholds are stored as NetObserv metadata on the PrometheusRule.'
+          )}
+      <br />
+      <br />
+      {t(
+        // eslint-disable-next-line max-len
+        'The netobserv label is applied automatically. Prefer a namespace outside the NetObserv install namespace so rules are not deleted if NetObserv is uninstalled.'
       )}
-      <span className="co-pre-line" style={{ display: 'block', marginBottom: '1rem' }}>
-        {mode === 'Alert'
-          ? t(
-              // eslint-disable-next-line max-len
-              'Define a Prometheus alert with PromQL. Set severity, summary, and description for Alertmanager. Optional Network Health display fields control how the rule appears on the dashboard.'
-            )
-          : t(
-              // eslint-disable-next-line max-len
-              'Define a Prometheus recording rule with PromQL. Recording rules do not notify; they feed Network Health. Summary, description, and display thresholds are stored as NetObserv metadata on the PrometheusRule.'
-            )}
-        <br />
-        <br />
-        {t(
-          // eslint-disable-next-line max-len
-          'The netobserv label is applied automatically. Prefer a namespace outside the NetObserv install namespace so rules are not deleted if NetObserv is uninstalled.'
-        )}
-        <br />
-        <br />
-        {t('Custom rule configuration')}
-      </span>
-    </>
+      <br />
+      <br />
+      {t('Custom rule configuration')}
+    </span>
   );
 };
