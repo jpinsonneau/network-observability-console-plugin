@@ -117,6 +117,7 @@ export const PromQLEditor: React.FC<PromQLEditorProps> = ({
                 ref={toggleRef}
                 onClick={() => setIsOpen(!isOpen)}
                 isExpanded={isOpen}
+                isDisabled={isReadOnly}
                 variant="secondary"
                 id={`${id}-snippets-toggle`}
                 data-test={`${id}-snippets-toggle`}
@@ -129,6 +130,8 @@ export const PromQLEditor: React.FC<PromQLEditorProps> = ({
               {PROMQL_SNIPPETS.map(s => (
                 <DropdownItem
                   key={s.id}
+                  data-test={`${id}-snippet-${s.id}`}
+                  ouiaId={`${id}-snippet-${s.id}`}
                   description={s.description}
                   onClick={() => {
                     onChange(s.expr);

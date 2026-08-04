@@ -96,6 +96,30 @@ describe('health-rule builders', () => {
     expect(next.spec.processor.metrics.healthRules[0].variants[0].thresholds.critical).toBe('5');
   });
 
+  it('appends a new template while leaving existing healthRules unchanged', () => {
+    const fc = {
+      metadata: { name: 'cluster' },
+      spec: {
+        processor: {
+          metrics: {
+            healthRules: [{ template: 'DNSErrors', mode: 'Alert', variants: [{ thresholds: { warning: '1' } }] }]
+          }
+        }
+      }
+    };
+    const rule = templateFormToFLPHealthRule({
+      template: 'IPsecErrors',
+      mode: 'Alert',
+      variants: [{ thresholds: { critical: '3' }, groupBy: 'Node' }]
+    });
+    const next = mergeHealthRuleIntoFlowCollector(fc, rule);
+    expect(next.spec.processor.metrics.healthRules).toHaveLength(2);
+    expect(next.spec.processor.metrics.healthRules[0].template).toBe('DNSErrors');
+    expect(next.spec.processor.metrics.healthRules[0].variants[0].thresholds.warning).toBe('1');
+    expect(next.spec.processor.metrics.healthRules[1].template).toBe('IPsecErrors');
+    expect(next.spec.processor.metrics.healthRules[1].variants[0].thresholds.critical).toBe('3');
+  });
+
   it('refuses to merge empty variants', () => {
     const fc = { metadata: { name: 'cluster' }, spec: { processor: { metrics: {} } } };
     expect(() => mergeHealthRuleIntoFlowCollector(fc, { template: 'DNSErrors', mode: 'Alert', variants: [] })).toThrow(
@@ -235,6 +259,15 @@ describe('health-rule annotations', () => {
     expect(parsed.threshold).toBe('10');
   });
 
+  it('retains threshold zero in alert annotation', () => {
+    const raw = buildAlertHealthAnnotation({
+      threshold: '0',
+      unit: '%'
+    });
+    expect(raw).toContain('"alertThreshold":"0"');
+    expect(parseHealthAnnotation(raw).threshold).toBe('0');
+  });
+
   it('parses legacy threshold key for compatibility', () => {
     const parsed = parseHealthAnnotation(JSON.stringify({ threshold: '7', unit: '%' }));
     expect(parsed.threshold).toBe('7');
@@ -360,5 +393,10 @@ describe('resolveHealthRuleWizardArgs', () => {
   it('decodes URL-encoded path segments', () => {
     history.replaceState({}, '', '/network-health/rules/template/Packet%20Drops');
     expect(resolveHealthRuleWizardArgs({}).template).toBe('Packet Drops');
+  });
+
+  it('keeps malformed percent-encoding instead of throwing', () => {
+    history.replaceState({}, '', '/network-health/rules/template/bad%2');
+    expect(resolveHealthRuleWizardArgs({}).template).toBe('bad%2');
   });
 });

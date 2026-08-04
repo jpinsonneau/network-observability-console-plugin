@@ -3,29 +3,31 @@ import * as _ from 'lodash';
 import { getVariantPlaceholders, VariantFieldPlaceholders } from './variantDefaults';
 
 const applyVariantPlaceholders = (items: UiSchema | undefined, placeholders: VariantFieldPlaceholders) => {
-  const thresholds = items?.thresholds as UiSchema | undefined;
-  if (!thresholds) {
+  if (!items) {
     return;
   }
-  if (placeholders.critical) {
-    thresholds.critical = { ...(thresholds.critical as object), 'ui:placeholder': placeholders.critical };
+  const thresholds = items.thresholds as UiSchema | undefined;
+  if (thresholds) {
+    if (placeholders.critical) {
+      thresholds.critical = { ...(thresholds.critical as object), 'ui:placeholder': placeholders.critical };
+    }
+    if (placeholders.warning) {
+      thresholds.warning = { ...(thresholds.warning as object), 'ui:placeholder': placeholders.warning };
+    }
+    if (placeholders.info) {
+      thresholds.info = { ...(thresholds.info as object), 'ui:placeholder': placeholders.info };
+    }
   }
-  if (placeholders.warning) {
-    thresholds.warning = { ...(thresholds.warning as object), 'ui:placeholder': placeholders.warning };
-  }
-  if (placeholders.info) {
-    thresholds.info = { ...(thresholds.info as object), 'ui:placeholder': placeholders.info };
-  }
-  if (placeholders.lowVolumeThreshold && items) {
+  if (placeholders.lowVolumeThreshold) {
     items.lowVolumeThreshold = {
       ...(items.lowVolumeThreshold as object),
       'ui:placeholder': placeholders.lowVolumeThreshold
     };
   }
-  if (placeholders.trendOffset && items) {
+  if (placeholders.trendOffset) {
     items.trendOffset = { ...(items.trendOffset as object), 'ui:placeholder': placeholders.trendOffset };
   }
-  if (placeholders.trendDuration && items) {
+  if (placeholders.trendDuration) {
     items.trendDuration = { ...(items.trendDuration as object), 'ui:placeholder': placeholders.trendDuration };
   }
 };
