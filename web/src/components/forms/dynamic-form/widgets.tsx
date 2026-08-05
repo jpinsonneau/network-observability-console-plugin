@@ -139,7 +139,13 @@ export const SelectWidget: React.FC<WidgetProps> = props => {
       onFocus={onFocus && (() => onFocus(id, value))}
       onOpenChange={(isOpen: boolean) => setIsOpen(isOpen)}
       toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-        <MenuToggle id={`${id}-toggle`} ref={toggleRef} onClick={() => setIsOpen(!isOpen)} isExpanded={isOpen}>
+        <MenuToggle
+          id={`${id}-toggle`}
+          data-test={id}
+          ref={toggleRef}
+          onClick={() => setIsOpen(!isOpen)}
+          isExpanded={isOpen}
+        >
           {value || t('Select {{title}}', { title: title || schema?.title || label })}
         </MenuToggle>
       )}
