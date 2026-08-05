@@ -15,9 +15,9 @@ import { ContextSingleton } from './context';
 import { computeStepInterval, TimeRange } from './datetime';
 import { checkFilterAvailable, getFilterDefinitions } from './filter-definitions';
 import {
-  defaultPanelIds,
   dnsIdMatcher,
   droppedIdMatcher,
+  getDefaultOverviewPanels,
   OverviewPanel,
   rttIdMatcher,
   tlsIdMatcher
@@ -158,6 +158,15 @@ export function useConfigCapabilities(params: {
     [isDNSTracking, isFlowRTT, isPktDrop, isTLSTracking, panels]
   );
 
+  // IDs of panels that are selected by default from config (used to distinguish user-added panels in preset views)
+  const defaultPanelIds = React.useMemo(
+    () =>
+      getDefaultOverviewPanels(config.panels)
+        .filter(p => p.isSelected)
+        .map(p => p.id),
+    [config.panels]
+  );
+
   const selectedPanels = React.useMemo(() => {
     const preset = activeView !== 'all' ? getViewPreset(activeView) : undefined;
     if (preset?.panels) {
@@ -168,7 +177,7 @@ export function useConfigCapabilities(params: {
     }
     // "All Traffic": user's manual selection
     return availablePanels.filter(panel => panel.isSelected);
-  }, [availablePanels, activeView]);
+  }, [availablePanels, activeView, defaultPanelIds]);
 
   const availableColumns = React.useMemo(
     () =>

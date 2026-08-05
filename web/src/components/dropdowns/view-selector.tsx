@@ -1,7 +1,8 @@
 import { Badge, MenuToggle, MenuToggleElement, Select, SelectOption } from '@patternfly/react-core';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ViewPreset, ViewPresetId } from '../../model/views';
+import { NetflowContext } from '../../model/netflow-context';
+import { ViewPresetId } from '../../model/views';
 import { useOutsideClickEvent } from '../../utils/outside-hook';
 
 // i18n extraction hints for dynamic view labels
@@ -10,10 +11,11 @@ import { useOutsideClickEvent } from '../../utils/outside-hook';
 export interface ViewSelectorProps {
   activeView: ViewPresetId;
   setActiveView: (view: ViewPresetId) => void;
-  availableViews: ViewPreset[];
 }
 
-export const ViewSelector: React.FC<ViewSelectorProps> = ({ activeView, setActiveView, availableViews }) => {
+export const ViewSelector: React.FC<ViewSelectorProps> = ({ activeView, setActiveView }) => {
+  const { caps } = React.useContext(NetflowContext);
+  const availableViews = caps.availableViews;
   const { t } = useTranslation('plugin__netobserv-plugin');
   const ref = useOutsideClickEvent(() => setOpen(false));
   const [isOpen, setOpen] = React.useState(false);

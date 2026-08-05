@@ -299,11 +299,6 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     queryParams
   });
 
-  const resetDefaultFilters = React.useCallback(() => {
-    setActiveView('all');
-    updateTableFilters({ match: filters.match, list: caps.defaultFilters });
-  }, [filters.match, caps.defaultFilters, updateTableFilters, setActiveView]);
-
   // Keep savedMetricType in sync when user is on "All Traffic" and manually changes metric type
   React.useEffect(() => {
     if (activeView === 'all') {
@@ -329,6 +324,11 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     },
     [setActiveView, updateTopologyMetricType]
   );
+
+  const resetDefaultFilters = React.useCallback(() => {
+    applyView('all');
+    updateTableFilters({ match: filters.match, list: caps.defaultFilters });
+  }, [filters.match, caps.defaultFilters, updateTableFilters, applyView]);
 
   const setFiltersFromURL = React.useCallback(() => {
     if (forcedFilters === null) {
@@ -376,7 +376,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     setPanels,
     setFiltersFromURL,
     activeView,
-    setActiveView
+    setActiveView: applyView
   });
 
   // Sync state to URL params
@@ -448,7 +448,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
                 <Content component={ContentVariants.h4}>{t('View')}</Content>
               </FlexItem>
               <FlexItem>
-                <ViewSelector activeView={activeView} setActiveView={applyView} availableViews={caps.availableViews} />
+                <ViewSelector activeView={activeView} setActiveView={applyView} />
               </FlexItem>
             </Flex>
           </FlexItem>
