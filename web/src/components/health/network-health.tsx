@@ -161,9 +161,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                 </Button>
               </FlexItem>
             </Flex>
-            {activeTabKey === 'global' && (
-              <HealthGlobal info={health.global} isDark={isDarkTheme} isLoading={isInitialLoading} />
-            )}
+            {activeTabKey === 'global' && <HealthGlobal info={health.global} isLoading={isInitialLoading} />}
             {activeTabKey === 'per-node' && (
               <HealthDrawerContainer
                 title={t('Rule violations per node')}
@@ -204,9 +202,15 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
           <DrawerContentBody id="healthDrawerBody">
             <Flex id="health-page-content-flex" direction={{ default: 'column' }}>
               <FlexItem className="health-header-container">
-                <Flex className="health-header" direction={{ default: 'row' }}>
-                  <FlexItem flex={{ default: 'flex_1' }}>
-                    <Flex direction={{ default: 'column' }}>
+                <Flex className="health-header" direction={{ default: 'column' }} gap={{ default: 'gapMd' }}>
+                  <FlexItem>
+                    <Flex
+                      direction={{ default: 'column', md: 'row' }}
+                      alignItems={{ default: 'alignItemsStretch', md: 'alignItemsCenter' }}
+                      justifyContent={{ md: 'justifyContentSpaceBetween' }}
+                      gap={{ default: 'gapMd' }}
+                      flexWrap={{ default: 'wrap' }}
+                    >
                       <FlexItem>
                         <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
                           <FlexItem>
@@ -218,65 +222,70 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                         </Flex>
                       </FlexItem>
                       <FlexItem>
-                        <HealthSummary
-                          rules={rules}
-                          stats={health}
-                          forceCollapsed={isScoringDrawerOpen || isRulesManagerOpen}
-                          isLoading={isInitialLoading}
-                        />
-                      </FlexItem>
-                    </Flex>
-                  </FlexItem>
-                  <FlexItem>
-                    <Flex direction={{ default: 'row' }} alignItems={{ default: 'alignItemsFlexEnd' }}>
-                      <FlexItem>
-                        <Button
-                          data-test="create-health-rule-button"
-                          variant="primary"
-                          icon={<PlusCircleIcon />}
-                          onClick={() => navigateTo(healthRuleSetupPath())}
+                        <Flex
+                          direction={{ default: 'row' }}
+                          alignItems={{ default: 'alignItemsFlexEnd' }}
+                          flexWrap={{ default: 'wrap' }}
+                          gap={{ default: 'gapSm' }}
                         >
-                          {t('Create health rule')}
-                        </Button>
-                      </FlexItem>
-                      <FlexItem>
-                        <Button
-                          data-test="manage-health-rules-button"
-                          variant="secondary"
-                          onClick={() => {
-                            setIsScoringDrawerOpen(false);
-                            setIsRulesManagerOpen(!isRulesManagerOpen);
-                          }}
-                        >
-                          {isRulesManagerOpen ? t('Hide manage rules') : t('Manage rules')}
-                        </Button>
-                      </FlexItem>
-                      <FlexItem className="netobserv-refresh-interval-container">
-                        <Flex direction={{ default: 'column' }}>
-                          <FlexItem className="netobserv-action-title">
-                            <Content component={ContentVariants.h4}>{t('Refresh interval')}</Content>
+                          <FlexItem>
+                            <Button
+                              data-test="create-health-rule-button"
+                              variant="primary"
+                              icon={<PlusCircleIcon />}
+                              onClick={() => navigateTo(healthRuleSetupPath())}
+                            >
+                              {t('Create health rule')}
+                            </Button>
                           </FlexItem>
-                          <FlexItem flex={{ default: 'flex_1' }}>
-                            <RefreshDropdown
-                              data-test="refresh-dropdown"
-                              id="refresh-dropdown"
-                              interval={interval}
-                              setInterval={setInterval}
+                          <FlexItem>
+                            <Button
+                              data-test="manage-health-rules-button"
+                              variant="secondary"
+                              onClick={() => {
+                                setIsScoringDrawerOpen(false);
+                                setIsRulesManagerOpen(!isRulesManagerOpen);
+                              }}
+                            >
+                              {isRulesManagerOpen ? t('Hide manage rules') : t('Manage rules')}
+                            </Button>
+                          </FlexItem>
+                          <FlexItem className="netobserv-refresh-interval-container">
+                            <Flex direction={{ default: 'column' }}>
+                              <FlexItem className="netobserv-action-title">
+                                <Content component={ContentVariants.h4}>{t('Refresh interval')}</Content>
+                              </FlexItem>
+                              <FlexItem flex={{ default: 'flex_1' }}>
+                                <RefreshDropdown
+                                  data-test="refresh-dropdown"
+                                  id="refresh-dropdown"
+                                  interval={interval}
+                                  setInterval={setInterval}
+                                />
+                              </FlexItem>
+                            </Flex>
+                          </FlexItem>
+                          <FlexItem className="netobserv-refresh-container">
+                            <Button
+                              data-test="refresh-button"
+                              id="refresh-button"
+                              className="co-action-refresh-button"
+                              variant="primary"
+                              onClick={() => fetch()}
+                              icon={<SyncAltIcon style={{ animation: `spin ${loading ? 1 : 0}s linear infinite` }} />}
                             />
                           </FlexItem>
                         </Flex>
                       </FlexItem>
-                      <FlexItem className="netobserv-refresh-container">
-                        <Button
-                          data-test="refresh-button"
-                          id="refresh-button"
-                          className="co-action-refresh-button"
-                          variant="primary"
-                          onClick={() => fetch()}
-                          icon={<SyncAltIcon style={{ animation: `spin ${loading ? 1 : 0}s linear infinite` }} />}
-                        />
-                      </FlexItem>
                     </Flex>
+                  </FlexItem>
+                  <FlexItem>
+                    <HealthSummary
+                      rules={rules}
+                      stats={health}
+                      forceCollapsed={isScoringDrawerOpen || isRulesManagerOpen}
+                      isLoading={isInitialLoading}
+                    />
                   </FlexItem>
                 </Flex>
                 {showCreatedAlert && (
