@@ -153,19 +153,27 @@ export const HealthCard: React.FC<HealthCardProps> = ({
             </ul>
           </FlexItem>
           <FlexItem>
-            <div style={{ textAlign: 'right' }}>
-              <Content
-                component={ContentVariants.small}
-                style={{
-                  color: 'var(--pf-t--global--text--color--subtle)'
-                }}
-              >
-                {t('Score')}
-              </Content>
-              <Content component={ContentVariants.h1}>
-                {isNaN(score) || !isFinite(score) ? '-' : valueFormat(score, 1)}
-              </Content>
-            </div>
+            <Flex
+              direction={{ default: 'column' }}
+              alignItems={{ default: 'alignItemsCenter' }}
+              gap={{ default: 'gapNone' }}
+            >
+              <FlexItem>
+                <Content
+                  component={ContentVariants.small}
+                  style={{
+                    color: 'var(--pf-t--global--text--color--subtle)'
+                  }}
+                >
+                  {t('Score')}
+                </Content>
+              </FlexItem>
+              <FlexItem>
+                <Content component={ContentVariants.p} className="health-card-score">
+                  {isNaN(score) || !isFinite(score) ? '-' : valueFormat(score, 1)}
+                </Content>
+              </FlexItem>
+            </Flex>
           </FlexItem>
         </Flex>
       </CardBody>
