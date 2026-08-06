@@ -1,16 +1,5 @@
 import { Rule } from '@openshift-console/dynamic-plugin-sdk';
-import {
-  Alert,
-  Card,
-  CardBody,
-  Content,
-  ContentVariants,
-  Flex,
-  FlexItem,
-  Grid,
-  GridItem,
-  Spinner
-} from '@patternfly/react-core';
+import { Alert, Card, CardBody, Content, ContentVariants, Flex, FlexItem, Spinner } from '@patternfly/react-core';
 import { AngleDownIcon, AngleRightIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -282,11 +271,15 @@ export const HealthSummary: React.FC<HealthSummaryProps> = ({ rules, stats, forc
           {displayExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
         </FlexItem>
       )}
-      <FlexItem flex={{ default: 'flex_1' }}>
+      <FlexItem>
         {displayExpanded ? (
-          <Grid hasGutter>
-            {/* Status card */}
-            <GridItem lg={6} md={6} sm={12}>
+          <Flex
+            className="health-summary-cards"
+            gap={{ default: 'gapMd' }}
+            alignItems={{ default: 'alignItemsStretch' }}
+            flexWrap={{ default: 'wrap' }}
+          >
+            <FlexItem className="health-summary-status-card">
               <Card className={`health-metric-card status ${statusClass}`}>
                 <CardBody>
                   <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsNone' }}>
@@ -312,10 +305,9 @@ export const HealthSummary: React.FC<HealthSummaryProps> = ({ rules, stats, forc
                   </Flex>
                 </CardBody>
               </Card>
-            </GridItem>
+            </FlexItem>
 
-            {/* Critical card */}
-            <GridItem lg={2} md={6} sm={12}>
+            <FlexItem className="health-summary-metric-card">
               <HealthMetricCard
                 severity="critical"
                 label={t('Critical')}
@@ -330,10 +322,9 @@ export const HealthSummary: React.FC<HealthSummaryProps> = ({ rules, stats, forc
                     : undefined
                 }
               />
-            </GridItem>
+            </FlexItem>
 
-            {/* Warning card */}
-            <GridItem lg={2} md={6} sm={12}>
+            <FlexItem className="health-summary-metric-card">
               <HealthMetricCard
                 severity="warning"
                 label={t('Warning')}
@@ -348,10 +339,9 @@ export const HealthSummary: React.FC<HealthSummaryProps> = ({ rules, stats, forc
                     : undefined
                 }
               />
-            </GridItem>
+            </FlexItem>
 
-            {/* Info card */}
-            <GridItem lg={2} md={6} sm={12}>
+            <FlexItem className="health-summary-metric-card">
               <HealthMetricCard
                 severity="info"
                 label={t('Info')}
@@ -366,10 +356,10 @@ export const HealthSummary: React.FC<HealthSummaryProps> = ({ rules, stats, forc
                     : undefined
                 }
               />
-            </GridItem>
-          </Grid>
+            </FlexItem>
+          </Flex>
         ) : (
-          <Flex gap={{ default: 'gapSm' }} alignItems={{ default: 'alignItemsCenter' }}>
+          <Flex gap={{ default: 'gapSm' }} alignItems={{ default: 'alignItemsCenter' }} flexWrap={{ default: 'wrap' }}>
             {/* Collapsed view - just counters with icons */}
             <FlexItem className={`health-summary-compact-item ${statusClass}`}>
               <Flex gap={{ default: 'gapXs' }} alignItems={{ default: 'alignItemsCenter' }}>
