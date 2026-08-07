@@ -129,12 +129,14 @@ export const NetflowTrafficTab: React.FC<NetflowTrafficTabProps> = ({ match, obj
           }
         }
 
+        // Flows enrich VMI (not VM) as owner; VM and VMI share name/namespace.
+        const kind = obj.kind === 'VirtualMachine' ? 'VirtualMachineInstance' : obj.kind;
         setForcedFilters({
           list: [
             {
               def: findFilter(filterDefinitions, 'src_resource')!,
               compare: FilterCompare.equal,
-              values: [{ v: `${obj.kind}.${obj.metadata!.namespace}.${obj.metadata!.name}` }]
+              values: [{ v: `${kind}.${obj.metadata!.namespace}.${obj.metadata!.name}` }]
             }
           ],
           match: 'bidirectional'
