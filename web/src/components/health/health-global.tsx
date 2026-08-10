@@ -48,15 +48,26 @@ export const HealthGlobal: React.FC<HealthGlobalProps> = ({ info, isLoading }) =
   const score = React.useMemo(() => computeResourceScore(info), [info]);
   const criticalCount = React.useMemo(
     () =>
-      (info.critical.firing.length || 0) + (info.critical.pending.length || 0) + (info.critical.recording.length || 0),
+      (info.critical.firing.length || 0) +
+      (info.critical.pending.length || 0) +
+      (info.critical.silenced.length || 0) +
+      (info.critical.recording.length || 0),
     [info]
   );
   const warningCount = React.useMemo(
-    () => (info.warning.firing.length || 0) + (info.warning.pending.length || 0) + (info.warning.recording.length || 0),
+    () =>
+      (info.warning.firing.length || 0) +
+      (info.warning.pending.length || 0) +
+      (info.warning.silenced.length || 0) +
+      (info.warning.recording.length || 0),
     [info]
   );
   const infoCount = React.useMemo(
-    () => (info.other.firing.length || 0) + (info.other.pending.length || 0) + (info.other.recording.length || 0),
+    () =>
+      (info.other.firing.length || 0) +
+      (info.other.pending.length || 0) +
+      (info.other.silenced.length || 0) +
+      (info.other.recording.length || 0),
     [info]
   );
   const silencedCount = React.useMemo(
