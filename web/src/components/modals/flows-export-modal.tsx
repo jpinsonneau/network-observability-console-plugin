@@ -287,7 +287,7 @@ export const FlowsExportModal: React.FC<FlowsExportModalProps> = ({
             isChecked={isExportAll}
             onChange={(event, checked) => setExportAll(checked)}
             label={t('Export all data')}
-            aria-label="Export all"
+            aria-label={t('Export all data')}
             description={
               <Content className="netobserv-no-child-margin">
                 <Content component={ContentVariants.p}>

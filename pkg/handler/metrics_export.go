@@ -22,6 +22,9 @@ import (
 
 const (
 	includeTopologyEdgesKey = "includeTopologyEdges"
+	// exportMetricsMaxBodyBytes caps POST /flow/metrics/export JSON bodies.
+	// Overview batch payloads are small (query metadata only); 1MiB is generous headroom.
+	exportMetricsMaxBodyBytes = 1 << 20
 )
 
 type exportMetricsQuery struct {
@@ -99,8 +102,14 @@ func (h *Handlers) exportMetricsGet(ctx context.Context, w http.ResponseWriter, 
 }
 
 func (h *Handlers) exportMetricsPost(ctx context.Context, w http.ResponseWriter, r *http.Request) int {
+	r.Body = http.MaxBytesReader(w, r.Body, exportMetricsMaxBodyBytes)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			apierrors.Write(w, http.StatusRequestEntityTooLarge, fmt.Errorf("request body exceeds %d bytes", exportMetricsMaxBodyBytes))
+			return http.StatusRequestEntityTooLarge
+		}
 		apierrors.Write(w, http.StatusBadRequest, err)
 		return http.StatusBadRequest
 	}
