@@ -50,7 +50,7 @@ import {
   seedTemplateRule,
   unwrapTemplateForm
 } from './templateForm';
-import { healthRuleTemplateSchema } from './templateSchema';
+import { getHealthRuleTemplateSchema } from './templateSchema';
 import { healthRuleTemplateUISchemaForEdit } from './templateUISchema';
 import {
   defaultWizardState,
@@ -529,7 +529,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
   const templateForm = () => (
     <DynamicForm
       formData={templateData}
-      schema={healthRuleTemplateSchema as RJSFSchema}
+      schema={getHealthRuleTemplateSchema(t) as RJSFSchema}
       uiSchema={healthRuleTemplateUISchemaForEdit(
         Boolean(sourceState.isEdit || editTemplateParam),
         templateData?.spec?.template
