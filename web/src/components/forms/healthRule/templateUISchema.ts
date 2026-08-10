@@ -63,7 +63,7 @@ export const healthRuleTemplateUISchema: UiSchema = {
       'ui:description': 'Alert notifies via Alertmanager; Recording is Network Health only.'
     },
     variants: {
-      'ui:title': 'Variant',
+      'ui:title': 'Variants',
       'ui:description':
         'Optional. Leave empty to keep operator defaults (or change mode only). Adding variants replaces the full ' +
         'default configuration for this template — include every variant you want to keep. Placeholders show defaults.',

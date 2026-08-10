@@ -686,7 +686,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
         </Wizard>
       </div>
       <Modal
-        id="health-rule-wizard-delete-confirm"
+        id="health-rule-wizard-delete-modal"
         title={isTemplate ? t('Reset template to defaults?') : t('Delete custom rule?')}
         isOpen={confirmDanger}
         scrollable={false}
