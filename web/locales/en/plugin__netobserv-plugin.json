@@ -277,6 +277,7 @@
   "Delete custom rule?": "Delete custom rule?",
   "This removes the FlowCollector healthRules override for {{template}}. Operator defaults will apply again.": "This removes the FlowCollector healthRules override for {{template}}. Operator defaults will apply again.",
   "This permanently deletes PrometheusRule {{name}} in namespace {{namespace}}.": "This permanently deletes PrometheusRule {{name}} in namespace {{namespace}}.",
+  "Variants": "Variants",
   "Variant": "Variant",
   "Group by": "Group by",
   "Thresholds": "Thresholds",

@@ -45,7 +45,7 @@ export const getHealthRuleTemplateSchema = (t: TFunction) => ({
         },
         variants: {
           type: 'array',
-          title: t('Variant'),
+          title: t('Variants'),
           items: {
             type: 'object',
             title: t('Variant'),

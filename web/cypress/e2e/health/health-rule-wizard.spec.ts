@@ -150,15 +150,16 @@ describe('health-rule-wizard', () => {
     cy.get('[data-test-id="dynamic-form"]', { timeout: 60000 }).should('exist');
     cy.get('[data-test="root_metadata_name"] input').should('have.value', 'netobserv-custom-surge');
     cy.get('[data-test="root_spec_groups_0_rules_0_expr"]').should('exist');
-    // Config + Review footers both mount Delete; assert on the visible one.
-    cy.get('[data-test="health-rule-wizard-delete"]:visible').should('contain', 'Delete');
+    // Config + Review footers both mount Delete; assert on a visible one.
+    cy.get('[data-test="health-rule-wizard-delete"]').filter(':visible').should('contain', 'Delete');
   });
 
   it('deletes a custom PrometheusRule from the wizard', () => {
     cy.visit('/console-health-rule-wizard?namespace=openshift-monitoring&name=netobserv-custom-surge');
     cy.get('#healthRuleWizard', { timeout: 60000 }).should('exist');
-    cy.get('[data-test="health-rule-wizard-delete"]:visible').first().click();
-    cy.get('[data-test="health-rule-wizard-delete-confirm"]').click();
+    // Config + Review footers both mount Delete; click a single visible control.
+    cy.get('[data-test="health-rule-wizard-delete"]').filter(':visible').eq(0).click();
+    cy.get('[data-test="health-rule-wizard-delete-confirm"]').should('be.visible').click();
     cy.url({ timeout: 60000 }).should('include', 'console-network-health');
     cy.url().should('not.include', 'ruleCreated=1');
   });
