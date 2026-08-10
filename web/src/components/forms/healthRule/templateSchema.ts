@@ -1,3 +1,4 @@
+import { TFunction } from 'i18next';
 import { HEALTH_RULE_TEMPLATES } from './types';
 
 /**
@@ -5,7 +6,7 @@ import { HEALTH_RULE_TEMPLATES } from './types';
  * Kept under apiVersion/kind/metadata/spec so DynamicForm's getUpdatedCR works.
  * Shape is flattened for UX — not the nested CRD path.
  */
-export const healthRuleTemplateSchema = {
+export const getHealthRuleTemplateSchema = (t: TFunction) => ({
   type: 'object',
   required: ['apiVersion', 'kind', 'spec'],
   properties: {
@@ -33,62 +34,62 @@ export const healthRuleTemplateSchema = {
       properties: {
         template: {
           type: 'string',
-          title: 'Template',
+          title: t('Template'),
           enum: [...HEALTH_RULE_TEMPLATES]
         },
         mode: {
           type: 'string',
-          title: 'Mode',
+          title: t('Mode'),
           enum: ['Alert', 'Recording'],
           default: 'Alert'
         },
         variants: {
           type: 'array',
-          title: 'Variant',
+          title: t('Variant'),
           items: {
             type: 'object',
-            title: 'Variant',
+            title: t('Variant'),
             properties: {
               groupBy: {
                 type: 'string',
-                title: 'Group by',
+                title: t('Group by'),
                 enum: ['Cluster', 'Node', 'Namespace', 'Workload'],
                 default: 'Cluster'
               },
               thresholds: {
                 type: 'object',
-                title: 'Thresholds',
+                title: t('Thresholds'),
                 default: {},
                 properties: {
                   critical: {
                     type: 'number',
-                    title: 'Critical threshold'
+                    title: t('Critical threshold')
                   },
                   warning: {
                     type: 'number',
-                    title: 'Warning threshold'
+                    title: t('Warning threshold')
                   },
                   info: {
                     type: 'number',
-                    title: 'Info threshold'
+                    title: t('Info threshold')
                   }
                 }
               },
               lowVolumeThreshold: {
                 type: 'number',
-                title: 'Low volume threshold'
+                title: t('Low volume threshold')
               },
               trendOffset: {
                 type: 'string',
-                title: 'Trend offset'
+                title: t('Trend offset')
               },
               trendDuration: {
                 type: 'string',
-                title: 'Trend duration'
+                title: t('Trend duration')
               },
               mode: {
                 type: 'string',
-                title: 'Variant mode override',
+                title: t('Variant mode override'),
                 enum: ['Alert', 'Recording']
               }
             }
@@ -97,4 +98,4 @@ export const healthRuleTemplateSchema = {
       }
     }
   }
-};
+});

@@ -191,7 +191,7 @@ This console plugin comes with several panels allowing GUI-based configuration f
 When you update the operator CRDs, you may have to update some schemas here as well, which contain some rules that drive how forms are displayed. Especially:
 
 - [flowCollectorUISchema.ts](./web/src/components/forms/flowCollector/uiSchema.ts) (and related `*UISchema.ts` files in each feature folder) contain a display-oriented description of every CRD field, including whether or not they should be hidden, or if they have relationships with other fields.
-- [<feature>/<CRD>-wizard.tsx](./web/src/components/forms/flowCollector/wizard.tsx) contains specific fields to be displayed in wizards.
+- [<feature>/wizard.tsx](./web/src/components/forms/flowCollector/wizard.tsx) contains specific fields to be displayed in wizards.
 
 When a CRD field is added, consider whether you need to update these files.
 
