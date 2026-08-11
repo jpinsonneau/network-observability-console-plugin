@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ViewId } from '../components/netflow-traffic';
 import { Filters } from '../model/filters';
 import { DataSource, MetricType, PacketLoss, RecordType, StatFunction } from '../model/flow-query';
-import { ViewPresetId } from '../model/views';
+import { ActiveViewId } from '../model/views';
 import { TimeRange } from './datetime';
 import {
   setURLDatasource,
@@ -33,7 +33,7 @@ export function useURLSync(params: {
   packetLoss: PacketLoss;
   recordType: RecordType;
   dataSource: DataSource;
-  activeView: ViewPresetId;
+  activeView: ActiveViewId;
   setQueryParams: React.Dispatch<React.SetStateAction<string>>;
   setTRModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }): void {

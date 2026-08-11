@@ -8,7 +8,17 @@ import { DataSource, FlowScope, MetricType, PacketLoss, RecordType, StructuredFl
 import { parseQuickFilters, QuickFilter } from '../model/quick-filters';
 import { resolveGroupTypes, ScopeConfigDef } from '../model/scope';
 import { TopologyOptions } from '../model/topology';
-import { getAvailableViews, getViewPreset, ViewPreset, ViewPresetId } from '../model/views';
+import {
+  ActiveViewId,
+  CustomView,
+  DraftView,
+  GenericPrefs,
+  getAvailableViews,
+  getViewPreset,
+  isCustomViewId,
+  ViewPreset,
+  ViewPresetId
+} from '../model/views';
 import { getFetchFunctions as getBackAndForthFetch } from './back-and-forth';
 import { Column, ColumnsId } from './columns';
 import { ContextSingleton } from './context';
@@ -17,7 +27,7 @@ import { checkFilterAvailable, getFilterDefinitions } from './filter-definitions
 import {
   dnsIdMatcher,
   droppedIdMatcher,
-  getDefaultOverviewPanels,
+  getPanelFeature,
   OverviewPanel,
   rttIdMatcher,
   tlsIdMatcher
@@ -53,7 +63,7 @@ export function useConfigCapabilities(params: {
   dataSource: DataSource;
   columns: Column[];
   panels: OverviewPanel[];
-  activeView: ViewPresetId;
+  activeView: ActiveViewId;
   metricScope: FlowScope;
   topologyOptions: TopologyOptions;
   topologyMetricType: MetricType;
@@ -64,6 +74,10 @@ export function useConfigCapabilities(params: {
   recordType: RecordType;
   packetLoss: PacketLoss;
   range: number | TimeRange;
+  genericColumnPrefs: GenericPrefs;
+  genericPanelPrefs: GenericPrefs;
+  draftView: DraftView | null;
+  customViews: CustomView[];
 }): ConfigCapabilities {
   const {
     config,
@@ -81,7 +95,11 @@ export function useConfigCapabilities(params: {
     limit,
     recordType,
     packetLoss,
-    range
+    range,
+    genericColumnPrefs,
+    genericPanelPrefs,
+    draftView,
+    customViews
   } = params;
 
   const { t } = useTranslation('plugin__netobserv-plugin');
@@ -158,26 +176,49 @@ export function useConfigCapabilities(params: {
     [isDNSTracking, isFlowRTT, isPktDrop, isTLSTracking, panels]
   );
 
-  // IDs of panels that are selected by default from config (used to distinguish user-added panels in preset views)
-  const defaultPanelIds = React.useMemo(
-    () =>
-      getDefaultOverviewPanels(config.panels)
-        .filter(p => p.isSelected)
-        .map(p => p.id),
-    [config.panels]
-  );
-
   const selectedPanels = React.useMemo(() => {
-    const preset = activeView !== 'all' ? getViewPreset(activeView) : undefined;
-    if (preset?.panels) {
-      // Feature view: show preset panels + panels user explicitly added (not config defaults)
-      return availablePanels.filter(
-        panel => preset.panels!.includes(panel.id) || (panel.isSelected && !defaultPanelIds.includes(panel.id))
-      );
+    // Draft view overrides when viewing the draft's base view
+    if (draftView && draftView.baseViewId === activeView) {
+      const draftPanelIds = new Set(draftView.panels);
+      return availablePanels.filter(panel => draftPanelIds.has(panel.id));
     }
-    // "All Traffic": user's manual selection
-    return availablePanels.filter(panel => panel.isSelected);
-  }, [availablePanels, activeView, defaultPanelIds]);
+    // Custom view
+    if (isCustomViewId(activeView)) {
+      const customView = customViews.find(v => v.id === activeView);
+      if (customView) {
+        const customPanelIds = new Set(customView.panels as string[]);
+        return availablePanels.filter(panel => customPanelIds.has(panel.id));
+      }
+    }
+    // Feature preset view: preset panels + generic prefs
+    // Generic prefs override preset inclusion for generic panels
+    if (activeView !== 'all') {
+      const preset = getViewPreset(activeView as ViewPresetId);
+      if (preset?.panels) {
+        const presetPanelSet = new Set(preset.panels as string[]);
+        return availablePanels.filter(panel => {
+          const isGeneric = !getPanelFeature(panel.id);
+          // Generic prefs take priority over preset for generic panels
+          if (isGeneric) {
+            if (genericPanelPrefs.removed.includes(panel.id)) return false;
+            if (genericPanelPrefs.added.includes(panel.id)) return true;
+          }
+          // Preset panels (not removed by generic prefs)
+          if (presetPanelSet.has(panel.id)) return true;
+          return false;
+        });
+      }
+    }
+    // "All Traffic": user's manual selection + generic prefs override
+    return availablePanels.filter(panel => {
+      const isGeneric = !getPanelFeature(panel.id);
+      if (isGeneric) {
+        if (genericPanelPrefs.removed.includes(panel.id)) return false;
+        if (genericPanelPrefs.added.includes(panel.id)) return true;
+      }
+      return panel.isSelected;
+    });
+  }, [availablePanels, activeView, draftView, customViews, genericPanelPrefs]);
 
   const availableColumns = React.useMemo(
     () =>
@@ -189,23 +230,49 @@ export function useConfigCapabilities(params: {
     [columns, config.features, isConnectionTracking]
   );
 
-  // IDs of columns that are selected by default from config (default: true, no feature tag)
-  const defaultColumnIds = React.useMemo(
-    () => new Set(config.columns.filter(c => c.default && !c.feature).map(c => c.id)),
-    [config.columns]
-  );
-
   const selectedColumns = React.useMemo(() => {
-    const preset = activeView !== 'all' ? getViewPreset(activeView) : undefined;
-    if (preset?.columns) {
-      // Feature view: show preset columns + columns user explicitly added (not config defaults)
-      return availableColumns.filter(
-        col => preset.columns!.includes(col.id as string) || (col.isSelected && !defaultColumnIds.has(col.id))
-      );
+    // Draft view overrides when viewing the draft's base view
+    if (draftView && draftView.baseViewId === activeView) {
+      const draftColIds = new Set(draftView.columns);
+      return availableColumns.filter(col => draftColIds.has(col.id));
     }
-    // "All Traffic": user's manual selection
-    return availableColumns.filter(column => column.isSelected);
-  }, [availableColumns, activeView, defaultColumnIds]);
+    // Custom view
+    if (isCustomViewId(activeView)) {
+      const customView = customViews.find(v => v.id === activeView);
+      if (customView) {
+        const customColIds = new Set(customView.columns);
+        return availableColumns.filter(col => customColIds.has(col.id));
+      }
+    }
+    // Feature preset view: preset columns + generic prefs
+    // Generic prefs override preset inclusion for generic columns
+    if (activeView !== 'all') {
+      const preset = getViewPreset(activeView as ViewPresetId);
+      if (preset?.columns) {
+        const presetColSet = new Set(preset.columns);
+        return availableColumns.filter(col => {
+          const isGeneric = !col.feature;
+          // Generic prefs take priority over preset for generic columns
+          if (isGeneric) {
+            if (genericColumnPrefs.removed.includes(col.id)) return false;
+            if (genericColumnPrefs.added.includes(col.id)) return true;
+          }
+          // Preset columns (not removed by generic prefs)
+          if (presetColSet.has(col.id)) return true;
+          return false;
+        });
+      }
+    }
+    // "All Traffic": user's manual selection + generic prefs override
+    return availableColumns.filter(col => {
+      const isGeneric = !col.feature;
+      if (isGeneric) {
+        if (genericColumnPrefs.removed.includes(col.id)) return false;
+        if (genericColumnPrefs.added.includes(col.id)) return true;
+      }
+      return col.isSelected;
+    });
+  }, [availableColumns, activeView, draftView, customViews, genericColumnPrefs]);
 
   const filterDefs = React.useMemo(() => {
     const allFilterDefs = getFilterDefinitions(config.filters, config.columns, t);
@@ -286,7 +353,18 @@ export function useConfigCapabilities(params: {
     return getBackAndForthFetch(filterDefs);
   }, [filterDefs]);
 
-  const availableViews = React.useMemo(() => getAvailableViews(config.features), [config.features]);
+  const availableViews = React.useMemo(() => {
+    const presets = getAvailableViews(config.features);
+    // Append custom views as pseudo-presets for the view selector
+    const customAsPresets: ViewPreset[] = customViews.map(cv => ({
+      id: cv.id as unknown as ViewPresetId,
+      label: cv.name,
+      panels: cv.panels,
+      columns: cv.columns,
+      topologyMetricType: cv.topologyMetricType
+    }));
+    return [...presets, ...customAsPresets];
+  }, [config.features, customViews]);
 
   return {
     allowLoki,

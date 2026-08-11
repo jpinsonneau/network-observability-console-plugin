@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Config } from '../model/config';
 import { Filters } from '../model/filters';
 import { DataSource, FlowScope, MetricType, PacketLoss, RecordType } from '../model/flow-query';
-import { ViewPresetId } from '../model/views';
+import { ActiveViewId } from '../model/views';
 import { Column, getDefaultColumns } from './columns';
 import {
   defaultArraySelectionOptions,
@@ -35,8 +35,8 @@ export function useConfigValidation(params: {
   setColumns: React.Dispatch<React.SetStateAction<Column[]>>;
   setPanels: React.Dispatch<React.SetStateAction<OverviewPanel[]>>;
   setFiltersFromURL: () => void;
-  activeView: ViewPresetId;
-  setActiveView: (v: ViewPresetId) => void;
+  activeView: ActiveViewId;
+  setActiveView: (v: ActiveViewId) => void;
 }): void {
   const {
     initState,

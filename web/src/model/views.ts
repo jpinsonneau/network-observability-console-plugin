@@ -5,6 +5,42 @@ import { MetricType } from './flow-query';
 
 export type ViewPresetId = 'all' | 'pktdrop' | 'dns' | 'rtt' | 'tls' | 'udn' | 'networkEvents' | 'packetTranslation';
 
+export type CustomViewSlot = 'custom_0' | 'custom_1' | 'custom_2';
+export type ActiveViewId = ViewPresetId | CustomViewSlot;
+export const MAX_CUSTOM_VIEWS = 3;
+
+const customViewSlots: CustomViewSlot[] = ['custom_0', 'custom_1', 'custom_2'];
+
+export interface CustomView {
+  id: CustomViewSlot;
+  name: string;
+  features: Feature[];
+  panels: OverviewPanelId[];
+  columns: string[];
+  topologyMetricType?: MetricType;
+}
+
+export interface DraftView {
+  baseViewId: ActiveViewId;
+  panels: string[];
+  columns: string[];
+  topologyMetricType?: MetricType;
+}
+
+export interface GenericPrefs {
+  added: string[]; // generic IDs user added (not in defaults)
+  removed: string[]; // generic IDs user removed (were in defaults)
+}
+
+export const defaultGenericPrefs: GenericPrefs = { added: [], removed: [] };
+
+export const isCustomViewId = (id: string): id is CustomViewSlot => customViewSlots.includes(id as CustomViewSlot);
+
+export const getNextCustomViewSlot = (existing: CustomView[]): CustomViewSlot | undefined => {
+  const usedIds = new Set(existing.map(v => v.id));
+  return customViewSlots.find(slot => !usedIds.has(slot));
+};
+
 export interface ViewPreset {
   id: ViewPresetId;
   label: string; // i18n key
@@ -119,16 +155,9 @@ export const viewPresets: ViewPreset[] = [
     requiredFeature: 'packetTranslation',
     panels: ['top_sankey', 'top_avg_byte_rates', 'byte_rates'],
     columns: [
-      ColumnsId.starttime,
-      ColumnsId.srcnamespace,
-      ColumnsId.srcname,
+      ...baseColumns,
       ColumnsId.srcaddr,
-      ColumnsId.srcport,
-      ColumnsId.dstnamespace,
-      ColumnsId.dstname,
       ColumnsId.dstaddr,
-      ColumnsId.dstport,
-      ColumnsId.proto,
       ColumnsId.bytes,
       ColumnsId.packets,
       'XlatSrcAddr',

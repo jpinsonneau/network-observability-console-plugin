@@ -32,6 +32,9 @@ export const localStorageOverviewMetricsDimensionKey = 'netflow-traffic-overview
 export const localStorageOverviewMetricsTotalDimensionKey = 'netflow-traffic-overview-metrics-total-dimension';
 export const localStorageOverviewKebabKey = 'netflow-traffic-overview-kebab-map';
 export const localStorageActiveViewKey = 'netflow-traffic-active-view';
+export const localStorageGenericColumnPrefsKey = 'netflow-traffic-generic-column-prefs';
+export const localStorageGenericPanelPrefsKey = 'netflow-traffic-generic-panel-prefs';
+export const localStorageCustomViewsKey = 'netflow-traffic-custom-views';
 
 export interface ArraySelectionOptions {
   id: string;

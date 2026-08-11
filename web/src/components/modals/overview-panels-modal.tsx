@@ -17,7 +17,14 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Feature } from '../../model/config';
 import { RecordType } from '../../model/flow-query';
-import { getDefaultOverviewPanels, getOverviewPanelInfo, OverviewPanel } from '../../utils/overview-panels';
+import { ActiveViewId, defaultGenericPrefs, GenericPrefs, getViewPreset, isCustomViewId, ViewPresetId } from '../../model/views';
+import {
+  defaultPanelIds,
+  getDefaultOverviewPanels,
+  getOverviewPanelInfo,
+  getPanelFeature,
+  OverviewPanel
+} from '../../utils/overview-panels';
 import Modal, { ensureRootElement } from './modal';
 import './overview-panels-modal.css';
 
@@ -29,6 +36,9 @@ export interface OverviewPanelsModalProps {
   setPanels: (v: OverviewPanel[]) => void;
   customIds?: string[];
   features: Feature[];
+  activeView: ActiveViewId;
+  genericPrefs: GenericPrefs;
+  setGenericPrefs: (v: GenericPrefs) => void;
   id?: string;
 }
 
@@ -40,15 +50,22 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   panels,
   setPanels,
   customIds,
-  features
+  features,
+  activeView,
+  genericPrefs,
+  setGenericPrefs
 }) => {
   React.useEffect(() => {
     ensureRootElement();
   }, []);
 
   const [updatedPanels, setUpdatedPanels] = React.useState<OverviewPanel[]>([]);
+  const [resetClicked, setResetClicked] = React.useState<boolean>(false);
   const [filterKeys, setFilterKeys] = React.useState<string[]>([]);
   const { t } = useTranslation('plugin__netobserv-plugin');
+
+  // IDs of generic panels (no feature) that are default-selected
+  const defaultGenericPanelIds = React.useMemo(() => new Set(defaultPanelIds), []);
 
   React.useEffect(() => {
     if (isModalOpen) {
@@ -57,11 +74,16 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   }, [isModalOpen]);
 
   React.useEffect(() => {
-    if (!isModalOpen || _.isEmpty(updatedPanels)) {
+    if (resetClicked) return; // Don't overwrite reset state
+    if (isModalOpen || _.isEmpty(updatedPanels)) {
       setUpdatedPanels(_.cloneDeep(panels));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen, panels]);
+
+  const isDisplaySelected = React.useCallback((panel: OverviewPanel): boolean => {
+    return panel.isSelected;
+  }, []);
 
   const getFilterKeys = React.useCallback(() => {
     let panelFilterKeys = ['total', 'bar', 'donut', 'line'];
@@ -97,12 +119,25 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   );
 
   const onReset = React.useCallback(() => {
-    setUpdatedPanels(getDefaultOverviewPanels(customIds).filter(p => panels.some(existing => existing.id === p.id)));
-  }, [customIds, panels]);
+    setResetClicked(true);
+    if (activeView !== 'all' && !isCustomViewId(activeView)) {
+      // Feature view: reset to preset's panels
+      const preset = getViewPreset(activeView as ViewPresetId);
+      const presetPanelIds = new Set(preset?.panels ?? []);
+      const resetPanels = panels.map(p => ({ ...p, isSelected: presetPanelIds.has(p.id) }));
+      setUpdatedPanels(resetPanels);
+    } else {
+      // "All Traffic" or custom view: reset to config defaults
+      const defaults = getDefaultOverviewPanels(customIds).filter(p => panels.some(existing => existing.id === p.id));
+      setUpdatedPanels(defaults);
+    }
+    // Clear generic prefs on any reset
+    setGenericPrefs(defaultGenericPrefs);
+  }, [customIds, panels, activeView, setGenericPrefs]);
 
   const isSaveDisabled = React.useCallback(() => {
-    return _.isEmpty(updatedPanels.filter(p => p.isSelected));
-  }, [updatedPanels]);
+    return _.isEmpty(updatedPanels.filter(p => isDisplaySelected(p)));
+  }, [updatedPanels, isDisplaySelected]);
 
   const isFilteredPanel = React.useCallback(
     (p: OverviewPanel) => {
@@ -151,8 +186,9 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   );
 
   const isAllSelected = React.useCallback(() => {
-    return _.reduce(filteredPanels(), (acc, p) => (acc = acc && p.isSelected), true);
-  }, [filteredPanels]);
+    const filtered = filteredPanels();
+    return filtered.length > 0 && _.reduce(filtered, (acc, p) => (acc = acc && isDisplaySelected(p)), true);
+  }, [filteredPanels, isDisplaySelected]);
 
   const onSelectAll = React.useCallback(() => {
     const allSelected = isAllSelected();
@@ -162,14 +198,51 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   }, [isAllSelected, isFilteredPanel]);
 
   const onClose = React.useCallback(() => {
+    setResetClicked(false);
     setUpdatedPanels(_.cloneDeep(panels));
     setModalOpen(false);
   }, [panels, setModalOpen]);
 
   const onSave = React.useCallback(() => {
+    // Compute generic prefs from user's changes to generic panels
+    // These persist across all feature views
+    const newAdded = [...genericPrefs.added];
+    const newRemoved = [...genericPrefs.removed];
+    let prefsChanged = false;
+    for (const panel of updatedPanels) {
+      const panelFeature = getPanelFeature(panel.id);
+      const isGeneric = !panelFeature;
+      if (!isGeneric) continue;
+      const isDefault = defaultGenericPanelIds.has(panel.id);
+      if (panel.isSelected) {
+        const removedIdx = newRemoved.indexOf(panel.id);
+        if (removedIdx >= 0) {
+          newRemoved.splice(removedIdx, 1);
+          prefsChanged = true;
+        }
+        if (!isDefault && !newAdded.includes(panel.id)) {
+          newAdded.push(panel.id);
+          prefsChanged = true;
+        }
+      } else {
+        const addedIdx = newAdded.indexOf(panel.id);
+        if (addedIdx >= 0) {
+          newAdded.splice(addedIdx, 1);
+          prefsChanged = true;
+        }
+        if (isDefault && !newRemoved.includes(panel.id)) {
+          newRemoved.push(panel.id);
+          prefsChanged = true;
+        }
+      }
+    }
+    if (prefsChanged) {
+      setGenericPrefs({ added: newAdded, removed: newRemoved });
+    }
+
     setPanels(updatedPanels);
     onClose();
-  }, [setPanels, updatedPanels, onClose]);
+  }, [setPanels, updatedPanels, onClose, defaultGenericPanelIds, genericPrefs, setGenericPrefs]);
 
   const toggleChip = React.useCallback(
     (key: string) => {
@@ -197,7 +270,7 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
             <DataListControl>
               <DataListCheck
                 aria-labelledby={'overview-panel-management-item-' + i}
-                isChecked={panel.isSelected}
+                isChecked={isDisplaySelected(panel)}
                 id={panel.id}
                 data-test={`overview-panel-checkbox-${panel.id}`}
                 onChange={onCheck}
