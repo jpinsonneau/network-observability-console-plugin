@@ -123,8 +123,8 @@ func AppendEnriched(
 		metrics, _ := result.([]metricsparse.TopologyMetric)
 		for i := range metrics {
 			m := &metrics[i]
-			srcKind, srcName := metricsparse.FormatPeerKindName(m.Source)
-			dstKind, dstName := metricsparse.FormatPeerKindName(m.Destination)
+			srcKind, srcName := metricsparse.FormatPeerKindName(&m.Source)
+			dstKind, dstName := metricsparse.FormatPeerKindName(&m.Destination)
 			series := normalizeSeriesName(topologySeriesName(srcKind, srcName, dstKind, dstName))
 			for _, dp := range m.Values {
 				ts := int64(dp[0])

@@ -36,21 +36,21 @@ func loadMatrix(t *testing.T, path string) model.Matrix {
 }
 
 func maxUnix(matrix model.Matrix) int64 {
-	var max int64
+	var maxTS int64
 	for _, stream := range matrix {
 		for _, pair := range stream.Values {
 			ts := int64(pair.Timestamp) / 1000
-			if ts > max {
-				max = ts
+			if ts > maxTS {
+				maxTS = ts
 			}
 		}
 	}
-	return max + 60
+	return maxTS + 60
 }
 
 func TestEnrichMatrixNamespacePeers(t *testing.T) {
 	matrix := loadMatrix(t, "../../mocks/loki/flow_metrics_namespace.json")
-	resultType, result := EnrichMatrix(matrix, EnrichInput{
+	resultType, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy:      "namespace",
 		Scopes:           testScopes(),
 		TimeRangeSeconds: 300,
@@ -71,7 +71,7 @@ func TestEnrichMatrixNamespacePeers(t *testing.T) {
 
 func TestEnrichMatrixOwnerPeers(t *testing.T) {
 	matrix := loadMatrix(t, "../../mocks/loki/flow_metrics_owner.json")
-	resultType, result := EnrichMatrix(matrix, EnrichInput{
+	resultType, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy:      "owner",
 		Scopes:           testScopes(),
 		TimeRangeSeconds: 300,
@@ -81,8 +81,8 @@ func TestEnrichMatrixOwnerPeers(t *testing.T) {
 	require.Equal(t, ResultTypeTopologyMetrics, resultType)
 	metrics := result.([]TopologyMetric)
 	require.NotEmpty(t, metrics)
-	srcKind, srcName := FormatPeerKindName(metrics[0].Source)
-	dstKind, dstName := FormatPeerKindName(metrics[0].Destination)
+	srcKind, srcName := FormatPeerKindName(&metrics[0].Source)
+	dstKind, dstName := FormatPeerKindName(&metrics[0].Destination)
 	assert.NotEmpty(t, srcKind)
 	assert.NotEmpty(t, srcName)
 	assert.NotEmpty(t, dstKind)
@@ -92,7 +92,7 @@ func TestEnrichMatrixOwnerPeers(t *testing.T) {
 func TestEnrichMatrixAppAggregateUsesTopology(t *testing.T) {
 	// Overview totals query with aggregateBy=app; labels are not Src/Dst directional.
 	matrix := loadMatrix(t, "../../mocks/loki/flow_metrics_app.json")
-	resultType, result := EnrichMatrix(matrix, EnrichInput{
+	resultType, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy:      "app",
 		Scopes:           testScopes(),
 		TimeRangeSeconds: 300,
@@ -120,7 +120,7 @@ func TestEnrichMatrixFieldAggregateUsesGeneric(t *testing.T) {
 			},
 		},
 	}
-	resultType, result := EnrichMatrix(matrix, EnrichInput{
+	resultType, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy:      "DnsFlagsResponseCode",
 		Scopes:           testScopes(),
 		TimeRangeSeconds: 300,

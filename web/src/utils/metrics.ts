@@ -105,13 +105,17 @@ export const hydrateTopologyMetrics = (metrics: TopologyMetrics[]): TopologyMetr
 
 /** Flatten topology rows into GenericMetric when callers expect field-style aggregates. */
 export const genericMetricsFromTopology = (metrics: TopologyMetrics[], aggregateBy: Field): GenericMetric[] => {
-  return metrics.map(m => ({
-    name: m.source.getDisplayName(false, false) || m.source.id || '',
-    values: m.values,
-    stats: m.stats,
-    aggregateBy,
-    ...(m.tls ? { tls: m.tls } : {})
-  }));
+  return metrics.map(m => {
+    const displayName = m.source.getDisplayName(false, false);
+    const fallbackId = m.source.id !== idUnknown ? m.source.id : '';
+    return {
+      name: displayName || fallbackId,
+      values: m.values,
+      stats: m.stats,
+      aggregateBy,
+      ...(m.tls ? { tls: m.tls } : {})
+    };
+  });
 };
 
 /** Merge TLS dimensions from TlsFlows rows (same scope + TLSVersion) into volume topology rows by src/dst peer ids. */

@@ -84,7 +84,7 @@ func enrichTopologyResponse(flows *model.AggregatedQueryResponse, params url.Val
 	if err != nil {
 		return nil, err
 	}
-	resultType, result := metricsparse.EnrichMatrix(matrix, in)
+	resultType, result := metricsparse.EnrichMatrix(matrix, &in)
 	return &enrichedMetricsResponse{
 		ResultType:    resultType,
 		Result:        result,

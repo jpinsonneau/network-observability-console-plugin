@@ -26,7 +26,9 @@ func nameAndType(name, typ string) *NameAndType {
 
 func peerID(fieldsMap map[string]string, owner, resource *NameAndType, addr, subnetLabel string, scopes []config.Scope) string {
 	parts := make([]string, 0)
-	for _, sc := range customScopes(scopes) {
+	customs := customScopes(scopes)
+	for i := range customs {
+		sc := &customs[i]
 		if v := fieldsMap[sc.ID]; v != "" {
 			parts = append(parts, sc.ID+"="+v)
 		}
@@ -71,7 +73,7 @@ func createPeer(fieldsMap map[string]string, owner, resource *NameAndType, addr,
 
 	customs := customScopes(scopes)
 	for i := len(customs) - 1; i >= 0; i-- {
-		sc := customs[i]
+		sc := &customs[i]
 		if v := fieldsMap[sc.ID]; v != "" {
 			peer.Scopes[sc.ID] = v
 			if peer.ResourceKind == "" {
@@ -107,7 +109,9 @@ func peerFieldsFromMetric(m pmodel.Metric, prefix string, scopes []config.Scope)
 	}
 
 	fieldsMap := map[string]string{}
-	for _, sc := range customScopes(scopes) {
+	customs := customScopes(scopes)
+	for i := range customs {
+		sc := &customs[i]
 		if len(sc.Labels) == 0 {
 			continue
 		}
@@ -141,7 +145,7 @@ var shortKindMap = map[string]string{
 	"StatefulSet": "sts",
 }
 
-func peerDisplayName(p Peer, inclNamespace, disambiguate bool) string {
+func peerDisplayName(p *Peer, inclNamespace, disambiguate bool) string {
 	if p.Resource != nil {
 		return formatNamedPeer(p, p.Resource.Name, p.Resource.Type, inclNamespace, disambiguate)
 	}
@@ -170,7 +174,7 @@ func peerDisplayName(p Peer, inclNamespace, disambiguate bool) string {
 	return ""
 }
 
-func formatNamedPeer(p Peer, name, typ string, inclNamespace, disambiguate bool) string {
+func formatNamedPeer(p *Peer, name, typ string, inclNamespace, disambiguate bool) string {
 	disamb := ""
 	if disambiguate && p.IsAmbiguous {
 		short := shortKindMap[typ]
@@ -203,6 +207,6 @@ func IsTopologyMetric(m pmodel.Metric) bool {
 }
 
 // FormatPeerKindName returns resourceKind and display name for export rows.
-func FormatPeerKindName(p Peer) (kind, name string) {
+func FormatPeerKindName(p *Peer) (kind, name string) {
 	return p.ResourceKind, peerDisplayName(p, false, false)
 }

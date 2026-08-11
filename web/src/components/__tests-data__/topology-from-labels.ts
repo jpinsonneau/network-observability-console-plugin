@@ -1,10 +1,9 @@
-import { Flow } from '../../api/ipfix';
 import { TopologyMetrics } from '../../api/query-response';
 import { FlowScope } from '../../model/flow-query';
 import { computeStepInterval, TimeRange } from '../../utils/datetime';
 import { computeStats, createPeer } from '../../utils/metrics';
 
-type MetricLabels = Partial<Flow> & Record<string, string | undefined>;
+type MetricLabels = Record<string, string | undefined>;
 
 const nameAndType = (name?: string, type?: string) => (name && type ? { name, type } : undefined);
 
@@ -28,12 +27,12 @@ export const topologyFromLabels = (
 ): TopologyMetrics => {
   let numeric = values.map(([t, v]) => [Number(t), Number(v)] as [number, number]);
   if (range) {
+    const { stepSeconds } = computeStepInterval(range);
     const first = numeric.length ? Math.min(...numeric.map(dp => dp[0])) : range.from;
     let start = first;
     while (start > range.from) {
-      start -= computeStepInterval(range).stepSeconds;
+      start -= stepSeconds;
     }
-    const { stepSeconds } = computeStepInterval(range);
     let end = range.to;
     if (numeric.length) {
       end = Math.max(end, Math.max(...numeric.map(dp => dp[0])));

@@ -23,7 +23,7 @@ func streamValues(stream *pmodel.SampleStream) []Datapoint {
 	return out
 }
 
-func rangeToSeconds(in EnrichInput) int64 {
+func rangeToSeconds(in *EnrichInput) int64 {
 	if in.TimeRangeSeconds > 0 {
 		return in.TimeRangeSeconds
 	}
@@ -44,7 +44,7 @@ type calibratedRange struct {
 	step  float64
 }
 
-func calibrateRange(raw [][]Datapoint, in EnrichInput) calibratedRange {
+func calibrateRange(raw [][]Datapoint, in *EnrichInput) calibratedRange {
 	rangeSeconds := rangeToSeconds(in)
 	step := float64(computeStepSeconds(rangeSeconds))
 
@@ -106,29 +106,22 @@ func calibrateRange(raw [][]Datapoint, in EnrichInput) calibratedRange {
 	return calibratedRange{start: firstTimestamp, end: endWithTolerance, step: step}
 }
 
-func getValueCloseTo(values []Datapoint, timestamp, step float64) (float64, bool) {
-	tolerance := step / 2
-	for _, dp := range values {
-		if dp[0] > timestamp-tolerance && dp[0] < timestamp+tolerance {
-			return dp[1], true
-		}
-	}
-	return 0, false
-}
-
 func normalizeMetrics(values []Datapoint, start, end, step float64, forceZeros bool) []Datapoint {
 	var normalized []Datapoint
 	if forceZeros {
 		normalized = make([]Datapoint, 0, len(values))
+		bucketKeys := make(map[int64]struct{}, len(values))
 		for _, dp := range values {
 			val := dp[1]
 			if math.IsNaN(val) {
 				val = 0
 			}
 			normalized = append(normalized, Datapoint{dp[0], val})
+			bucketKeys[int64(math.Round((dp[0]-start)/step))] = struct{}{}
 		}
 		for current := start; current < end; current += step {
-			if _, ok := getValueCloseTo(normalized, current, step); !ok {
+			key := int64(math.Round((current - start) / step))
+			if _, ok := bucketKeys[key]; !ok {
 				normalized = append(normalized, Datapoint{current, 0})
 			}
 		}

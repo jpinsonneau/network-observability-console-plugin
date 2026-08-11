@@ -38,7 +38,11 @@ type Peer struct {
 }
 
 // MarshalJSON flattens scope fields onto the peer object (FE expects namespace, host, … as top-level keys).
-func (p Peer) MarshalJSON() ([]byte, error) {
+func (p Peer) MarshalJSON() ([]byte, error) { //nolint:gocritic // value receiver required for json.Marshal(Peer)
+	return marshalPeerJSON(&p)
+}
+
+func marshalPeerJSON(p *Peer) ([]byte, error) {
 	m := map[string]interface{}{
 		"id":          p.ID,
 		"isAmbiguous": p.IsAmbiguous,
@@ -171,12 +175,12 @@ type EnrichInput struct {
 
 func customScopes(scopes []config.Scope) []config.Scope {
 	out := make([]config.Scope, 0, len(scopes))
-	for _, sc := range scopes {
-		switch sc.ID {
+	for i := range scopes {
+		switch scopes[i].ID {
 		case "owner", "resource", "addr":
 			continue
 		default:
-			out = append(out, sc)
+			out = append(out, scopes[i])
 		}
 	}
 	return out

@@ -67,6 +67,7 @@ describe('genericMetricsFromTopology', () => {
     const mapped = genericMetricsFromTopology(topo, 'app' as Field);
     expect(mapped).toHaveLength(1);
     expect(mapped[0].aggregateBy).toEqual('app');
+    expect(mapped[0].name).toEqual('');
     expect(mapped[0].stats.avg).toEqual(3);
     expect(mapped[0].values).toEqual([[1000, 3]]);
   });

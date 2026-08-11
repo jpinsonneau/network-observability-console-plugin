@@ -10,7 +10,7 @@ import (
 )
 
 // EnrichMatrix converts a raw Prometheus/Loki matrix into topology or generic metrics.
-func EnrichMatrix(matrix model.Matrix, in EnrichInput) (resultType string, result interface{}) {
+func EnrichMatrix(matrix model.Matrix, in *EnrichInput) (resultType string, result interface{}) {
 	if useTopologyEnrichment(matrix, in) {
 		return ResultTypeTopologyMetrics, parseTopologyMetrics(matrix, in)
 	}
@@ -20,11 +20,11 @@ func EnrichMatrix(matrix model.Matrix, in EnrichInput) (resultType string, resul
 // EnrichTopology always builds topology metrics (peers + stats), matching the
 // historical frontend getFlowMetrics path. Used for fixture conversion and tests
 // where a matrix may lack Src/Dst on every series (e.g. cluster-only labels).
-func EnrichTopology(matrix model.Matrix, in EnrichInput) []TopologyMetric {
+func EnrichTopology(matrix model.Matrix, in *EnrichInput) []TopologyMetric {
 	return parseTopologyMetrics(matrix, in)
 }
 
-func useTopologyEnrichment(matrix model.Matrix, in EnrichInput) bool {
+func useTopologyEnrichment(matrix model.Matrix, in *EnrichInput) bool {
 	if isMatrixTopology(matrix) {
 		return true
 	}
@@ -39,8 +39,8 @@ func isFlowScopeAggregate(aggregateBy string, scopes []config.Scope) bool {
 	case "", "app", "addr":
 		return true
 	}
-	for _, sc := range scopes {
-		if sc.ID == base {
+	for i := range scopes {
+		if scopes[i].ID == base {
 			return true
 		}
 	}
@@ -56,7 +56,7 @@ func isMatrixTopology(matrix model.Matrix) bool {
 	return false
 }
 
-func parseTopologyMetrics(matrix model.Matrix, in EnrichInput) []TopologyMetric {
+func parseTopologyMetrics(matrix model.Matrix, in *EnrichInput) []TopologyMetric {
 	rawValues := make([][]Datapoint, len(matrix))
 	for i := range matrix {
 		rawValues[i] = streamValues(&matrix[i])
@@ -68,17 +68,14 @@ func parseTopologyMetrics(matrix model.Matrix, in EnrichInput) []TopologyMetric 
 		metrics = append(metrics, parseTopologyMetric(&matrix[i], cal, in))
 	}
 
-	scopeForDisambiguation := in.AggregateBy
-	if strings.HasSuffix(scopeForDisambiguation, topologyTLSVersionAggregateSuffix) {
-		scopeForDisambiguation = strings.TrimSuffix(scopeForDisambiguation, topologyTLSVersionAggregateSuffix)
-	}
+	scopeForDisambiguation := strings.TrimSuffix(in.AggregateBy, topologyTLSVersionAggregateSuffix)
 	if scopeForDisambiguation == "owner" || scopeForDisambiguation == "resource" {
 		markAmbiguous(metrics)
 	}
 	return metrics
 }
 
-func parseTopologyMetric(stream *pmodel.SampleStream, cal calibratedRange, in EnrichInput) TopologyMetric {
+func parseTopologyMetric(stream *pmodel.SampleStream, cal calibratedRange, in *EnrichInput) TopologyMetric {
 	normalized := normalizeMetrics(streamValues(stream), cal.start, cal.end, cal.step, in.ForceZeros)
 	stats := computeStats(normalized)
 	source := peerFromMetric(stream.Metric, fields.Src, in.Scopes)
@@ -94,7 +91,7 @@ func parseTopologyMetric(stream *pmodel.SampleStream, cal calibratedRange, in En
 	}
 }
 
-func parseGenericMetrics(matrix model.Matrix, in EnrichInput) []GenericMetric {
+func parseGenericMetrics(matrix model.Matrix, in *EnrichInput) []GenericMetric {
 	rawValues := make([][]Datapoint, len(matrix))
 	for i := range matrix {
 		rawValues[i] = streamValues(&matrix[i])
@@ -108,7 +105,7 @@ func parseGenericMetrics(matrix model.Matrix, in EnrichInput) []GenericMetric {
 	return metrics
 }
 
-func parseGenericMetric(stream *pmodel.SampleStream, cal calibratedRange, in EnrichInput) GenericMetric {
+func parseGenericMetric(stream *pmodel.SampleStream, cal calibratedRange, in *EnrichInput) GenericMetric {
 	normalized := normalizeMetrics(streamValues(stream), cal.start, cal.end, cal.step, in.ForceZeros)
 	stats := computeStats(normalized)
 	name := labelString(stream.Metric, in.AggregateBy)
@@ -124,7 +121,7 @@ func parseGenericMetric(stream *pmodel.SampleStream, cal calibratedRange, in Enr
 
 func markAmbiguous(metrics []TopologyMetric) {
 	nameKinds := map[string]map[string]struct{}{}
-	addKind := func(p Peer) {
+	addKind := func(p *Peer) {
 		name := peerDisplayName(p, true, false)
 		if name == "" {
 			return
@@ -139,11 +136,11 @@ func markAmbiguous(metrics []TopologyMetric) {
 		}
 	}
 	for i := range metrics {
-		addKind(metrics[i].Source)
-		addKind(metrics[i].Destination)
+		addKind(&metrics[i].Source)
+		addKind(&metrics[i].Destination)
 	}
 	check := func(p *Peer) {
-		name := peerDisplayName(*p, true, false)
+		name := peerDisplayName(p, true, false)
 		if name == "" {
 			return
 		}

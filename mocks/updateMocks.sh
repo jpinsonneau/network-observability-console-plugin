@@ -25,21 +25,33 @@ curl_loki() {
   local outfile="$1"
   local query="$2"
   shift 2
+  local tmp="${outfile}.tmp.$$"
   echo "  -> ${outfile}"
-  curl -fsS -H "X-Scope-OrgID: ${LOKI_TENANT}" \
+  if curl -fsS -H "X-Scope-OrgID: ${LOKI_TENANT}" \
     --get "${LOKI_URL}/loki/api/v1/query_range" \
     --data-urlencode "query=${query}" \
     --data-urlencode "start=${START_TS}" \
     --data-urlencode "end=${END_TS}" \
-    "$@" | jq . > "${outfile}"
+    "$@" | jq . > "${tmp}"; then
+    mv "${tmp}" "${outfile}"
+  else
+    rm -f "${tmp}"
+    return 1
+  fi
 }
 
 curl_label() {
   local outfile="$1"
   local label="$2"
+  local tmp="${outfile}.tmp.$$"
   echo "  -> ${outfile}"
-  curl -fsS -H "X-Scope-OrgID: ${LOKI_TENANT}" \
-    "${LOKI_URL}/loki/api/v1/label/${label}/values" | jq . > "${outfile}"
+  if curl -fsS -H "X-Scope-OrgID: ${LOKI_TENANT}" \
+    "${LOKI_URL}/loki/api/v1/label/${label}/values" | jq . > "${tmp}"; then
+    mv "${tmp}" "${outfile}"
+  else
+    rm -f "${tmp}"
+    return 1
+  fi
 }
 
 STREAM='{app="netobserv-flowcollector"}'

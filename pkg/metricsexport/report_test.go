@@ -35,7 +35,7 @@ func TestAppendEnrichedFromFixture(t *testing.T) {
 		{ID: "resource", Name: "Resource", Labels: []string{"SrcK8S_Name", "DstK8S_Name"}},
 		{ID: "host", Name: "Node", Labels: []string{"SrcK8S_HostName", "DstK8S_HostName"}},
 	}
-	resultType, result := metricsparse.EnrichMatrix(matrix, metricsparse.EnrichInput{
+	resultType, result := metricsparse.EnrichMatrix(matrix, &metricsparse.EnrichInput{
 		AggregateBy:      "owner",
 		Scopes:           scopes,
 		TimeRangeSeconds: 300,
@@ -51,41 +51,64 @@ func TestAppendEnrichedFromFixture(t *testing.T) {
 	}, true)
 
 	assert.NotEmpty(t, rows)
-	assert.Equal(t, "rate.bytes", rows[0].MetricGroup)
-	assert.NotEmpty(t, rows[0].Series)
-	assert.NotEmpty(t, rows[0].TimestampISO)
-	assert.NotEmpty(t, rows[0].SourceKind)
-	assert.NotEmpty(t, rows[0].SourceName)
-	assert.NotEmpty(t, rows[0].DestinationKind)
-	assert.NotEmpty(t, rows[0].DestinationName)
+	row := rows[0]
+	for _, r := range rows {
+		if r.SourceKind != "" && r.DestinationKind != "" && r.SourceName != "" && r.DestinationName != "" {
+			row = r
+			break
+		}
+	}
+	assert.Equal(t, "rate.bytes", row.MetricGroup)
+	assert.NotEmpty(t, row.Series)
+	assert.NotEmpty(t, row.TimestampISO)
+	assert.NotEmpty(t, row.SourceKind)
+	assert.NotEmpty(t, row.SourceName)
+	assert.NotEmpty(t, row.DestinationKind)
+	assert.NotEmpty(t, row.DestinationName)
 	assert.NotEmpty(t, edges)
-	assert.Equal(t, rows[0].SourceKind, edges[0].SourceKind)
-	assert.Equal(t, rows[0].SourceName, edges[0].SourceName)
+	edgeIdx := 0
+	for i, e := range edges {
+		if e.SourceKind == row.SourceKind && e.SourceName == row.SourceName {
+			edgeIdx = i
+			break
+		}
+	}
+	assert.Equal(t, row.SourceKind, edges[edgeIdx].SourceKind)
+	assert.Equal(t, row.SourceName, edges[edgeIdx].SourceName)
 
 	// Edge aggregates must come from enriched MetricStats (no recompute drift)
 	topo := result.([]metricsparse.TopologyMetric)
 	require.NotEmpty(t, topo)
-	assert.Equal(t, ExportFloat(topo[0].Stats.Sum), edges[0].Sum)
-	assert.Equal(t, ExportFloat(topo[0].Stats.Avg), edges[0].Avg)
-	assert.Equal(t, ExportFloat(topo[0].Stats.Min), edges[0].Min)
-	assert.Equal(t, ExportFloat(topo[0].Stats.Max), edges[0].Max)
-	assert.Equal(t, ExportFloat(topo[0].Stats.Latest), edges[0].Latest)
+	topoIdx := 0
+	for i, m := range topo {
+		sk, sn := metricsparse.FormatPeerKindName(&m.Source)
+		dk, dn := metricsparse.FormatPeerKindName(&m.Destination)
+		if sk == row.SourceKind && sn == row.SourceName && dk == row.DestinationKind && dn == row.DestinationName {
+			topoIdx = i
+			break
+		}
+	}
+	assert.Equal(t, ExportFloat(topo[topoIdx].Stats.Sum), edges[edgeIdx].Sum)
+	assert.Equal(t, ExportFloat(topo[topoIdx].Stats.Avg), edges[edgeIdx].Avg)
+	assert.Equal(t, ExportFloat(topo[topoIdx].Stats.Min), edges[edgeIdx].Min)
+	assert.Equal(t, ExportFloat(topo[topoIdx].Stats.Max), edges[edgeIdx].Max)
+	assert.Equal(t, ExportFloat(topo[topoIdx].Stats.Latest), edges[edgeIdx].Latest)
 }
 
 func timeNowUnix(matrix model.Matrix) int64 {
-	var max int64
+	var maxTS int64
 	for _, stream := range matrix {
 		for _, pair := range stream.Values {
 			ts := int64(pair.Timestamp) / 1000
-			if ts > max {
-				max = ts
+			if ts > maxTS {
+				maxTS = ts
 			}
 		}
 	}
-	if max == 0 {
+	if maxTS == 0 {
 		return 1
 	}
-	return max + 60
+	return maxTS + 60
 }
 
 func TestBuildReportOmitsEdgesWhenDisabled(t *testing.T) {

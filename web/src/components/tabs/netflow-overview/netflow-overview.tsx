@@ -33,6 +33,7 @@ import { getDSCPServiceClassName } from '../../../utils/dscp';
 import { getStructuredHTTPError, StructuredError } from '../../../utils/errors';
 import { valueFormat } from '../../../utils/format';
 import { localStorageOverviewKebabKey, useLocalStorage } from '../../../utils/local-storage-hook';
+import { isUnknownPeer } from '../../../utils/metrics';
 import { observeDOMRect, toNamedMetric } from '../../../utils/metrics-helper';
 import {
   customPanelMatcher,
@@ -843,7 +844,13 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
           const showTopOnly = options.showTop && !options.showApp?.value && !options.showAppDrop?.value;
           const metricType = id.endsWith('byte_rates') ? 'Bytes' : 'Packets';
           const topKMetrics = getTopKRateMetrics(id);
-          const rateMetrics = topKMetrics.or([]);
+          let rateMetrics = topKMetrics.or([]);
+          if (options.showInternal === false) {
+            rateMetrics = rateMetrics.filter(m => !m.isInternal);
+          }
+          if (options.showOutOfScope === false) {
+            rateMetrics = rateMetrics.filter(m => !isUnknownPeer(m.source) || !isUnknownPeer(m.destination));
+          }
           if (showTopOnly) {
             return {
               calculatedTitle: info.topTitle,

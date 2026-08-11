@@ -75,11 +75,14 @@ func main() {
 				continue
 			}
 			path := filepath.Join(root, e.Name())
-			if err := convertFixture(path, agg); err != nil {
+			convertedOK, err := convertFixture(path, agg)
+			if err != nil {
 				fatalf("%s: %v", path, err)
 			}
-			fmt.Printf("enriched %s (aggregateBy=%s)\n", path, agg)
-			converted++
+			if convertedOK {
+				fmt.Printf("enriched %s (aggregateBy=%s)\n", path, agg)
+				converted++
+			}
 		}
 	}
 	if converted == 0 {
@@ -88,23 +91,23 @@ func main() {
 	fmt.Printf("done: %d fixtures\n", converted)
 }
 
-func convertFixture(path, aggregateBy string) error {
+func convertFixture(path, aggregateBy string) (bool, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return false, err
 	}
 	var doc fixtureDoc
 	if err := json.Unmarshal(raw, &doc); err != nil {
-		return fmt.Errorf("unmarshal: %w", err)
+		return false, fmt.Errorf("unmarshal: %w", err)
 	}
 	if doc.ResultType != "matrix" {
 		fmt.Printf("skip %s (resultType=%s)\n", path, doc.ResultType)
-		return nil
+		return false, nil
 	}
 
 	var matrix model.Matrix
 	if err := json.Unmarshal(doc.Result, &matrix); err != nil {
-		return fmt.Errorf("unmarshal matrix: %w", err)
+		return false, fmt.Errorf("unmarshal matrix: %w", err)
 	}
 
 	in := metricsparse.EnrichInput{
@@ -113,15 +116,10 @@ func convertFixture(path, aggregateBy string) error {
 		UnixTimestamp: doc.UnixTimestamp,
 		ForceZeros:    true,
 		IsMock:        true,
-	}
-	if doc.UnixTimestamp > 0 {
-		// Prefer absolute window from series (IsMock already clamps end).
-		in.From = 0
-		in.To = 0
-		in.TimeRangeSeconds = 300
+		TimeRangeSeconds: 300,
 	}
 
-	metrics := metricsparse.EnrichTopology(matrix, in)
+	metrics := metricsparse.EnrichTopology(matrix, &in)
 
 	out := map[string]interface{}{
 		"resultType":    metricsparse.ResultTypeTopologyMetrics,
@@ -130,9 +128,10 @@ func convertFixture(path, aggregateBy string) error {
 	}
 	if len(doc.Stats) > 0 {
 		var stats interface{}
-		if err := json.Unmarshal(doc.Stats, &stats); err == nil {
-			out["stats"] = stats
+		if err := json.Unmarshal(doc.Stats, &stats); err != nil {
+			return false, fmt.Errorf("unmarshal stats: %w", err)
 		}
+		out["stats"] = stats
 	}
 	if doc.IsMock != nil {
 		out["isMock"] = *doc.IsMock
@@ -140,10 +139,13 @@ func convertFixture(path, aggregateBy string) error {
 
 	encoded, err := json.MarshalIndent(out, "", "    ")
 	if err != nil {
-		return err
+		return false, err
 	}
 	encoded = append(encoded, '\n')
-	return os.WriteFile(path, encoded, 0o644)
+	if err := os.WriteFile(path, encoded, 0o644); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func fatalf(format string, args ...interface{}) {

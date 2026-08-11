@@ -35,7 +35,7 @@ func TestNormalizeAndComputeStats_Simple(t *testing.T) {
 		{1664372210, 8}, {1664372225, 8}, {1664372240, 8}, {1664372255, 8},
 		{1664372270, 8}, {1664372285, 8}, {1664372300, 8},
 	}
-	cal := calibrateRange([][]Datapoint{values}, EnrichInput{
+	cal := calibrateRange([][]Datapoint{values}, &EnrichInput{
 		From: 1664372000, To: 1664372300, UnixTimestamp: 1664372300, IsMock: true,
 	})
 	norm := normalizeMetrics(values, cal.start, cal.end, cal.step, true)
@@ -49,6 +49,22 @@ func TestNormalizeAndComputeStats_Simple(t *testing.T) {
 	assert.Equal(t, 2300.0, stats.Total) // 7.67*300
 }
 
+func TestCalibrateRange_NonMock(t *testing.T) {
+	values := []Datapoint{
+		{1664372000, 5}, {1664372015, 5}, {1664372030, 5},
+		{1664372210, 8}, {1664372225, 8}, {1664372300, 8},
+	}
+	cal := calibrateRange([][]Datapoint{values}, &EnrichInput{
+		TimeRangeSeconds: 300,
+		UnixTimestamp:    1664372300,
+		ForceZeros:       true,
+		IsMock:           false,
+	})
+	norm := normalizeMetrics(values, cal.start, cal.end, cal.step, true)
+	assert.Equal(t, 8.0, computeStats(norm).Latest)
+	assert.True(t, cal.end <= float64(1664372300))
+}
+
 func TestNormalizeAndComputeStats_MissingDatapoints(t *testing.T) {
 	// Mirrors FE metrics.spec "should normalize and compute stats with missing data points"
 	values := []Datapoint{
@@ -57,7 +73,7 @@ func TestNormalizeAndComputeStats_MissingDatapoints(t *testing.T) {
 		{1664372210, 8}, {1664372225, 8}, {1664372240, 8}, {1664372255, 8},
 		{1664372270, 8}, {1664372285, 8}, {1664372300, 8},
 	}
-	cal := calibrateRange([][]Datapoint{values}, EnrichInput{
+	cal := calibrateRange([][]Datapoint{values}, &EnrichInput{
 		From: 1664372000, To: 1664372300, UnixTimestamp: 1664372300, IsMock: true,
 	})
 	norm := normalizeMetrics(values, cal.start, cal.end, cal.step, true)
@@ -96,7 +112,7 @@ func TestEnrichMatrix_Ambiguity(t *testing.T) {
 			"DstK8S_Name": "B", "DstK8S_Namespace": "ns1", "DstK8S_Type": "Service",
 		}, []Datapoint{{1000, 1}}),
 	}
-	resultType, result := EnrichMatrix(matrix, EnrichInput{
+	resultType, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy: "resource",
 		Scopes:      testScopes(),
 		From:        1000, To: 1030, UnixTimestamp: 1030,
@@ -109,9 +125,9 @@ func TestEnrichMatrix_Ambiguity(t *testing.T) {
 	assert.True(t, metrics[0].Destination.IsAmbiguous)
 	assert.False(t, metrics[1].Source.IsAmbiguous)
 	assert.True(t, metrics[1].Destination.IsAmbiguous)
-	assert.Equal(t, "ns1.B", peerDisplayName(metrics[0].Destination, true, false))
-	assert.Equal(t, "ns1.B (pod)", peerDisplayName(metrics[0].Destination, true, true))
-	assert.Equal(t, "ns1.B (svc)", peerDisplayName(metrics[1].Destination, true, true))
+	assert.Equal(t, "ns1.B", peerDisplayName(&metrics[0].Destination, true, false))
+	assert.Equal(t, "ns1.B (pod)", peerDisplayName(&metrics[0].Destination, true, true))
+	assert.Equal(t, "ns1.B (svc)", peerDisplayName(&metrics[1].Destination, true, true))
 }
 
 func TestEnrichMatrix_GenericWithTLS(t *testing.T) {
@@ -123,7 +139,7 @@ func TestEnrichMatrix_GenericWithTLS(t *testing.T) {
 			"TLSCipher":   "TLS_AES_128_GCM_SHA256",
 		}, []Datapoint{{1000, 2}, {1015, 4}}),
 	}
-	resultType, result := EnrichMatrix(matrix, EnrichInput{
+	resultType, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy: "SrcK8S_Name",
 		Scopes:      testScopes(),
 		From:        1000, To: 1030, UnixTimestamp: 1030,
@@ -145,7 +161,7 @@ func TestEnrichMatrix_GenericIgnoresTLSTypes(t *testing.T) {
 			"TLSTypes":    "1",
 		}, []Datapoint{{1000, 1}}),
 	}
-	_, result := EnrichMatrix(matrix, EnrichInput{
+	_, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy: "SrcK8S_Name",
 		Scopes:      testScopes(),
 		From:        1000, To: 1030, UnixTimestamp: 1030,
@@ -156,7 +172,7 @@ func TestEnrichMatrix_GenericIgnoresTLSTypes(t *testing.T) {
 }
 
 func TestEnrichMatrix_EmptyMatrix(t *testing.T) {
-	resultType, result := EnrichMatrix(model.Matrix{}, EnrichInput{
+	resultType, result := EnrichMatrix(model.Matrix{}, &EnrichInput{
 		AggregateBy:      "namespace",
 		Scopes:           testScopes(),
 		TimeRangeSeconds: 300,
@@ -174,7 +190,7 @@ func TestEnrichMatrix_AddressPeer(t *testing.T) {
 			"DstAddr": "5.6.7.8",
 		}, []Datapoint{{1000, 1}}),
 	}
-	resultType, result := EnrichMatrix(matrix, EnrichInput{
+	resultType, result := EnrichMatrix(matrix, &EnrichInput{
 		AggregateBy: "addr",
 		Scopes:      testScopes(),
 		From:        1000, To: 1030, UnixTimestamp: 1030,
@@ -182,8 +198,8 @@ func TestEnrichMatrix_AddressPeer(t *testing.T) {
 	})
 	require.Equal(t, ResultTypeTopologyMetrics, resultType)
 	metrics := result.([]TopologyMetric)
-	srcKind, srcName := FormatPeerKindName(metrics[0].Source)
-	dstKind, dstName := FormatPeerKindName(metrics[0].Destination)
+	srcKind, srcName := FormatPeerKindName(&metrics[0].Source)
+	dstKind, dstName := FormatPeerKindName(&metrics[0].Destination)
 	assert.Equal(t, "Address", srcKind)
 	assert.Equal(t, "nodes (1.2.3.4)", srcName)
 	assert.Equal(t, "Address", dstKind)
