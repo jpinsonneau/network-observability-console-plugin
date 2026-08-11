@@ -25,8 +25,12 @@ export function getMemoryUsageMB(): number {
 
 export const netflowPage = {
     visit: (clearfilters = true) => {
-        cy.clearLocalStorage()
+        // Only clear NetObserv settings — full clearLocalStorage drops Console session
+        cy.clearNetobservLocalStorage()
         cy.visit('/netflow-traffic')
+
+        // Wait for the plugin page before touching filters
+        cy.get('#overview-container', { timeout: 60000 }).should('exist')
 
         cy.wrap(clearfilters).then(shouldClearFilters => {
             if (shouldClearFilters) {
@@ -39,7 +43,6 @@ export const netflowPage = {
         netflowPage.waitForLokiQuery()
 
         cy.byTestID('no-results-found', { timeout: 30000 }).should('not.exist')
-        cy.get('#overview-container', { timeout: 30000 }).should('exist')
     },
     setAutoRefresh: () => {
         cy.byTestID(genSelectors.refreshDrop).should('exist').invoke('text').then((text) => {
@@ -58,10 +61,20 @@ export const netflowPage = {
         })
     },
     resetClearFilters: () => {
-        cy.byTestID("set-default-filters-button").should('exist').click({ force: true })
+        // Button only exists when there are no active filters
+        cy.get('body').then($body => {
+            if ($body.find('[data-test="set-default-filters-button"]').length > 0) {
+                cy.byTestID("set-default-filters-button").click({ force: true })
+            }
+        })
     },
     clearAllFilters: () => {
-        cy.byTestID("clear-all-filters-button").should('exist').click({ force: true })
+        // Button only exists when there are active filters
+        cy.get('body').then($body => {
+            if ($body.find('[data-test="clear-all-filters-button"]').length > 0) {
+                cy.byTestID("clear-all-filters-button").click({ force: true })
+            }
+        })
     },
     waitForLokiQuery: () => {
         cy.get("#refresh-button > span > svg").invoke('attr', 'style').should('contain', '0s linear 0s')
@@ -83,7 +96,7 @@ export const topologyPage = {
     * @param namespace - Optional namespace to filter topology view by
     */
     setupWithNamespaceFilter(namespace?: string) {
-        cy.clearLocalStorage()
+        cy.clearNetobservLocalStorage()
         netflowPage.visit()
 
         cy.get('#tabs-container').contains('Topology').click()
