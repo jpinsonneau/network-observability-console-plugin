@@ -7,8 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/netobserv/network-observability-console-plugin/pkg/model"
-	pmodel "github.com/prometheus/common/model"
+	"github.com/netobserv/network-observability-console-plugin/pkg/metricsparse"
 )
 
 const totalSeriesName = "total"
@@ -60,6 +59,7 @@ type Report struct {
 	TopologyEdges []TopologyEdgeRow `json:"topologyEdges,omitempty"`
 }
 
+// QueryInput describes how to name metric groups for an export query.
 type QueryInput struct {
 	MetricGroup    string
 	MetricType     string
@@ -67,12 +67,8 @@ type QueryInput struct {
 	AggregateBy    string
 }
 
-type seriesStats struct {
-	sum    float64
-	avg    float64
-	min    float64
-	max    float64
-	latest float64
+func timestampToISO(sec int64) string {
+	return time.Unix(sec, 0).UTC().Format(time.RFC3339)
 }
 
 func roundTwoDigits(v float64) float64 {
@@ -82,55 +78,6 @@ func roundTwoDigits(v float64) float64 {
 	return math.Round(v*100) / 100
 }
 
-func isFinite(v float64) bool {
-	return !math.IsNaN(v) && !math.IsInf(v, 0)
-}
-
-func computeStats(values []float64) seriesStats {
-	finite := make([]float64, 0, len(values))
-	for _, v := range values {
-		if isFinite(v) {
-			finite = append(finite, v)
-		}
-	}
-	if len(finite) == 0 {
-		return seriesStats{sum: math.NaN(), avg: math.NaN(), min: math.NaN(), max: math.NaN(), latest: math.NaN()}
-	}
-	sum := 0.0
-	minVal := finite[0]
-	maxVal := finite[0]
-	for _, v := range finite {
-		sum += v
-		if v < minVal {
-			minVal = v
-		}
-		if v > maxVal {
-			maxVal = v
-		}
-	}
-	avg := sum / float64(len(finite))
-	return seriesStats{
-		sum:    roundTwoDigits(sum),
-		avg:    roundTwoDigits(avg),
-		min:    roundTwoDigits(minVal),
-		max:    roundTwoDigits(maxVal),
-		latest: roundTwoDigits(finite[len(finite)-1]),
-	}
-}
-
-func timestampToISO(sec int64) string {
-	return time.Unix(sec, 0).UTC().Format(time.RFC3339)
-}
-
-func sampleTimestamp(pair pmodel.SamplePair) int64 {
-	return int64(pair.Timestamp) / 1000
-}
-
-func sampleValue(pair pmodel.SamplePair) float64 {
-	return roundTwoDigits(float64(pair.Value))
-}
-
-// normalizeSeriesName replaces empty / unlabeled Prometheus series with "total".
 func normalizeSeriesName(series string) string {
 	s := strings.TrimSpace(series)
 	switch s {
@@ -141,74 +88,92 @@ func normalizeSeriesName(series string) string {
 	}
 }
 
-// AppendMatrix appends export rows from a matrix query response.
-func AppendMatrix(
+func formatPeer(kind, name string) string {
+	if kind != "" && name != "" {
+		return kind + "/" + name
+	}
+	if name != "" {
+		return name
+	}
+	return ""
+}
+
+func topologySeriesName(srcKind, srcName, dstKind, dstName string) string {
+	src := formatPeer(srcKind, srcName)
+	dst := formatPeer(dstKind, dstName)
+	if src == "" && dst == "" {
+		return ""
+	}
+	return strings.TrimSpace(src + " -> " + dst)
+}
+
+// AppendEnriched flattens enriched topology/generic metrics into export rows.
+func AppendEnriched(
 	rows []MetricSeriesRow,
 	edges []TopologyEdgeRow,
-	matrix model.Matrix,
+	resultType string,
+	result interface{},
 	input QueryInput,
 	includeTopologyEdges bool,
 ) ([]MetricSeriesRow, []TopologyEdgeRow) {
 	group := MetricGroup(input.MetricType, input.MetricFunction, input.AggregateBy, input.MetricGroup)
 
-	for _, stream := range matrix {
-		if isTopologyMetric(stream.Metric) {
-			source := peerFromLabels(stream.Metric, "Src")
-			destination := peerFromLabels(stream.Metric, "Dst")
-			series := normalizeSeriesName(topologySeriesName(source, destination))
-			values := make([]float64, 0, len(stream.Values))
-			for _, pair := range stream.Values {
-				ts := sampleTimestamp(pair)
-				val := sampleValue(pair)
-				values = append(values, val)
+	switch resultType {
+	case metricsparse.ResultTypeTopologyMetrics:
+		metrics, _ := result.([]metricsparse.TopologyMetric)
+		for i := range metrics {
+			m := &metrics[i]
+			srcKind, srcName := metricsparse.FormatPeerKindName(m.Source)
+			dstKind, dstName := metricsparse.FormatPeerKindName(m.Destination)
+			series := normalizeSeriesName(topologySeriesName(srcKind, srcName, dstKind, dstName))
+			for _, dp := range m.Values {
+				ts := int64(dp[0])
+				val := roundTwoDigits(dp[1])
 				rows = append(rows, MetricSeriesRow{
 					MetricGroup:     group,
 					Series:          series,
 					Timestamp:       ts,
 					TimestampISO:    timestampToISO(ts),
 					Value:           ExportFloat(val),
-					SourceKind:      source.kind,
-					SourceName:      source.name,
-					DestinationKind: destination.kind,
-					DestinationName: destination.name,
+					SourceKind:      srcKind,
+					SourceName:      srcName,
+					DestinationKind: dstKind,
+					DestinationName: dstName,
 				})
 			}
 			if includeTopologyEdges && includeTopologyEdgesForGroup(group) {
-				stats := computeStats(values)
 				edges = append(edges, TopologyEdgeRow{
 					MetricGroup:     group,
-					SourceKind:      source.kind,
-					SourceName:      source.name,
-					DestinationKind: destination.kind,
-					DestinationName: destination.name,
-					Sum:             ExportFloat(stats.sum),
-					Avg:             ExportFloat(stats.avg),
-					Min:             ExportFloat(stats.min),
-					Max:             ExportFloat(stats.max),
-					Latest:          ExportFloat(stats.latest),
+					SourceKind:      srcKind,
+					SourceName:      srcName,
+					DestinationKind: dstKind,
+					DestinationName: dstName,
+					Sum:             ExportFloat(m.Stats.Sum),
+					Avg:             ExportFloat(m.Stats.Avg),
+					Min:             ExportFloat(m.Stats.Min),
+					Max:             ExportFloat(m.Stats.Max),
+					Latest:          ExportFloat(m.Stats.Latest),
 				})
 			}
-			continue
 		}
-
-		series := labelString(stream.Metric, input.AggregateBy)
-		if series == "" {
-			series = stream.Metric.String()
-		}
-		series = normalizeSeriesName(series)
-		for _, pair := range stream.Values {
-			ts := sampleTimestamp(pair)
-			val := sampleValue(pair)
-			rows = append(rows, MetricSeriesRow{
-				MetricGroup:  group,
-				Series:       series,
-				Timestamp:    ts,
-				TimestampISO: timestampToISO(ts),
-				Value:        ExportFloat(val),
-			})
+	case metricsparse.ResultTypeGenericMetrics:
+		metrics, _ := result.([]metricsparse.GenericMetric)
+		for i := range metrics {
+			m := &metrics[i]
+			series := normalizeSeriesName(m.Name)
+			for _, dp := range m.Values {
+				ts := int64(dp[0])
+				val := roundTwoDigits(dp[1])
+				rows = append(rows, MetricSeriesRow{
+					MetricGroup:  group,
+					Series:       series,
+					Timestamp:    ts,
+					TimestampISO: timestampToISO(ts),
+					Value:        ExportFloat(val),
+				})
+			}
 		}
 	}
-
 	return rows, edges
 }
 

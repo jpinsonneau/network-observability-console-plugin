@@ -86,12 +86,12 @@ func (o *LokiClientMock) Get(url string) ([]byte, int, error) {
 			}
 		} else {
 			path = "mocks/loki/flow_records"
-			//nolint:gocritic // if-else is ok
-			if strings.Contains(url, "|~`\"Packets\":0[,}]|~`\"PktDropPackets\":[1-9][0-9]*[,}]") {
+			// Match pkg/loki/flow_query.go packetLoss filters (order matters).
+			if strings.Contains(url, "!~`\"Packets\"`") && strings.Contains(url, "|~`\"PktDropPackets\":[1-9]") {
 				path += "_dropped.json"
-			} else if strings.Contains(url, "|~`\"PktDropPackets\":[1-9][0-9]*[,}]") {
+			} else if strings.Contains(url, "|~`\"PktDropPackets\":[1-9]") {
 				path += "_has_dropped.json"
-			} else if strings.Contains(url, "|~`\"PktDropPackets\":0[,}]") {
+			} else if strings.Contains(url, "!~`\"PktDropPackets\"`") {
 				path += "_sent.json"
 			} else {
 				path += ".json"

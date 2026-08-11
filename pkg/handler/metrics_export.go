@@ -205,9 +205,9 @@ func (h *Handlers) buildMetricsExportReport(
 	query *exportMetricsQuery,
 	includeTopologyEdges bool,
 ) (metricsexport.Report, error) {
-	matrix, ok := flows.Result.(model.Matrix)
-	if !ok {
-		return metricsexport.Report{}, fmt.Errorf("unexpected metrics result type %T", flows.Result)
+	enriched, err := enrichTopologyResponse(flows, params, h.Cfg.Frontend.Scopes)
+	if err != nil {
+		return metricsexport.Report{}, err
 	}
 
 	timeRange, err := encodeExportTimeRangeFromParams(params)
@@ -217,7 +217,7 @@ func (h *Handlers) buildMetricsExportReport(
 
 	rows := []metricsexport.MetricSeriesRow{}
 	edges := []metricsexport.TopologyEdgeRow{}
-	rows, edges = metricsexport.AppendMatrix(rows, edges, matrix, metricsexport.QueryInput{
+	rows, edges = metricsexport.AppendEnriched(rows, edges, enriched.ResultType, enriched.Result, metricsexport.QueryInput{
 		MetricGroup:    query.MetricGroup,
 		MetricType:     firstNonEmpty(query.Type, params.Get(metricTypeKey)),
 		MetricFunction: firstNonEmpty(query.Function, params.Get(metricFunctionKey)),

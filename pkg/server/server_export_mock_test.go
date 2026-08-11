@@ -154,3 +154,62 @@ func TestExportEndpointsMockMode(t *testing.T) {
 		assert.Contains(t, string(body), "metricGroup,series,timestamp")
 	})
 }
+
+func TestGetTopologyReturnsEnrichedMetrics(t *testing.T) {
+	t.Chdir("../..")
+
+	authM := authMock{}
+	authM.MockGranted()
+	cfg := mockExportConfig()
+	cfg.Frontend.Scopes = []config.Scope{
+		{ID: "namespace", Name: "Namespace", Labels: []string{"SrcK8S_Namespace", "DstK8S_Namespace"}},
+		{ID: "owner", Name: "Owner", Labels: []string{"SrcK8S_OwnerName", "DstK8S_OwnerName"}},
+		{ID: "resource", Name: "Resource", Labels: []string{"SrcK8S_Name", "DstK8S_Name"}},
+		{ID: "host", Name: "Node", Labels: []string{"SrcK8S_HostName", "DstK8S_HostName"}},
+	}
+	backendRoutes := setupRoutes(context.TODO(), cfg, &authM)
+	backendSvc := httptest.NewServer(backendRoutes)
+	defer backendSvc.Close()
+
+	url := backendSvc.URL + "/api/flow/metrics?recordType=flowLog&dataSource=auto&packetLoss=all&limit=100&timeRange=300&type=Bytes&function=rate&aggregateBy=namespace"
+	res, err := backendSvc.Client().Get(url)
+	require.NoError(t, err)
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, res.StatusCode, string(body))
+
+	var payload struct {
+		ResultType    string `json:"resultType"`
+		UnixTimestamp int64  `json:"unixTimestamp"`
+		Result        []struct {
+			Source struct {
+				ID           string `json:"id"`
+				ResourceKind string `json:"resourceKind"`
+				Namespace    string `json:"namespace"`
+			} `json:"source"`
+			Destination struct {
+				ID string `json:"id"`
+			} `json:"destination"`
+			Values [][]float64 `json:"values"`
+			Stats  struct {
+				Sum         float64   `json:"sum"`
+				Avg         float64   `json:"avg"`
+				Percentiles []float64 `json:"percentiles"`
+			} `json:"stats"`
+			Scope string `json:"scope"`
+		} `json:"result"`
+		Stats struct {
+			DataSources []string `json:"dataSources"`
+		} `json:"stats"`
+	}
+	require.NoError(t, json.Unmarshal(body, &payload))
+	assert.Equal(t, "topologyMetrics", payload.ResultType)
+	assert.NotZero(t, payload.UnixTimestamp)
+	require.NotEmpty(t, payload.Result)
+	assert.Equal(t, "namespace", payload.Result[0].Scope)
+	assert.NotEmpty(t, payload.Result[0].Source.ID)
+	assert.NotEmpty(t, payload.Result[0].Values)
+	assert.Len(t, payload.Result[0].Stats.Percentiles, 2)
+	assert.Contains(t, payload.Stats.DataSources, "mock")
+}

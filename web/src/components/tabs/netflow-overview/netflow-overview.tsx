@@ -833,6 +833,7 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
         case 'dropped_packet_rates': {
           const isDrop = id.startsWith('dropped');
           const options = getKebabOptions(id, {
+            showInternal: true,
             showOutOfScope: false,
             showTop: true,
             showApp: { text: t('Show total'), value: !isDrop },
@@ -842,7 +843,7 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
           const showTopOnly = options.showTop && !options.showApp?.value && !options.showAppDrop?.value;
           const metricType = id.endsWith('byte_rates') ? 'Bytes' : 'Packets';
           const topKMetrics = getTopKRateMetrics(id);
-          const filteredTopk = topKMetrics.or([]).filter(m => m.source.id !== m.destination.id);
+          const rateMetrics = topKMetrics.or([]);
           if (showTopOnly) {
             return {
               calculatedTitle: info.topTitle,
@@ -852,7 +853,7 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
                 <MetricsGraph
                   id={id}
                   metricType={metricType}
-                  metrics={filteredTopk}
+                  metrics={rateMetrics}
                   metricFunction="rate"
                   limit={props.limit}
                   showBar={false}
@@ -882,12 +883,12 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
             calculatedTitle: showTotalOnly ? info.totalTitle : undefined,
             element: panelError ? (
               <PanelErrorIndicator error={panelError} metricType={metricType} showDetails={!isFocus} />
-            ) : !_.isEmpty(filteredTopk) || namedTotalMetric.result || namedTotalDroppedMetric.result ? (
+            ) : !_.isEmpty(rateMetrics) || namedTotalMetric.result || namedTotalDroppedMetric.result ? (
               <MetricsGraphWithTotal
                 id={id}
                 metricType={metricType}
                 metricFunction="rate"
-                topKMetrics={filteredTopk}
+                topKMetrics={rateMetrics}
                 totalMetric={namedTotalMetric.result}
                 totalDropMetric={namedTotalDroppedMetric.result}
                 limit={props.limit}
@@ -895,6 +896,7 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
                 showTop={options.showTop!}
                 showTotal={options.showApp?.value || false}
                 showTotalDrop={options.showAppDrop?.value || false}
+                showInternal={options.showInternal}
                 showOutOfScope={options.showOutOfScope!}
                 smallerTexts={smallerTexts}
                 showOthers={false}

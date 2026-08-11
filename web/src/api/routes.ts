@@ -2,24 +2,25 @@ import axios from 'axios';
 import { Config, defaultConfig } from '../model/config';
 import { ExportApiFormat } from '../model/export-format';
 import { buildExportQuery } from '../model/export-query';
-import { FlowQuery, FlowScope, isTimeMetric, StructuredFlowQuery, structuredToRawQuery } from '../model/flow-query';
+import { FlowQuery, StructuredFlowQuery, structuredToRawQuery } from '../model/flow-query';
 import { MetricsExportRequest } from '../model/metrics-export-query';
 import { ContextSingleton } from '../utils/context';
 import { TimeRange } from '../utils/datetime';
 import { parseExportError } from '../utils/export-download';
-import { parseGenericMetrics, parseTopologyMetrics } from '../utils/metrics';
+import { genericMetricsFromTopology, hydrateTopologyMetrics } from '../utils/metrics';
 import { AlertsResult, SilencedAlert } from './alert';
 import { Field } from './ipfix';
 import {
   AggregatedQueryResponse,
   FlowMetricsResult,
+  GenericMetric,
   GenericMetricsResult,
   parseStream,
-  RawTopologyMetrics,
   RecordsResult,
   Stats,
   Status,
-  StreamResult
+  StreamResult,
+  TopologyMetrics
 } from './query-response';
 
 // OpenShift Console proxy CSRF (double-submit cookie). Required for POST/PUT/PATCH/DELETE
@@ -221,33 +222,32 @@ export const getFlowCollector = (): Promise<any> => {
     });
 };
 
-export const getFlowMetrics = (params: FlowQuery, range: number | TimeRange): Promise<FlowMetricsResult> => {
+export const getFlowMetrics = (params: FlowQuery, _range: number | TimeRange): Promise<FlowMetricsResult> => {
   return getFlowMetricsGeneric(params, res => {
-    return parseTopologyMetrics(
-      res.result as RawTopologyMetrics[],
-      range,
-      params.aggregateBy as FlowScope,
-      res.unixTimestamp,
-      !isTimeMetric(params.type),
-      res.stats.dataSources.includes('mock')
-    );
+    if (res.resultType !== 'topologyMetrics') {
+      throw new Error(`unexpected flow metrics resultType ${res.resultType}; expected topologyMetrics`);
+    }
+    return hydrateTopologyMetrics((res.result as TopologyMetrics[]) || []);
   });
 };
 
 export const getFlowGenericMetrics = (
   q: StructuredFlowQuery,
-  range: number | TimeRange
+  _range: number | TimeRange
 ): Promise<GenericMetricsResult> => {
   const params = structuredToRawQuery(q);
   return getFlowMetricsGeneric(params, res => {
-    return parseGenericMetrics(
-      res.result as RawTopologyMetrics[],
-      range,
-      params.aggregateBy as Field,
-      res.unixTimestamp,
-      !isTimeMetric(params.type),
-      res.stats.dataSources.includes('mock')
-    );
+    if (res.resultType === 'genericMetrics') {
+      return (res.result as GenericMetric[]) || [];
+    }
+    if (res.resultType === 'topologyMetrics') {
+      // Scope aggregates (e.g. app totals) enrich as topologyMetrics; flatten for generic callers.
+      return genericMetricsFromTopology(
+        hydrateTopologyMetrics((res.result as TopologyMetrics[]) || []),
+        (params.aggregateBy || 'app') as Field
+      );
+    }
+    throw new Error(`unexpected flow metrics resultType ${res.resultType}; expected genericMetrics`);
   });
 };
 
