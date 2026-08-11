@@ -338,8 +338,13 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
 
   const applyView = React.useCallback(
     (viewId: ActiveViewId) => {
+      // Re-selecting the current view discards its draft (keeps draft when switching away/back)
+      if (viewId === activeView) {
+        setDraftView(null);
+        return;
+      }
       setActiveView(viewId);
-      // Keep draft alive — only cleared when saved as custom view or explicitly discarded
+      // Keep draft alive across view switches — only cleared when saved, re-selected, or auto-cleared
       if (viewId === 'all') {
         // Restore user's original metric type
         updateTopologyMetricType(savedMetricType.current);
@@ -360,7 +365,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
         updateTopologyMetricType(preset.topologyMetricType);
       }
     },
-    [setActiveView, updateTopologyMetricType, customViews]
+    [activeView, setActiveView, updateTopologyMetricType, customViews]
   );
 
   const setColumnsWithDraft = React.useCallback(
@@ -494,10 +499,6 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     [customViews, activeView, setCustomViews, applyView]
   );
 
-  const onDiscardDraft = React.useCallback(() => {
-    setDraftView(null);
-  }, []);
-
   const resetDefaultFilters = React.useCallback(() => {
     applyView('all');
     updateTableFilters({ match: filters.match, list: caps.defaultFilters });
@@ -629,7 +630,6 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
                   onSaveView={() => setSaveViewModalOpen(true)}
                   onSaveExistingView={onSaveExistingView}
                   onDeleteCustomView={onDeleteCustomView}
-                  onDiscardDraft={onDiscardDraft}
                   hasAvailableSlot={!!getNextCustomViewSlot(customViews)}
                 />
               </FlexItem>

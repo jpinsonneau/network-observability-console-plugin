@@ -7,7 +7,6 @@ export type ViewPresetId = 'all' | 'pktdrop' | 'dns' | 'rtt' | 'tls' | 'udn' | '
 
 export type CustomViewSlot = 'custom_0' | 'custom_1' | 'custom_2';
 export type ActiveViewId = ViewPresetId | CustomViewSlot;
-export const MAX_CUSTOM_VIEWS = 3;
 
 const customViewSlots: CustomViewSlot[] = ['custom_0', 'custom_1', 'custom_2'];
 
