@@ -16,7 +16,14 @@ import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Config } from '../../model/config';
-import { ActiveViewId, defaultGenericPrefs, GenericPrefs, getViewPreset, isCustomViewId, ViewPresetId } from '../../model/views';
+import {
+  ActiveViewId,
+  defaultGenericPrefs,
+  GenericPrefs,
+  getViewPreset,
+  isCustomViewId,
+  ViewPresetId
+} from '../../model/views';
 import { Column, ColumnSizeMap, getDefaultColumns, getFullColumnName } from '../../utils/columns';
 import './columns-modal.css';
 import Modal, { ensureRootElement } from './modal';

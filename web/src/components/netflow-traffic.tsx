@@ -439,8 +439,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     const draftCols = new Set(draftView.columns);
     const draftPanels = new Set(draftView.panels);
 
-    const colsMatch =
-      draftCols.size === expectedCols.size && [...draftCols].every(id => expectedCols.has(id));
+    const colsMatch = draftCols.size === expectedCols.size && [...draftCols].every(id => expectedCols.has(id));
     const panelsMatch =
       draftPanels.size === expectedPanels.size && [...draftPanels].every(id => expectedPanels.has(id));
 

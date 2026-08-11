@@ -17,7 +17,14 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Feature } from '../../model/config';
 import { RecordType } from '../../model/flow-query';
-import { ActiveViewId, defaultGenericPrefs, GenericPrefs, getViewPreset, isCustomViewId, ViewPresetId } from '../../model/views';
+import {
+  ActiveViewId,
+  defaultGenericPrefs,
+  GenericPrefs,
+  getViewPreset,
+  isCustomViewId,
+  ViewPresetId
+} from '../../model/views';
 import {
   defaultPanelIds,
   getDefaultOverviewPanels,

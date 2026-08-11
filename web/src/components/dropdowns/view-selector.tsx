@@ -164,19 +164,19 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({
                     )}
                   </Flex>
                 </FlexItem>
-              <FlexItem>
-                <TrashIcon
-                  onClick={e => {
-                    e.stopPropagation();
-                    onDeleteCustomView(cv.id);
-                    setOpen(false);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                  data-test={`delete-view-${cv.id}`}
-                />
-              </FlexItem>
-            </Flex>
-          </SelectOption>
+                <FlexItem>
+                  <TrashIcon
+                    onClick={e => {
+                      e.stopPropagation();
+                      onDeleteCustomView(cv.id);
+                      setOpen(false);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    data-test={`delete-view-${cv.id}`}
+                  />
+                </FlexItem>
+              </Flex>
+            </SelectOption>
           );
         })}
         {isOnDraftView && <Divider key="draft-divider" />}
