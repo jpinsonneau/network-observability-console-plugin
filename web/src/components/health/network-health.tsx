@@ -37,11 +37,19 @@ import { useHealthFilters } from './health-filters-hook';
 import { HealthFiltersToolbar } from './health-filters-toolbar';
 import { HealthGlobal } from './health-global';
 import { buildStats, collectAvailableNamespaces, HealthItem } from './health-helper';
+import { HealthOvn, HealthOvnView } from './health-ovn';
+import { HealthOvnSummary } from './health-ovn-summary';
 import { HealthScoringDrawer } from './health-scoring-drawer';
 import { HealthSummary } from './health-summary';
+import { fetchOvnPlatformHealth } from './ovn-health-fetcher';
+import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
 import { HealthTabTitle } from './tab-title';
 
 import './health.css';
+
+type HealthContextTab = 'netobserv' | 'platform';
+type NetobservSubTab = 'global' | 'per-node' | 'per-namespace' | 'per-owner';
+type PlatformSubTab = HealthOvnView;
 
 export const NetworkHealth: React.FC<{}> = ({}) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
@@ -53,14 +61,16 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const [rules, setRules] = React.useState<Rule[]>([]);
   const [healthItems, setHealthItems] = React.useState<HealthItem[]>([]);
   const [filters, setFilters] = useHealthFilters();
-  const [activeTabKey, setActiveTabKey] = React.useState<string>('global');
+  const [ovnHealth, setOvnHealth] = React.useState<OvnHealthStats>(() => buildOvnStats([], false));
+  const [activeContextTab, setActiveContextTab] = React.useState<HealthContextTab>('netobserv');
+  const [activeNetobservTab, setActiveNetobservTab] = React.useState<NetobservSubTab>('global');
+  const [activePlatformTab, setActivePlatformTab] = React.useState<PlatformSubTab>('global');
   const [config, setConfig] = React.useState<Config>(defaultConfig);
   const [configLoaded, setConfigLoaded] = React.useState(false);
   const [isScoringDrawerOpen, setIsScoringDrawerOpen] = React.useState<boolean>(false);
   const [isRulesManagerOpen, setIsRulesManagerOpen] = React.useState(false);
   const [showCreatedAlert, setShowCreatedAlert] = React.useState(() => getURLParams().get('ruleCreated') === '1');
 
-  // Load config on mount
   React.useEffect(() => {
     loadConfig().then(v => {
       setConfig(v.config);
@@ -75,10 +85,17 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
     setLoading(true);
     setError(undefined);
 
-    fetchNetworkHealth(config.recordingAnnotations || {})
-      .then(res => {
-        setHealthItems(res.healthItems);
-        setRules(res.alertRules);
+    Promise.all([
+      fetchNetworkHealth(config.recordingAnnotations || {}),
+      fetchOvnPlatformHealth().catch(err => {
+        console.log('Could not fetch OVN platform alerts:', err);
+        return { stats: buildOvnStats([], false), alertRules: [] };
+      })
+    ])
+      .then(([netobservRes, ovnRes]) => {
+        setHealthItems(netobservRes.healthItems);
+        setRules(netobservRes.alertRules);
+        setOvnHealth(ovnRes.stats);
       })
       .catch(err => {
         const errStr = getGenericHTTPError(err);
@@ -98,27 +115,222 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const availableNamespaces = React.useMemo(() => collectAvailableNamespaces(healthItems), [healthItems]);
 
   usePoll(fetch, interval);
-  // Run first fetch only after config is loaded so recordingAnnotations (including third-party rules without template label) is available
   React.useEffect(() => {
     if (configLoaded) {
       fetch();
     }
   }, [configLoaded, fetch]);
 
+  React.useEffect(() => {
+    if (activeContextTab === 'platform' && !ovnHealth.available) {
+      setActiveContextTab('netobserv');
+    }
+  }, [activeContextTab, ovnHealth.available]);
+
   // Avoid flashing empty/zero stats before the first successful (or failed) load.
   const isInitialLoading = !configLoaded || !initialized;
+  const isPlatformContext = activeContextTab === 'platform' && ovnHealth.available;
+  const summaryForceCollapsed = isScoringDrawerOpen || isRulesManagerOpen;
+
+  const activeViewLabel = React.useMemo(() => {
+    if (isPlatformContext) {
+      return activePlatformTab === 'per-node' ? t('Nodes') : t('Global');
+    }
+    switch (activeNetobservTab) {
+      case 'global':
+        return t('Global');
+      case 'per-node':
+        return t('Nodes');
+      case 'per-namespace':
+        return t('Namespaces');
+      case 'per-owner':
+        return t('Workloads');
+      default:
+        return t('Global');
+    }
+  }, [activeNetobservTab, activePlatformTab, isPlatformContext, t]);
 
   const panelContent = () => {
     if (isRulesManagerOpen) {
       return <HealthRulesManager isOpen={isRulesManagerOpen} onClose={() => setIsRulesManagerOpen(false)} />;
     }
     if (isScoringDrawerOpen) {
-      return <HealthScoringDrawer isOpen={isScoringDrawerOpen} onClose={() => setIsScoringDrawerOpen(false)} />;
+      return (
+        <HealthScoringDrawer
+          isOpen={isScoringDrawerOpen}
+          onClose={() => setIsScoringDrawerOpen(false)}
+          context={isPlatformContext ? 'ovn' : 'netobserv'}
+        />
+      );
     }
     return null;
   };
 
   const isDrawerOpen = isScoringDrawerOpen || isRulesManagerOpen;
+
+  const renderContextTabs = () => (
+    <Flex className={`health-tabs-container health-context-tabs-row ${isDarkTheme ? 'dark' : ''}`}>
+      <FlexItem flex={{ default: 'flex_1' }}>
+        <Tabs
+          activeKey={activeContextTab}
+          onSelect={(_, tabIndex) => setActiveContextTab(String(tabIndex) as HealthContextTab)}
+          aria-label={t('Health data source')}
+          className={`health-context-tabs ${isDarkTheme ? 'dark' : ''}`}
+          data-test="health-context-tabs"
+        >
+          <Tab eventKey={'netobserv'} title={t('NetObserv')} data-test="health-context-tab-netobserv" />
+          {ovnHealth.available && (
+            <Tab eventKey={'platform'} title={t('Platform')} data-test="health-context-tab-platform" />
+          )}
+        </Tabs>
+      </FlexItem>
+      <FlexItem className={'bottom-border'}>
+        <Button
+          data-test={isPlatformContext ? 'health-ovn-info-button' : 'health-scoring-info-button'}
+          className="overflow-button"
+          variant="link"
+          onClick={() => {
+            setIsRulesManagerOpen(false);
+            setIsScoringDrawerOpen(!isScoringDrawerOpen);
+          }}
+          icon={<QuestionCircleIcon />}
+        >
+          {isScoringDrawerOpen
+            ? isPlatformContext
+              ? t('Hide platform alert information')
+              : t('Hide scoring information')
+            : isPlatformContext
+            ? t('Show platform alert information')
+            : t('Show scoring information')}
+        </Button>
+      </FlexItem>
+    </Flex>
+  );
+
+  const renderContextSummary = () => (
+    <div
+      key={isPlatformContext ? 'platform' : 'netobserv'}
+      className="health-context-summary"
+      aria-live="polite"
+      data-test="health-context-summary"
+    >
+      {isPlatformContext ? (
+        <HealthOvnSummary
+          stats={ovnHealth}
+          forceCollapsed={summaryForceCollapsed}
+          isLoading={isInitialLoading}
+          activeViewLabel={activeViewLabel}
+        />
+      ) : (
+        <HealthSummary
+          rules={rules}
+          stats={unfilteredHealth}
+          forceCollapsed={summaryForceCollapsed}
+          isLoading={isInitialLoading}
+          activeViewLabel={activeViewLabel}
+        />
+      )}
+    </div>
+  );
+
+  const renderSubTabs = () => {
+    if (isPlatformContext) {
+      return (
+        <Tabs
+          activeKey={activePlatformTab}
+          onSelect={(_, tabIndex) => setActivePlatformTab(String(tabIndex) as PlatformSubTab)}
+          aria-label={t('Platform networking alerts')}
+          className={`health-subtabs health-platform-subtabs ${isDarkTheme ? 'dark' : ''}`}
+          data-test="health-platform-subtabs"
+        >
+          <Tab
+            eventKey={'global'}
+            data-test="health-platform-tab-global"
+            title={<HealthTabTitle title={t('Global')} stats={[ovnHealth.global]} />}
+            aria-label="Tab global platform alerts"
+          />
+          <Tab
+            eventKey={'per-node'}
+            data-test="health-platform-tab-nodes"
+            title={<HealthTabTitle title={t('Nodes')} stats={ovnHealth.byNode} />}
+            aria-label="Tab OVN platform alerts per node"
+          />
+        </Tabs>
+      );
+    }
+
+    return (
+      <Tabs
+        activeKey={activeNetobservTab}
+        onSelect={(_, tabIndex) => setActiveNetobservTab(String(tabIndex) as NetobservSubTab)}
+        aria-label={t('NetObserv health views')}
+        className={`health-subtabs health-netobserv-subtabs ${isDarkTheme ? 'dark' : ''}`}
+        data-test="health-netobserv-subtabs"
+      >
+        <Tab
+          eventKey={'global'}
+          title={<HealthTabTitle title={t('Global')} stats={[health.global]} />}
+          aria-label="Tab global"
+        />
+        <Tab
+          eventKey={'per-node'}
+          title={<HealthTabTitle title={t('Nodes')} stats={health.byNode} />}
+          aria-label="Tab per node"
+        />
+        <Tab
+          eventKey={'per-namespace'}
+          title={<HealthTabTitle title={t('Namespaces')} stats={health.byNamespace} />}
+          aria-label="Tab per namespace"
+        />
+        <Tab
+          eventKey={'per-owner'}
+          title={<HealthTabTitle title={t('Workloads')} stats={health.byOwner} />}
+          aria-label="Tab per owner"
+        />
+      </Tabs>
+    );
+  };
+
+  const renderTabContent = () => {
+    const content = isPlatformContext ? (
+      <HealthOvn stats={ovnHealth} view={activePlatformTab} isLoading={isInitialLoading} isDark={isDarkTheme} />
+    ) : (
+      <>
+        {activeNetobservTab === 'global' && (
+          <HealthGlobal info={health.global} isLoading={isInitialLoading} />
+        )}
+        {activeNetobservTab === 'per-node' && (
+          <HealthDrawerContainer
+            title={t('Rule violations per node')}
+            stats={health.byNode}
+            kind={'Node'}
+            isDark={isDarkTheme}
+            isLoading={isInitialLoading}
+          />
+        )}
+        {activeNetobservTab === 'per-namespace' && (
+          <HealthDrawerContainer
+            title={t('Rule violations per namespace')}
+            stats={health.byNamespace}
+            kind={'Namespace'}
+            isDark={isDarkTheme}
+            isLoading={isInitialLoading}
+          />
+        )}
+        {activeNetobservTab === 'per-owner' && (
+          <HealthDrawerContainer
+            title={t('Rule violations per workload')}
+            stats={health.byOwner}
+            kind={'Owner'}
+            isDark={isDarkTheme}
+            isLoading={isInitialLoading}
+          />
+        )}
+      </>
+    );
+
+    return <div className="health-tab-panel">{content}</div>;
+  };
 
   const mainContent = () => {
     return (
@@ -127,80 +339,17 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
           <HealthError title={t('Error')} body={error} />
         ) : (
           <>
-            <HealthFiltersToolbar filters={filters} setFilters={setFilters} availableNamespaces={availableNamespaces} />
-            <Flex className={`health-tabs-container ${isDarkTheme ? 'dark' : ''}`}>
-              <FlexItem flex={{ default: 'flex_1' }}>
-                <Tabs
-                  activeKey={activeTabKey}
-                  onSelect={(_, tabIndex) => setActiveTabKey(String(tabIndex))}
-                  role="region"
-                  className={isDarkTheme ? 'dark' : ''}
-                >
-                  <Tab
-                    eventKey={'global'}
-                    title={<HealthTabTitle title={t('Global')} stats={[health.global]} />}
-                    aria-label="Tab global"
-                  />
-                  <Tab
-                    eventKey={'per-node'}
-                    title={<HealthTabTitle title={t('Nodes')} stats={health.byNode} />}
-                    aria-label="Tab per node"
-                  />
-                  <Tab
-                    eventKey={'per-namespace'}
-                    title={<HealthTabTitle title={t('Namespaces')} stats={health.byNamespace} />}
-                    aria-label="Tab per namespace"
-                  />
-                  <Tab
-                    eventKey={'per-owner'}
-                    title={<HealthTabTitle title={t('Workloads')} stats={health.byOwner} />}
-                    aria-label="Tab per owner"
-                  />
-                </Tabs>
-              </FlexItem>
-              <FlexItem className={'bottom-border'}>
-                <Button
-                  data-test="health-scoring-info-button"
-                  className="overflow-button"
-                  variant="link"
-                  onClick={() => {
-                    setIsRulesManagerOpen(false);
-                    setIsScoringDrawerOpen(!isScoringDrawerOpen);
-                  }}
-                  icon={<QuestionCircleIcon />}
-                >
-                  {isScoringDrawerOpen ? t('Hide scoring information') : t('Show scoring information')}
-                </Button>
-              </FlexItem>
-            </Flex>
-            {activeTabKey === 'global' && <HealthGlobal info={health.global} isLoading={isInitialLoading} />}
-            {activeTabKey === 'per-node' && (
-              <HealthDrawerContainer
-                title={t('Rule violations per node')}
-                stats={health.byNode}
-                kind={'Node'}
-                isDark={isDarkTheme}
-                isLoading={isInitialLoading}
+            {renderContextTabs()}
+            {renderContextSummary()}
+            {!isPlatformContext && (
+              <HealthFiltersToolbar
+                filters={filters}
+                setFilters={setFilters}
+                availableNamespaces={availableNamespaces}
               />
             )}
-            {activeTabKey === 'per-namespace' && (
-              <HealthDrawerContainer
-                title={t('Rule violations per namespace')}
-                stats={health.byNamespace}
-                kind={'Namespace'}
-                isDark={isDarkTheme}
-                isLoading={isInitialLoading}
-              />
-            )}
-            {activeTabKey === 'per-owner' && (
-              <HealthDrawerContainer
-                title={t('Rule violations per workload')}
-                stats={health.byOwner}
-                kind={'Owner'}
-                isDark={isDarkTheme}
-                isLoading={isInitialLoading}
-              />
-            )}
+            <div className="health-subtabs-container">{renderSubTabs()}</div>
+            {renderTabContent()}
           </>
         )}
       </div>
@@ -289,14 +438,6 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                         </Flex>
                       </FlexItem>
                     </Flex>
-                  </FlexItem>
-                  <FlexItem>
-                    <HealthSummary
-                      rules={rules}
-                      stats={unfilteredHealth}
-                      forceCollapsed={isScoringDrawerOpen || isRulesManagerOpen}
-                      isLoading={isInitialLoading}
-                    />
                   </FlexItem>
                 </Flex>
                 {showCreatedAlert && (
