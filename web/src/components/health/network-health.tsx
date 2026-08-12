@@ -219,13 +219,13 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
             eventKey={'global'}
             data-test="health-platform-tab-global"
             title={<HealthTabTitle title={t('Global')} stats={[ovnHealth.global]} />}
-            aria-label="Tab global platform alerts"
+            aria-label={t('Tab global platform alerts')}
           />
           <Tab
             eventKey={'per-node'}
             data-test="health-platform-tab-nodes"
             title={<HealthTabTitle title={t('Nodes')} stats={ovnHealth.byNode} />}
-            aria-label="Tab OVN platform alerts per node"
+            aria-label={t('Tab OVN platform alerts per node')}
           />
         </Tabs>
       );
@@ -241,23 +241,27 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       >
         <Tab
           eventKey={'global'}
+          data-test="health-netobserv-tab-global"
           title={<HealthTabTitle title={t('Global')} stats={[health.global]} />}
-          aria-label="Tab global"
+          aria-label={t('Tab global')}
         />
         <Tab
           eventKey={'per-node'}
+          data-test="health-netobserv-tab-nodes"
           title={<HealthTabTitle title={t('Nodes')} stats={health.byNode} />}
-          aria-label="Tab per node"
+          aria-label={t('Tab per node')}
         />
         <Tab
           eventKey={'per-namespace'}
+          data-test="health-netobserv-tab-namespaces"
           title={<HealthTabTitle title={t('Namespaces')} stats={health.byNamespace} />}
-          aria-label="Tab per namespace"
+          aria-label={t('Tab per namespace')}
         />
         <Tab
           eventKey={'per-owner'}
+          data-test="health-netobserv-tab-workloads"
           title={<HealthTabTitle title={t('Workloads')} stats={health.byOwner} />}
-          aria-label="Tab per owner"
+          aria-label={t('Tab per owner')}
         />
       </Tabs>
     );
@@ -362,6 +366,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                               id="refresh-button"
                               className="co-action-refresh-button"
                               variant="primary"
+                              aria-label={t('Refresh network health')}
                               onClick={() => fetch()}
                               icon={<SyncAltIcon style={{ animation: `spin ${loading ? 1 : 0}s linear infinite` }} />}
                             />

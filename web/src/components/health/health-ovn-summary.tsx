@@ -134,6 +134,7 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
       </FlexItem>
       <FlexItem className="health-section-summary-body">
         <Flex
+          data-test="health-ovn-summary-dashboard"
           gap={{ default: 'gapMd' }}
           alignItems={{ default: 'alignItemsCenter' }}
           className={`health-summary-dashboard ${forceCollapsed ? 'force-collapsed' : ''}`}

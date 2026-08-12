@@ -661,10 +661,6 @@
     width: 100%;
 }
 
-.health-subtabs-container .pf-v6-c-tabs__scroll-button {
-    display: none !important;
-}
-
 .health-ovn-description {
     margin-bottom: var(--pf-t--global--spacer--md);
     color: var(--pf-t--global--text--color--subtle);
