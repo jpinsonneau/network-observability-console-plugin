@@ -39,7 +39,7 @@ const NetobservScoringContent: React.FC = () => {
             color: 'var(--pf-t--global--text--color--status--danger--default)'
           }}
         >
-          Critical
+          {t('Critical')}
         </span>
       </Content>
       <Content component={ContentVariants.p}>
@@ -57,7 +57,7 @@ const NetobservScoringContent: React.FC = () => {
             color: 'var(--pf-t--global--text--color--status--warning--default)'
           }}
         >
-          Warning
+          {t('Warning')}
         </span>
       </Content>
       <Content component={ContentVariants.p}>
@@ -75,7 +75,7 @@ const NetobservScoringContent: React.FC = () => {
             color: 'var(--pf-t--global--text--color--status--info--default)'
           }}
         >
-          Info
+          {t('Info')}
         </span>
       </Content>
       <Content component={ContentVariants.p}>
@@ -163,6 +163,7 @@ const OvnPlatformInfoContent: React.FC = () => {
       <Content component={ContentVariants.h3}>{t('What are OVN platform alerts?')}</Content>
       <Content component={ContentVariants.p}>
         {t(
+          // eslint-disable-next-line max-len
           'These are Prometheus alerts defined and managed by the OpenShift cluster network operator for OVN-Kubernetes. They monitor control plane health, node networking components, and OVN database state.'
         )}
       </Content>
@@ -187,7 +188,7 @@ const OvnPlatformInfoContent: React.FC = () => {
             color: 'var(--pf-t--global--text--color--status--danger--default)'
           }}
         >
-          Critical
+          {t('Critical')}
         </span>
       </Content>
       <Content component={ContentVariants.p}>
@@ -202,7 +203,7 @@ const OvnPlatformInfoContent: React.FC = () => {
             color: 'var(--pf-t--global--text--color--status--warning--default)'
           }}
         >
-          Warning
+          {t('Warning')}
         </span>
       </Content>
       <Content component={ContentVariants.p}>
@@ -215,7 +216,7 @@ const OvnPlatformInfoContent: React.FC = () => {
             color: 'var(--pf-t--global--text--color--status--info--default)'
           }}
         >
-          Info
+          {t('Info')}
         </span>
       </Content>
       <Content component={ContentVariants.p}>
@@ -237,6 +238,7 @@ const OvnPlatformInfoContent: React.FC = () => {
       <Content component={ContentVariants.h3}>{t('How the summary status is determined')}</Content>
       <Content component={ContentVariants.p}>
         {t(
+          // eslint-disable-next-line max-len
           'The status message reflects the highest severity with active alerts: critical issues take precedence over warnings, then info. When no alerts are active, the summary reports a healthy platform state.'
         )}
       </Content>
@@ -265,7 +267,9 @@ export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen
           </Content>
         </span>
         <DrawerActions>
-          <DrawerCloseButton onClick={onClose} />
+          <span data-test={isOvnContext ? 'health-ovn-info-drawer-close' : 'health-scoring-drawer-close'}>
+            <DrawerCloseButton onClick={onClose} />
+          </span>
         </DrawerActions>
       </DrawerHead>
       <div style={{ padding: '1.5rem', overflowY: 'auto', height: '100%' }}>

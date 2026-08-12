@@ -26,7 +26,9 @@ describe('health-ovn', () => {
     cy.get('[data-test="health-ovn-summary"]', { timeout: 60000 }).should('be.visible');
     cy.get('[data-test="health-ovn-content"]', { timeout: 60000 }).should('be.visible');
     cy.contains('There is no running ovn-kubernetes control plane.').should('be.visible');
-    cy.get('button[aria-label="Kebab toggle"]').first().click();
+    cy.contains('tr', 'There is no running ovn-kubernetes control plane.')
+      .find('[data-test="rule-details-actions"] button')
+      .click();
     cy.contains('View runbook')
       .should('have.attr', 'href')
       .and('include', 'github.com/openshift/runbooks');

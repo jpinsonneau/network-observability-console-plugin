@@ -45,6 +45,9 @@ export const getAlerts = (match?: string): Promise<AlertsResult> => {
   });
 };
 
+// Alertmanager filters match silence matcher definitions, not alert labels. Broad silences
+// (e.g. by alertname only) can still suppress OVN alerts whose prometheus label lives on
+// PrometheusRule metadata rather than on the alert itself, so we fetch all active silences.
 export const getAllSilencedAlerts = (): Promise<SilencedAlert[]> => {
   return axios.get('/api/alertmanager/api/v2/silences').then(r => {
     if (r.status >= 400) {

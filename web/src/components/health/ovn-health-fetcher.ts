@@ -7,6 +7,8 @@ import { isSilenced } from './health-helper';
 import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
 import { isOvnPlatformAlertName } from './ovn-platform-alerts';
 
+const OVN_ALERTS_MATCH = 'prometheus="openshift-ovn-kubernetes/k8s"';
+
 export const injectAlertRuleIds = (groups: AlertsResult['data']['groups']): Rule[] => {
   return groups.flatMap(group => {
     group.rules.forEach(r => {
@@ -39,7 +41,7 @@ export type OvnPlatformHealthResult = {
 };
 
 export const fetchOvnPlatformHealth = (): Promise<OvnPlatformHealthResult> => {
-  const alertsP = getAlerts().then(res =>
+  const alertsP = getAlerts(OVN_ALERTS_MATCH).then(res =>
     injectAlertRuleIds(res.data.groups).filter(r => isOvnPlatformAlertName(r.name))
   );
 

@@ -49,7 +49,8 @@ describe('ovn-platform-alerts', () => {
 describe('ovn-health-helper', () => {
   it('extracts node name from labels', () => {
     expect(getNodeNameFromLabels({ node: 'worker-1' })).toBe('worker-1');
-    expect(getNodeNameFromLabels({ instance: '10.0.0.1:9090' })).toBe('10.0.0.1:9090');
+    expect(getNodeNameFromLabels({ instance: '10.0.0.1:9090' })).toBe('10.0.0.1');
+    expect(getNodeNameFromLabels({ instance: '[2001:db8::1]:9090' })).toBe('2001:db8::1');
     expect(getNodeNameFromLabels({})).toBeUndefined();
   });
 
@@ -64,8 +65,20 @@ describe('ovn-health-helper', () => {
     expect(stats.global.critical.firing).toHaveLength(0);
     expect(stats.global.warning.firing).toHaveLength(1);
     expect(stats.byNode).toHaveLength(2);
+    expect(stats.byNode.find(s => s.name === 'worker-b')).toBeDefined();
     expect(countOvnActiveAlerts(stats)).toBe(3);
     expect(getOvnTabStats(stats)).toHaveLength(3);
+  });
+
+  it('merges node and instance identities for the same host', () => {
+    const rules = [
+      makeRule('OVNKubernetesNodePodAddError', 'firing', { node: 'worker-a' }),
+      makeRule('OVNKubernetesNodePodDeleteError', 'pending', { instance: 'worker-a:9095' })
+    ];
+    const stats = buildOvnStats(rules, true);
+    expect(stats.byNode).toHaveLength(1);
+    expect(stats.byNode[0].name).toBe('worker-a');
+    expect(countOvnActiveAlerts(stats)).toBe(2);
   });
 
   it('marks unavailable when no allowlisted rules are present', () => {
