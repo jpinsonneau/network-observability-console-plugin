@@ -47,18 +47,33 @@ export type OvnHealthStats = {
   byNode: HealthStat[];
 };
 
+export const normalizeNodeLabelValue = (value: string): string => {
+  if (value.startsWith('[')) {
+    const end = value.indexOf(']');
+    if (end !== -1 && end + 1 < value.length && value[end + 1] === ':') {
+      return value.slice(1, end);
+    }
+    return value;
+  }
+  const colon = value.lastIndexOf(':');
+  if (colon !== -1) {
+    return value.slice(0, colon);
+  }
+  return value;
+};
+
 export const getNodeNameFromLabels = (labels: Record<string, string>): string | undefined => {
   for (const key of NODE_LABEL_KEYS) {
     const value = labels[key];
     if (value) {
-      return value;
+      return normalizeNodeLabelValue(value);
     }
   }
   return undefined;
 };
 
 const pushItem = (stat: HealthStat, item: HealthItem) => {
-  let bucket = stat.other;
+  let bucket: HealthStat['critical'];
   switch (item.severity) {
     case 'critical':
       bucket = stat.critical;
@@ -78,9 +93,6 @@ const pushItem = (stat: HealthStat, item: HealthItem) => {
       break;
     case 'silenced':
       bucket.silenced.push(item);
-      break;
-    case 'inactive':
-      bucket.inactive.push(item.ruleName);
       break;
     default:
       break;

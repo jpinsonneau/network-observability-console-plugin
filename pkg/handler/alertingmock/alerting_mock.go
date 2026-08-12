@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
@@ -427,26 +428,34 @@ func createRule(probability float64, name, severity, extraFilter string, thresho
 	}
 }
 
+var (
+	netobservAlertRulesOnce  sync.Once
+	netobservAlertRulesCache []AlertingRule
+)
+
 func getNetobservAlertRules() []AlertingRule {
-	return []AlertingRule{
-		createRule(0.4, "Packet delivery failed", "info", "", 5, 100, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
-		createRule(0.3, "You have reached your hourly rate limit", "info", "", 5, 100, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
-		createRule(0.1, "It's always DNS", "warning", `dns_flag_response_code!=\"\"`, 15, 100, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
-		createRule(0.1, "We're under attack", "warning", "", 20, 100, true, []string{}, []string{}),
-		createRule(0.1, "Sh*t - Famous last words", "critical", "", 5, 100, true, []string{}, []string{"SrcK8S_Hostname", "DstK8S_Hostname"}),
-		createRule(0.3, "FromIngress", "info", "", 10, 100, false, []string{"exported_namespace"}, []string{}),
-		createRule(0.3, "Degraded latency", "info", "", 100, 1000, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
-		// Additional global alerts
-		createRule(0.8, "High overall traffic volume", "warning", "", 1000, 5000, true, []string{}, []string{}),
-		createRule(0.6, "Cluster-wide packet loss detected", "critical", "", 10, 50, true, []string{}, []string{}),
-		createRule(0.5, "Global DNS resolution issues", "info", "", 100, 500, true, []string{}, []string{}),
-		// Workload-specific alerts
-		createWorkloadRule(0.2, "High workload packet drops", "warning", "", 10, 50, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
-		createWorkloadRule(0.15, "Workload connection errors", "info", "", 5, 30, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
-		createWorkloadRule(0.1, "Workload DNS issues", "warning", `dns_flag_response_code!=\"\"`, 15, 60, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
-		createWorkloadRule(0.12, "Workload high latency", "info", "", 100, 500, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
-		createWorkloadRule(0.08, "Workload network policy denied", "warning", "", 5, 25, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
-	}
+	netobservAlertRulesOnce.Do(func() {
+		netobservAlertRulesCache = []AlertingRule{
+			createRule(0.4, "Packet delivery failed", "info", "", 5, 100, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
+			createRule(0.3, "You have reached your hourly rate limit", "info", "", 5, 100, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
+			createRule(0.1, "It's always DNS", "warning", `dns_flag_response_code!=\"\"`, 15, 100, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
+			createRule(0.1, "We're under attack", "warning", "", 20, 100, true, []string{}, []string{}),
+			createRule(0.1, "Sh*t - Famous last words", "critical", "", 5, 100, true, []string{}, []string{"SrcK8S_Hostname", "DstK8S_Hostname"}),
+			createRule(0.3, "FromIngress", "info", "", 10, 100, false, []string{"exported_namespace"}, []string{}),
+			createRule(0.3, "Degraded latency", "info", "", 100, 1000, true, []string{"SrcK8S_Namespace", "DstK8S_Namespace"}, []string{}),
+			// Additional global alerts
+			createRule(0.8, "High overall traffic volume", "warning", "", 1000, 5000, true, []string{}, []string{}),
+			createRule(0.6, "Cluster-wide packet loss detected", "critical", "", 10, 50, true, []string{}, []string{}),
+			createRule(0.5, "Global DNS resolution issues", "info", "", 100, 500, true, []string{}, []string{}),
+			// Workload-specific alerts
+			createWorkloadRule(0.2, "High workload packet drops", "warning", "", 10, 50, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
+			createWorkloadRule(0.15, "Workload connection errors", "info", "", 5, 30, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
+			createWorkloadRule(0.1, "Workload DNS issues", "warning", `dns_flag_response_code!=\"\"`, 15, 60, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
+			createWorkloadRule(0.12, "Workload high latency", "info", "", 100, 500, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
+			createWorkloadRule(0.08, "Workload network policy denied", "warning", "", 5, 25, true, []string{"SrcK8S_Namespace", "SrcK8S_OwnerName", "SrcK8S_Type"}),
+		}
+	})
+	return netobservAlertRulesCache
 }
 
 func getNetobservRecordingRules() []RecordingRule {
