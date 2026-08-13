@@ -34,7 +34,7 @@ import { HealthScoringDrawer } from './health-scoring-drawer';
 import { HealthSummary } from './health-summary';
 import { fetchOvnPlatformHealth } from './ovn-health-fetcher';
 import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
-import { HealthTabTitle } from './tab-title';
+import { getNetobservContextStats, getOvnContextStats, HealthContextTabTitle, HealthTabTitle } from './tab-title';
 
 import './health.css';
 
@@ -153,9 +153,17 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
           className={`health-context-tabs ${isDarkTheme ? 'dark' : ''}`}
           data-test="health-context-tabs"
         >
-          <Tab eventKey={'netobserv'} title={t('NetObserv')} data-test="health-context-tab-netobserv" />
+          <Tab
+            eventKey={'netobserv'}
+            title={<HealthContextTabTitle title={t('NetObserv')} stats={getNetobservContextStats(health)} />}
+            data-test="health-context-tab-netobserv"
+          />
           {ovnHealth.available && (
-            <Tab eventKey={'platform'} title={t('Platform')} data-test="health-context-tab-platform" />
+            <Tab
+              eventKey={'platform'}
+              title={<HealthContextTabTitle title={t('Platform')} stats={getOvnContextStats(ovnHealth)} />}
+              data-test="health-context-tab-platform"
+            />
           )}
         </Tabs>
       </FlexItem>
