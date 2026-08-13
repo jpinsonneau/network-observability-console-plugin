@@ -7,7 +7,11 @@ import { isSilenced } from './health-helper';
 import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
 import { isOvnPlatformAlertName } from './ovn-platform-alerts';
 
-const OVN_ALERTS_MATCH = 'prometheus="openshift-ovn-kubernetes/k8s"';
+/** CNO OVN-Kubernetes alert group in Prometheus /api/v1/rules (label on PrometheusRule CR is not exposed on rules). */
+const OVN_RULES_GROUP_NAME = 'cluster-network-operator-ovn.rules';
+
+export const isOvnPlatformRulesGroup = (group: AlertsResult['data']['groups'][number]): boolean =>
+  group.name === OVN_RULES_GROUP_NAME || (group.file?.includes('openshift-ovn-kubernetes') ?? false);
 
 export const injectAlertRuleIds = (groups: AlertsResult['data']['groups']): Rule[] => {
   return groups.flatMap(group => {
@@ -41,9 +45,10 @@ export type OvnPlatformHealthResult = {
 };
 
 export const fetchOvnPlatformHealth = (): Promise<OvnPlatformHealthResult> => {
-  const alertsP = getAlerts(OVN_ALERTS_MATCH).then(res =>
-    injectAlertRuleIds(res.data.groups).filter(r => isOvnPlatformAlertName(r.name))
-  );
+  const alertsP = getAlerts().then(res => {
+    const ovnGroups = res.data.groups.filter(isOvnPlatformRulesGroup);
+    return injectAlertRuleIds(ovnGroups).filter(r => isOvnPlatformAlertName(r.name));
+  });
 
   const silencedP = getAllSilencedAlerts()
     .then(res => res.filter(a => a.status.state === 'active').map(a => a.matchers))
