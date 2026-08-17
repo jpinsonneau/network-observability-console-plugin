@@ -58,6 +58,7 @@
 }
 
 /* Filter groups (Source / Destination / …): wrap when the pane is narrow */
+#filter-toolbar-chips .pf-v5-c-toolbar__content-section,
 #filter-toolbar-chips .pf-v6-c-toolbar__content-section {
   flex-wrap: wrap;
   min-width: 0;
