@@ -69,7 +69,6 @@ describe('(OCP-67087) DNSTracking test', { tags: ['Network_Observability'] }, fu
 
     it("(OCP-67087, aramesha) Validate DNSTracking dashboards", function () {
         // navigate to 'NetObserv / Main' Dashboard page
-        dashboard.visit()
         dashboard.visitDashboard("netobserv-main")
 
         cy.checkDashboards(DNSPanels)

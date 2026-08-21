@@ -211,16 +211,126 @@ export const Operator = {
                     cy.log("Console refreshed successfully")
                 }
                 if (parameters !== "LokiDisabled" && parameters !== "WithLokiStack") {
-                    cy.adminCLI(`oc wait --for=condition=Ready pod -l app=loki -n ${project} --timeout=180s`)
+                    // Ensure FlowCollector exists before polling pods (UI Submit is async).
+                    const waitForFlowCollector = (attempt = 0): void => {
+                        const maxAttempts = 24
+                        cy.adminCLI(`oc get flowcollector cluster -o name`, {
+                            failOnNonZeroExit: false
+                        }).then((result: Cypress.Exec) => {
+                            if (result.stdout?.trim()) {
+                                return
+                            }
+                            if (attempt < maxAttempts) {
+                                cy.wait(5000)
+                                waitForFlowCollector(attempt + 1)
+                            } else {
+                                throw new Error(
+                                    `Timed out waiting for flowcollector/cluster ` +
+                                        `(exitCode=${result.exitCode} stderr=${result.stderr?.trim() || '(empty)'})`
+                                )
+                            }
+                        })
+                    }
+                    waitForFlowCollector()
+                    // Demo Loki pods are created async after FlowCollector apply; waiting
+                    // immediately yields "no matching resources".
+                    const waitForLokiPods = (attempt = 0): void => {
+                        // ~5 min: UI + operator reconcile can be slower than fixture apply
+                        const maxAttempts = 60
+                        cy.adminCLI(`oc get pods -l app=loki -n ${project} -o name`, {
+                            failOnNonZeroExit: false
+                        }).then((result: Cypress.Exec) => {
+                            const stdout = result.stdout?.trim() || ''
+                            const stderr = result.stderr?.trim() || ''
+                            if (stdout.length > 0) {
+                                cy.adminCLI(
+                                    `oc wait --for=condition=Ready pod -l app=loki -n ${project} --timeout=180s`
+                                )
+                            } else if (attempt < maxAttempts) {
+                                cy.wait(5000)
+                                waitForLokiPods(attempt + 1)
+                            } else {
+                                throw new Error(
+                                    `Timed out waiting for Loki pods (app=loki) in ${project}. ` +
+                                    `Check gather-extra artifacts for operator logs and pod state.`
+                                )
+                            }
+                        })
+                    }
+                    waitForLokiPods()
                 }
 
-                // Check FlowCollector status and wait for plugin pod to be Ready
+                // Check FlowCollector status and wait for all components to be Ready
                 if (parameters !== "WithLokiStack") {
                     // Check status in the FlowCollector 'cluster' row specifically
                     cy.contains('tr', 'cluster').within(() => {
                         cy.byTestID('status-text', { timeout: 60000 }).should('contain.text', 'Ready')
                     })
                     cy.adminCLI(`oc wait --for=condition=Ready pod -l app=netobserv-plugin -n ${project} --timeout=180s`)
+
+                    // Wait for eBPF agent and FLP pods to be running.
+                    // FC "Ready" means the operator reconciled, but pods may
+                    // still be starting (DaemonSet rolling out on each node, etc.).
+                    // FLP can be a Deployment (Service/Kafka model) or DaemonSet (Direct model),
+                    // so we wait on pods rather than a specific resource type.
+                    cy.adminCLI(
+                        `oc wait --for=condition=Ready pod -l app=netobserv-ebpf-agent -n ${project} --timeout=180s`,
+                        { failOnNonZeroExit: false }
+                    )
+                    cy.adminCLI(
+                        `oc wait --for=condition=Ready pod -l app=flowlogs-pipeline -n ${project} --timeout=180s`,
+                        { failOnNonZeroExit: false }
+                    )
+
+                    // Wait for the operator to reconcile the frontend ConfigMap
+                    // with the expected eBPF features. Without this, the plugin page
+                    // loads with a stale config and shows wrong/missing panels.
+                    const featureMap: Record<string, string> = {
+                        FlowRTT: 'flowRTT',
+                        DNSTracking: 'dnsTracking',
+                        PacketDrop: 'pktDrop',
+                        TLSTracking: 'tlsTracking',
+                        UDNMapping: 'udnMapping',
+                        NetworkAlertHealth: 'dnsTracking'
+                    }
+                    const expectedFeature = featureMap[parameters || '']
+                    if (expectedFeature) {
+                        const waitForConfig = (attempt = 0): void => {
+                            const maxAttempts = 60
+                            // Check the "features:" YAML list for the expected entry.
+                            // Column definitions use "feature: flowRTT" (singular, no dash),
+                            // while the enabled features list uses "- flowRTT" (YAML list item).
+                            // We must match the list form to avoid false positives.
+                            cy.adminCLI(
+                                `oc get configmap console-plugin-config -n ${project} -o jsonpath='{.data.config\\.yaml}' 2>/dev/null | grep -c '^ *- ${expectedFeature}$' || echo 0`,
+                                { failOnNonZeroExit: false }
+                            ).then((result: Cypress.Exec) => {
+                                const count = parseInt(result.stdout?.trim() || '0', 10)
+                                cy.log(`ConfigMap features list match for '${expectedFeature}': ${count} (attempt ${attempt + 1}/${maxAttempts})`)
+                                if (count > 0) {
+                                    return
+                                }
+                                if (attempt < maxAttempts) {
+                                    cy.wait(5000)
+                                    waitForConfig(attempt + 1)
+                                } else {
+                                    // Dump the actual features list for debugging
+                                    cy.adminCLI(
+                                        `oc get configmap console-plugin-config -n ${project} -o jsonpath='{.data.config\\.yaml}' 2>/dev/null | sed -n '/^  features:/,/^  [a-z]/p'`,
+                                        { failOnNonZeroExit: false }
+                                    ).then((dump: Cypress.Exec) => {
+                                        cy.log(
+                                            `WARNING: ConfigMap features list missing '${expectedFeature}' after ${maxAttempts} attempts. ` +
+                                            `Actual features section: ${dump.stdout?.trim() || '(empty or not found)'}. ` +
+                                            `Proceeding anyway — checkPanel reload-retry may still recover.`
+                                        )
+                                    })
+                                }
+                            })
+                        }
+                        waitForConfig()
+                    }
+
                     // Force reload to ensure console picks up the new ConsolePlugin
                     // (the copy-login-commands intercept may have caught a delete-triggered reload)
                     cy.reload(true)
@@ -241,10 +351,24 @@ export const Operator = {
         cy.get(pluginSelectors.lokiMode).should('exist').click().then(mode => {
             cy.get(pluginSelectors.monolithicMode).should('exist').click()
         })
-        cy.get(pluginSelectors.installDemoLoki).should('exist').click({ force: true })
+        // Use check() so a default-unchecked checkbox is always enabled (click can toggle off)
+        cy.get(pluginSelectors.installDemoLoki).should('exist').check({ force: true })
         cy.get(pluginSelectors.next).should('exist').click()
         // Consumption tab - final submit
-        cy.get('footer').contains('button', 'Submit').should('exist').click()
+        cy.get(pluginSelectors.wizardSubmit).should('exist').click()
+        // Wait until the API object exists before callers poll for Loki pods
+        cy.adminCLI(`oc get flowcollector cluster -o name`, { failOnNonZeroExit: false }).then(
+            (result: Cypress.Exec) => {
+                if (!result.stdout?.trim()) {
+                    // Form submit may still be in flight; brief poll (non-failing —
+                    // waitForFlowCollector() continues retries and reports diagnostics)
+                    cy.wait(5000)
+                    cy.adminCLI(`oc get flowcollector cluster -o name`, {
+                        failOnNonZeroExit: false
+                    })
+                }
+            }
+        )
     },
     deleteFlowCollector: () => {
         cy.adminCLI(`oc delete flowcollector cluster --ignore-not-found`)

@@ -114,9 +114,48 @@ export const netflowPage = {
     waitForLokiQuery: () => {
         cy.get("#refresh-button > span > svg").invoke('attr', 'style').should('contain', '0s linear 0s')
     },
+    /**
+     * Refresh until Traffic flows table has at least minRows.
+     * Empty Loki results render `no-results-found` instead of `table-composable`.
+     */
+    waitForTableRows: (minRows = 1, options?: { attempts?: number; intervalMs?: number }) => {
+        const maxAttempts = options?.attempts ?? 24
+        const intervalMs = options?.intervalMs ?? 5000
+        const attempt = (remaining: number): void => {
+            cy.get('body').then($body => {
+                const $table = $body.find('[data-test="table-composable"]')
+                const rows = Number($table.attr('data-test-rows-count') || 0)
+                if ($table.length > 0 && rows >= minRows) {
+                    cy.byTestID('table-composable')
+                        .should('have.attr', 'data-test-rows-count')
+                        .and('satisfy', (v: string) => Number(v) >= minRows)
+                    return
+                }
+                if (remaining <= 0) {
+                    throw new Error(
+                        `Timed out waiting for table-composable with >= ${minRows} rows ` +
+                            `(found=${$table.length ? rows : 'no-results-found'})`
+                    )
+                }
+                cy.byTestID(genSelectors.refreshBtn).click({ force: true })
+                netflowPage.waitForLokiQuery()
+                cy.wait(intervalMs)
+                attempt(remaining - 1)
+            })
+        }
+        attempt(maxAttempts)
+    },
+    dismissPoppers: () => {
+        cy.get('body').click(0, 0)
+        cy.get('#filter-popper').should('not.exist')
+        cy.get('#query-options-popper').should('not.exist')
+        cy.get('#table-display-popper').should('not.exist')
+        cy.get('#overview-display-popper').should('not.exist')
+        cy.get('#topology-display-popper').should('not.exist')
+    },
     selectSourceNS: (project: string) => {
-        // verify Source namespace filter
         cy.get(filterSelectors.filterInput).type("src_namespace=" + project + '{enter}')
+        netflowPage.dismissPoppers()
         cy.get('#src_namespace-0-toggle').should('contain.text', `${project}`)
     }
 }
@@ -214,6 +253,7 @@ export namespace pluginSelectors {
     export const lokiMode = '#root_spec_loki_mode-toggle'
     export const monolithicMode = '#root_spec_loki_mode-Monolithic'
     export const installDemoLoki = '[data-test="root_spec_loki_monolithic_installDemoLoki"]'
+    export const wizardSubmit = '[data-test-id=flowcollector-wizard-consumption-submit]'
 }
 
 export namespace genSelectors {
@@ -361,14 +401,28 @@ export namespace histogramSelectors {
 }
 
 Cypress.Commands.add('checkPanelsNum', (panels = 2) => {
-    cy.get('#overview-flex').find('.overview-card').its('length').should('eq', panels);
+    cy.get('#overview-flex', { timeout: 60000 }).find('.overview-card').its('length').should('eq', panels);
 });
 
 Cypress.Commands.add('checkPanel', (panelName) => {
-    for (let i = 0; i < panelName.length; i++) {
-        cy.get('#overview-flex', { timeout: 60000 }).contains(panelName[i]);
-        cy.get('[data-test-metrics]', { timeout: 120000 }).its('length').should('gt', 0);
+    const verifyPanels = (retries = 6): void => {
+        cy.get('#overview-flex', { timeout: 60000 }).then($flex => {
+            const missing = panelName.filter((name: string) => !$flex.text().includes(name))
+            if (missing.length > 0 && retries > 0) {
+                cy.log(`Panels not found (${missing.length}), reloading (${retries} retries left)`)
+                cy.wait(10000)
+                cy.reload()
+                cy.get('#overview-flex', { timeout: 60000 }).should('exist')
+                verifyPanels(retries - 1)
+            } else {
+                for (let i = 0; i < panelName.length; i++) {
+                    cy.get('#overview-flex').contains(panelName[i], { timeout: 30000 })
+                    cy.get('[data-test-metrics]', { timeout: 120000 }).its('length').should('gt', 0)
+                }
+            }
+        })
     }
+    verifyPanels()
 });
 
 Cypress.Commands.add('checkPopItems', (id, names) => {

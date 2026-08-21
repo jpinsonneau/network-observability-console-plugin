@@ -64,9 +64,14 @@ describe('(OCP-84156 OCP-88744) StaticPlugin test with Status Check', { tags: ['
         cy.get('#root_spec_agent_ebpf_sampling').type('1')
         cy.get(pluginSelectors.update).click()
 
-        // Wait for flowcollector to get ready
-        cy.wait(20000)
-        cy.get(flowcollectorStatusSelectors.readyRow,{ timeout: 60000 }).should('exist')
+        // Wait for FC reconciliation: first wait for NOT Ready (operator started reconciling),
+        // then wait for Ready again. The first wait may time out if reconciliation is instant.
+        cy.adminCLI(`oc wait --for=condition=Ready=false flowcollector/cluster --timeout=30s`, {
+            failOnNonZeroExit: false
+        })
+        cy.adminCLI(`oc wait --for=condition=Ready flowcollector/cluster --timeout=180s`)
+        cy.reload()
+        cy.get(flowcollectorStatusSelectors.readyRow, { timeout: 60000 }).should('exist')
             .should('have.attr', 'data-test-status', 'True')
             .should('have.attr', 'data-test-reason', 'Ready')
         cy.get(pluginSelectors.openNetworkTraffic).click()

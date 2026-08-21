@@ -69,7 +69,6 @@ describe('(OCP-68246) FlowRTT test', { tags: ['Network_Observability'] }, functi
 
     it("(OCP-68246, aramesha) Validate flowRTT dashboards", function () {
         // navigate to 'NetObserv / Main' Dashboard page
-        dashboard.visit()
         dashboard.visitDashboard("netobserv-main")
 
         // verify 'TCP latency,p99' panel

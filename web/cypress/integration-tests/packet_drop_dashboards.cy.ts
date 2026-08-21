@@ -81,7 +81,6 @@ describe('(OCP-66141) PacketDrop dashboards test', { tags: ['Network_Observabili
 
     it("(OCP-66141, aramesha) Validate packetDrop dashboards", function () {
         // navigate to 'NetObserv / Main' Dashboard page
-        dashboard.visit()
         dashboard.visitDashboard("netobserv-main")
 
         // verify 'Drops' panel

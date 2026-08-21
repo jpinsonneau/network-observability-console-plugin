@@ -107,7 +107,6 @@ describe('(OCP-88966) TLSTracking test', { tags: ['Network_Observability'] }, fu
         cy.visit('/monitoring')
 
         // navigate to 'NetObserv / Main' Dashboard page
-        dashboard.visit()
         dashboard.visitDashboard("netobserv-main")
 
         // verify 'TLS Traffic' panel
