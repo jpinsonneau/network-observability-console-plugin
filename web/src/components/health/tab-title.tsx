@@ -8,6 +8,7 @@ import {
 } from '@patternfly/react-icons';
 import * as React from 'react';
 import { getAllHealthItems, getResourceSeverity, HealthStat, HealthStats, Severity } from './health-helper';
+import { BgpHealthStats } from './bgp-health-helper';
 import { OvnHealthStats } from './ovn-health-helper';
 
 const getSeverityTabIcon = (severities: (Severity | undefined)[]): React.ReactElement => {
@@ -34,6 +35,8 @@ export const getNetobservContextStats = (health: HealthStats): HealthStat[] => [
 ];
 
 export const getOvnContextStats = (stats: OvnHealthStats): HealthStat[] => [stats.global, ...stats.byNode];
+
+export const getBgpContextStats = (stats: BgpHealthStats): HealthStat[] => [stats.global, ...stats.byPeer];
 
 export const getContextTabActiveCount = (stats: HealthStat[]): number =>
   stats.reduce((total, stat) => total + getAllHealthItems(stat).length, 0);

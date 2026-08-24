@@ -579,6 +579,15 @@ func GetRules() func(w http.ResponseWriter, r *http.Request) {
 					"rules":    ovnRules,
 				})
 			}
+			bgpRules := filterAlertingRules(getBgpPlatformAlertRules(), matchers)
+			if len(bgpRules) > 0 {
+				groups = append(groups, map[string]any{
+					"name":     "BGPSessionHealth",
+					"file":     "/etc/prometheus/rules/bgp-cloud-connector/rules-frrk8s.yaml",
+					"interval": 30,
+					"rules":    bgpRules,
+				})
+			}
 		}
 
 		res := map[string]any{

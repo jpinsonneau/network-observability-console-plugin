@@ -28,19 +28,30 @@ import HealthError from './health-error';
 import { fetchNetworkHealth } from './health-fetcher';
 import { HealthGlobal } from './health-global';
 import { buildStats, HealthStats } from './health-helper';
+import { fetchBgpPlatformHealth } from './bgp-health-fetcher';
+import { buildBgpStats, BgpHealthStats } from './bgp-health-helper';
+import { HealthBgp, HealthBgpView } from './health-bgp';
+import { HealthBgpSummary } from './health-bgp-summary';
 import { HealthOvn, HealthOvnView } from './health-ovn';
 import { HealthOvnSummary } from './health-ovn-summary';
 import { HealthScoringDrawer } from './health-scoring-drawer';
 import { HealthSummary } from './health-summary';
 import { fetchOvnPlatformHealth } from './ovn-health-fetcher';
 import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
-import { getNetobservContextStats, getOvnContextStats, HealthContextTabTitle, HealthTabTitle } from './tab-title';
+import {
+  getBgpContextStats,
+  getNetobservContextStats,
+  getOvnContextStats,
+  HealthContextTabTitle,
+  HealthTabTitle
+} from './tab-title';
 
 import './health.css';
 
-type HealthContextTab = 'netobserv' | 'platform';
+type HealthContextTab = 'netobserv' | 'platform' | 'bgp';
 type NetobservSubTab = 'global' | 'per-node' | 'per-namespace' | 'per-owner';
 type PlatformSubTab = HealthOvnView;
+type BgpSubTab = HealthBgpView;
 
 export const NetworkHealth: React.FC<{}> = ({}) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
@@ -52,9 +63,11 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const [rules, setRules] = React.useState<Rule[]>([]);
   const [health, setHealth] = React.useState<HealthStats>(buildStats([]));
   const [ovnHealth, setOvnHealth] = React.useState<OvnHealthStats>(() => buildOvnStats([], false));
+  const [bgpHealth, setBgpHealth] = React.useState<BgpHealthStats>(() => buildBgpStats([], false));
   const [activeContextTab, setActiveContextTab] = React.useState<HealthContextTab>('netobserv');
   const [activeNetobservTab, setActiveNetobservTab] = React.useState<NetobservSubTab>('global');
   const [activePlatformTab, setActivePlatformTab] = React.useState<PlatformSubTab>('global');
+  const [activeBgpTab, setActiveBgpTab] = React.useState<BgpSubTab>('global');
   const [config, setConfig] = React.useState<Config>(defaultConfig);
   const [configLoaded, setConfigLoaded] = React.useState(false);
   const [isScoringDrawerOpen, setIsScoringDrawerOpen] = React.useState<boolean>(false);
@@ -78,12 +91,17 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       fetchOvnPlatformHealth().catch(err => {
         console.log('Could not fetch OVN platform alerts:', err);
         return { stats: buildOvnStats([], false), alertRules: [] };
+      }),
+      fetchBgpPlatformHealth().catch(err => {
+        console.log('Could not fetch BGP platform alerts:', err);
+        return { stats: buildBgpStats([], false), alertRules: [] };
       })
     ])
-      .then(([netobservRes, ovnRes]) => {
+      .then(([netobservRes, ovnRes, bgpRes]) => {
         setHealth(netobservRes.stats);
         setRules(netobservRes.alertRules);
         setOvnHealth(ovnRes.stats);
+        setBgpHealth(bgpRes.stats);
       })
       .catch(err => {
         const errStr = getGenericHTTPError(err);
@@ -106,13 +124,20 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
     if (activeContextTab === 'platform' && !ovnHealth.available) {
       setActiveContextTab('netobserv');
     }
-  }, [activeContextTab, ovnHealth.available]);
+    if (activeContextTab === 'bgp' && !bgpHealth.available) {
+      setActiveContextTab('netobserv');
+    }
+  }, [activeContextTab, ovnHealth.available, bgpHealth.available]);
 
   const isInitialLoading = !configLoaded || !initialized;
   const isPlatformContext = activeContextTab === 'platform' && ovnHealth.available;
+  const isBgpContext = activeContextTab === 'bgp' && bgpHealth.available;
   const summaryForceCollapsed = isScoringDrawerOpen;
 
   const activeViewLabel = React.useMemo(() => {
+    if (isBgpContext) {
+      return activeBgpTab === 'per-peer' ? t('Peers') : t('Global');
+    }
     if (isPlatformContext) {
       return activePlatformTab === 'per-node' ? t('Nodes') : t('Global');
     }
@@ -128,7 +153,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       default:
         return t('Global');
     }
-  }, [activeNetobservTab, activePlatformTab, isPlatformContext, t]);
+  }, [activeBgpTab, activeNetobservTab, activePlatformTab, isBgpContext, isPlatformContext, t]);
 
   const panelContent = () => {
     if (isScoringDrawerOpen) {
@@ -136,7 +161,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
         <HealthScoringDrawer
           isOpen={isScoringDrawerOpen}
           onClose={() => setIsScoringDrawerOpen(false)}
-          context={isPlatformContext ? 'ovn' : 'netobserv'}
+          context={isBgpContext ? 'bgp' : isPlatformContext ? 'ovn' : 'netobserv'}
         />
       );
     }
@@ -165,20 +190,33 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
               data-test="health-context-tab-platform"
             />
           )}
+          {bgpHealth.available && (
+            <Tab
+              eventKey={'bgp'}
+              title={<HealthContextTabTitle title={t('BGP')} stats={getBgpContextStats(bgpHealth)} />}
+              data-test="health-context-tab-bgp"
+            />
+          )}
         </Tabs>
       </FlexItem>
       <FlexItem className={'bottom-border'}>
         <Button
-          data-test={isPlatformContext ? 'health-ovn-info-button' : 'health-scoring-info-button'}
+          data-test={
+            isBgpContext ? 'health-bgp-info-button' : isPlatformContext ? 'health-ovn-info-button' : 'health-scoring-info-button'
+          }
           className="overflow-button"
           variant="link"
           onClick={() => setIsScoringDrawerOpen(!isScoringDrawerOpen)}
           icon={<QuestionCircleIcon />}
         >
           {isScoringDrawerOpen
-            ? isPlatformContext
+            ? isBgpContext
+              ? t('Hide BGP alert information')
+              : isPlatformContext
               ? t('Hide platform alert information')
               : t('Hide scoring information')
+            : isBgpContext
+            ? t('Show BGP alert information')
             : isPlatformContext
             ? t('Show platform alert information')
             : t('Show scoring information')}
@@ -187,33 +225,63 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
     </Flex>
   );
 
-  const renderContextSummary = () => (
-    <div
-      key={isPlatformContext ? 'platform' : 'netobserv'}
-      className="health-context-summary"
-      aria-live="polite"
-      data-test="health-context-summary"
-    >
-      {isPlatformContext ? (
-        <HealthOvnSummary
-          stats={ovnHealth}
-          forceCollapsed={summaryForceCollapsed}
-          isLoading={isInitialLoading}
-          activeViewLabel={activeViewLabel}
-        />
-      ) : (
-        <HealthSummary
-          rules={rules}
-          stats={health}
-          forceCollapsed={summaryForceCollapsed}
-          isLoading={isInitialLoading}
-          activeViewLabel={activeViewLabel}
-        />
-      )}
-    </div>
-  );
+  const renderContextSummary = () => {
+    const key = isBgpContext ? 'bgp' : isPlatformContext ? 'platform' : 'netobserv';
+    return (
+      <div key={key} className="health-context-summary" aria-live="polite" data-test="health-context-summary">
+        {isBgpContext ? (
+          <HealthBgpSummary
+            stats={bgpHealth}
+            forceCollapsed={summaryForceCollapsed}
+            isLoading={isInitialLoading}
+            activeViewLabel={activeViewLabel}
+          />
+        ) : isPlatformContext ? (
+          <HealthOvnSummary
+            stats={ovnHealth}
+            forceCollapsed={summaryForceCollapsed}
+            isLoading={isInitialLoading}
+            activeViewLabel={activeViewLabel}
+          />
+        ) : (
+          <HealthSummary
+            rules={rules}
+            stats={health}
+            forceCollapsed={summaryForceCollapsed}
+            isLoading={isInitialLoading}
+            activeViewLabel={activeViewLabel}
+          />
+        )}
+      </div>
+    );
+  };
 
   const renderSubTabs = () => {
+    if (isBgpContext) {
+      return (
+        <Tabs
+          activeKey={activeBgpTab}
+          onSelect={(_, tabIndex) => setActiveBgpTab(String(tabIndex) as BgpSubTab)}
+          aria-label={t('BGP/BFD session alerts')}
+          className={`health-subtabs health-bgp-subtabs ${isDarkTheme ? 'dark' : ''}`}
+          data-test="health-bgp-subtabs"
+        >
+          <Tab
+            eventKey={'global'}
+            data-test="health-bgp-tab-global"
+            title={<HealthTabTitle title={t('Global')} stats={[bgpHealth.global]} />}
+            aria-label={t('Tab global BGP alerts')}
+          />
+          <Tab
+            eventKey={'per-peer'}
+            data-test="health-bgp-tab-peers"
+            title={<HealthTabTitle title={t('Peers')} stats={bgpHealth.byPeer} />}
+            aria-label={t('Tab BGP alerts per peer')}
+          />
+        </Tabs>
+      );
+    }
+
     if (isPlatformContext) {
       return (
         <Tabs
@@ -276,7 +344,9 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   };
 
   const renderTabContent = () => {
-    const content = isPlatformContext ? (
+    const content = isBgpContext ? (
+      <HealthBgp stats={bgpHealth} view={activeBgpTab} isLoading={isInitialLoading} isDark={isDarkTheme} />
+    ) : isPlatformContext ? (
       <HealthOvn stats={ovnHealth} view={activePlatformTab} isLoading={isInitialLoading} isDark={isDarkTheme} />
     ) : (
       <>

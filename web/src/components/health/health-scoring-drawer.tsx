@@ -9,7 +9,7 @@ import {
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
-export type HealthScoringContext = 'netobserv' | 'ovn';
+export type HealthScoringContext = 'netobserv' | 'ovn' | 'bgp';
 
 export interface HealthScoringDrawerProps {
   isOpen: boolean;
@@ -253,31 +253,98 @@ const OvnPlatformInfoContent: React.FC = () => {
   );
 };
 
+const BgpInfoContent: React.FC = () => {
+  const { t } = useTranslation('plugin__netobserv-plugin');
+
+  return (
+    <>
+      <Content component={ContentVariants.h3}>{t('What are BGP/BFD alerts?')}</Content>
+      <Content component={ContentVariants.p}>
+        {t(
+          // eslint-disable-next-line max-len
+          'These are Prometheus alerts from bgp-cloud-connector based on frr-k8s metrics. They monitor BGP session state, BFD liveness, prefix advertisement, and peer stability.'
+        )}
+      </Content>
+
+      <Content component={ContentVariants.h3}>{t('Not included in the NetObserv health score')}</Content>
+      <Content component={ContentVariants.p}>
+        {t(
+          'BGP/BFD alerts are shown for visibility only. They do not contribute to the 0–10 NetObserv health score calculated from NetObserv health rules.'
+        )}
+      </Content>
+
+      <Content component={ContentVariants.h3}>{t('Alert types')}</Content>
+
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('BGPSessionDown')}</strong>: {t('A BGP session has been down for more than 1 minute.')}
+      </Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('BGPPeerFlapping')}</strong>: {t('A BGP session is flapping (excessive opens in 10 minutes).')}
+      </Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('BGPNoPrefixesReceived')}</strong>: {t('An established session has no received prefixes.')}
+      </Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('BGPNoPrefixesAnnounced')}</strong>: {t('An established session has no announced prefixes.')}
+      </Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('BFDSessionDown')}</strong>: {t('A BFD session has been down for more than 30 seconds.')}
+      </Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('BFDPeerFlapping')}</strong>: {t('A BFD session is flapping (excessive down events in 10 minutes).')}
+      </Content>
+
+      <Content component={ContentVariants.h3}>{t('Grouping by peer')}</Content>
+      <Content component={ContentVariants.p}>
+        {t(
+          'Alerts are grouped by the peer label from frr-k8s metrics, showing which BGP neighbor is affected. The Global view shows alerts without a specific peer label.'
+        )}
+      </Content>
+    </>
+  );
+};
+
 export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen, onClose, context }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const drawerRef = React.useRef<HTMLDivElement>(null);
   const isOvnContext = context === 'ovn';
+  const isBgpContext = context === 'bgp';
+
+  const title = isBgpContext
+    ? t('Understanding BGP/BFD Alerts')
+    : isOvnContext
+    ? t('Understanding OVN Platform Alerts')
+    : t('Understanding Network Health Scores');
+
+  const dataTestClose = isBgpContext
+    ? 'health-bgp-info-drawer-close'
+    : isOvnContext
+    ? 'health-ovn-info-drawer-close'
+    : 'health-scoring-drawer-close';
+
+  const dataTestContent = isBgpContext
+    ? 'health-bgp-info-drawer'
+    : isOvnContext
+    ? 'health-ovn-info-drawer'
+    : 'health-scoring-drawer';
 
   return (
     <DrawerPanelContent isResizable widths={{ default: 'width_50' }} minSize="400px">
       <DrawerHead>
         <span tabIndex={isOpen ? 0 : -1} ref={drawerRef}>
           <Content component={ContentVariants.h2} style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>
-            {isOvnContext ? t('Understanding OVN Platform Alerts') : t('Understanding Network Health Scores')}
+            {title}
           </Content>
         </span>
         <DrawerActions>
-          <span data-test={isOvnContext ? 'health-ovn-info-drawer-close' : 'health-scoring-drawer-close'}>
+          <span data-test={dataTestClose}>
             <DrawerCloseButton onClick={onClose} />
           </span>
         </DrawerActions>
       </DrawerHead>
       <div style={{ padding: '1.5rem', overflowY: 'auto', height: '100%' }}>
-        <Content
-          className="health-scoring-content"
-          data-test={isOvnContext ? 'health-ovn-info-drawer' : 'health-scoring-drawer'}
-        >
-          {isOvnContext ? <OvnPlatformInfoContent /> : <NetobservScoringContent />}
+        <Content className="health-scoring-content" data-test={dataTestContent}>
+          {isBgpContext ? <BgpInfoContent /> : isOvnContext ? <OvnPlatformInfoContent /> : <NetobservScoringContent />}
         </Content>
       </div>
     </DrawerPanelContent>
