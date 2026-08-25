@@ -165,15 +165,27 @@ export const FormField: React.FC<FormFieldProps> = ({ children, id, defaultLabel
 export type FieldSetProps = Pick<FieldProps, 'idSchema' | 'required' | 'schema' | 'uiSchema'> & {
   children?: React.ReactNode;
   defaultLabel?: string;
+  /** Takes priority over schema/uiSchema title (e.g. array items with data-derived names). */
+  labelOverride?: string;
   /** When true, the schema description block under the accordion title is omitted (e.g. full text only in a tooltip). */
   suppressDescription?: boolean;
 };
 
 export const FieldSet: React.FC<FieldSetProps> = props => {
-  const { children, defaultLabel, idSchema, required = false, schema, suppressDescription, uiSchema } = props;
+  const {
+    children,
+    defaultLabel,
+    labelOverride,
+    idSchema,
+    required = false,
+    schema,
+    suppressDescription,
+    uiSchema
+  } = props;
   const { defaultExpanded } = getUiOptions(uiSchema ?? {}) as UiSchemaOptionsWithDependency;
   const [expanded, setExpanded] = React.useState(idSchema['$id'] === 'root' || Boolean(defaultExpanded));
-  const [showLabel, label] = useSchemaLabel(schema, uiSchema || {}, defaultLabel);
+  const [showLabel, schemaLabel] = useSchemaLabel(schema, uiSchema || {}, defaultLabel);
+  const label = labelOverride || schemaLabel;
   const schemaDescription = useSchemaDescription(schema, uiSchema || {});
   const description = suppressDescription ? '' : schemaDescription;
   return showLabel && label ? (

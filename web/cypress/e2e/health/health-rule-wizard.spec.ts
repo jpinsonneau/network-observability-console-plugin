@@ -7,7 +7,6 @@ const stubPromQL = () => {
   }).as('promQuery');
 };
 
-/** Prefer button text — source-step radio descriptions also contain the word "Next". */
 const clickWizardNext = () => {
   cy.contains('button', 'Next').should('be.visible').click();
 };
