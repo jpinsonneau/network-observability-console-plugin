@@ -15,7 +15,7 @@ import {
   Tabs,
   Title
 } from '@patternfly/react-core';
-import { PlusCircleIcon, QuestionCircleIcon, SyncAltIcon } from '@patternfly/react-icons';
+import { QuestionCircleIcon, SyncAltIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Config, defaultConfig } from '../../model/config';
@@ -232,7 +232,6 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
                             <Button
                               data-test="create-health-rule-button"
                               variant="primary"
-                              icon={<PlusCircleIcon />}
                               onClick={() => navigateTo(healthRuleSetupPath())}
                             >
                               {t('Create health rule')}

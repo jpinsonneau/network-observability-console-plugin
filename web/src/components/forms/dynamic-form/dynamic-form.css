@@ -34,6 +34,10 @@
   margin-right: 0.5rem;
 }
 
+.form-group.spaced .pf-v6-c-form-control {
+  width: 100%;
+}
+
 .checkboxes-container {
   padding: 1rem;
 }

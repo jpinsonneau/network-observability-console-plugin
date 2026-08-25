@@ -21,6 +21,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { queryPrometheusMetric } from '../../../api/routes';
 import { ContextSingleton } from '../../../utils/context';
+import { useDiscardGuard } from '../../../utils/discard-guard-hook';
 import { useK8sModel } from '../../../utils/k8s-models-hook';
 import { navigateTo, useNavigate, useParams } from '../../../utils/url';
 import { safeJSToYAML, safeYAMLToJS } from '../../../utils/yaml';
@@ -94,6 +95,7 @@ type HealthRuleWizardFooterProps = {
   showDanger: boolean;
   dangerLabel: string;
   onDanger: () => void;
+  onCancel: () => void;
   submitting: boolean;
   deleting: boolean;
 };
@@ -105,11 +107,12 @@ const HealthRuleWizardFooter: React.FC<HealthRuleWizardFooterProps> = ({
   showDanger,
   dangerLabel,
   onDanger,
+  onCancel,
   submitting,
   deleting
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
-  const { goToPrevStep, goToNextStep, close, activeStep } = useWizardContext();
+  const { goToPrevStep, goToNextStep, activeStep } = useWizardContext();
   const isFirst = (activeStep?.index ?? 1) === 1;
 
   return (
@@ -143,7 +146,7 @@ const HealthRuleWizardFooter: React.FC<HealthRuleWizardFooterProps> = ({
             <Button
               variant="link"
               data-test="health-rule-wizard-cancel"
-              onClick={close}
+              onClick={onCancel}
               isDisabled={submitting || deleting}
             >
               {t('Cancel')}
@@ -199,6 +202,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
   const [previewYAML, setPreviewYAML] = React.useState('');
   const [confirmDanger, setConfirmDanger] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [discard, discardModal] = useDiscardGuard();
   const seededTemplateFromFc = React.useRef(false);
   const seededCustomCreate = React.useRef(false);
 
@@ -392,23 +396,33 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
     return nextErrors.length === 0;
   };
 
-  const navigateAfterSave = () => {
-    const path = networkHealthCreatedPath();
-    if (ContextSingleton.isStandalone()) {
-      navigateTo(path);
-    } else {
-      navigate(path);
-    }
-  };
+  const doNavigateTo = React.useCallback(
+    (path: string) => {
+      discard.clearDirty();
+      if (ContextSingleton.isStandalone()) {
+        navigateTo(path);
+      } else {
+        navigate(path);
+      }
+    },
+    [navigate, discard]
+  );
 
-  const navigateAfterDelete = () => {
-    const path = networkHealthPath();
-    if (ContextSingleton.isStandalone()) {
-      navigateTo(path);
-    } else {
-      navigate(path);
-    }
-  };
+  const navigateAway = React.useCallback(() => {
+    doNavigateTo(networkHealthPath());
+  }, [doNavigateTo]);
+
+  const navigateAfterSave = React.useCallback(() => {
+    doNavigateTo(networkHealthCreatedPath());
+  }, [doNavigateTo]);
+
+  const navigateAfterDelete = React.useCallback(() => {
+    doNavigateTo(networkHealthPath());
+  }, [doNavigateTo]);
+
+  const handleClose = React.useCallback(() => {
+    discard.requestClose(navigateAway);
+  }, [discard, navigateAway]);
 
   const onConfirmDanger = async () => {
     setDeleting(true);
@@ -449,6 +463,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
   const onSaveTemplate = async (yamlOverride?: string) => {
     setSubmitting(true);
     setErrors([]);
+    discard.clearDirty();
     try {
       if (yamlOverride) {
         const merged = mergeTemplatePreviewIntoFlowCollector(safeYAMLToJS(yamlOverride));
@@ -486,6 +501,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
     }
     setSubmitting(true);
     setErrors([]);
+    discard.clearDirty();
     try {
       let data: any;
       if (yamlOverride) {
@@ -538,7 +554,6 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
       validator={validator}
       onChange={event => {
         const next = event.formData as HealthRuleFormData;
-        // DynamicForm may add empty array items without nested defaults (skipDefaults).
         if (next?.spec?.variants) {
           next.spec.variants = next.spec.variants.map(v => ({
             groupBy: (v?.groupBy as string) || 'Cluster',
@@ -550,6 +565,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
           })) as HealthRuleFormData['spec']['variants'];
         }
         setTemplateData(next);
+        discard.markDirty();
       }}
       errors={errors}
       skipDefaults
@@ -569,6 +585,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
         validator={validator}
         onChange={event => {
           setPrometheusData(event.formData);
+          discard.markDirty();
         }}
         errors={errors}
         skipDefaults
@@ -595,7 +612,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
               void onSaveCustom();
             }
           }}
-          onClose={() => navigateTo(networkHealthPath())}
+          onClose={handleClose}
           isVisitRequired={false}
         >
           {!isEdit && (
@@ -607,6 +624,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
                   setSourceState(next);
                   setErrors([]);
                   setWarnings([]);
+                  discard.markDirty();
                 }}
               />
             </WizardStep>
@@ -623,6 +641,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
                   showDanger={showDangerAction}
                   dangerLabel={dangerLabel}
                   onDanger={() => setConfirmDanger(true)}
+                  onCancel={handleClose}
                   submitting={submitting}
                   deleting={deleting}
                 />
@@ -654,6 +673,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
                 showDanger={showDangerAction}
                 dangerLabel={dangerLabel}
                 onDanger={() => setConfirmDanger(true)}
+                onCancel={handleClose}
                 submitting={submitting}
                 deleting={deleting}
               />
@@ -685,6 +705,7 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
           </WizardStep>
         </Wizard>
       </div>
+      {discardModal}
       <Modal
         id="health-rule-wizard-delete-modal"
         title={isTemplate ? t('Reset template to defaults?') : t('Delete custom rule?')}
