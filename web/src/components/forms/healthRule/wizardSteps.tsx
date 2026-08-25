@@ -67,7 +67,6 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
         )}
         <br />
         <br />
-        {t('Choose how to define the rule.')}
       </span>
       <Form>
         <FormGroup role="radiogroup" isStack label={t('Rule type')} isRequired fieldId="health-rule-source">
@@ -76,17 +75,10 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
             name="health-rule-source"
             data-test="health-rule-source-template"
             label={t('NetObserv template (recommended)')}
-            description={
-              choice === 'template'
-                ? t(
-                    // eslint-disable-next-line max-len
-                    'Next: pick a template and optionally change its mode or variants. Leave variants empty to keep operator defaults.'
-                  )
-                : t(
-                    // eslint-disable-next-line max-len
-                    'Templates configure FlowCollector healthRules without writing PromQL. Customizing a template replaces its defaults.'
-                  )
-            }
+            description={t(
+              // eslint-disable-next-line max-len
+              'Templates configure FlowCollector healthRules without writing PromQL. Customizing a template replaces its defaults.'
+            )}
             isChecked={choice === 'template'}
             isDisabled={lockSource}
             onChange={() => setChoice('template')}
@@ -96,17 +88,10 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
             name="health-rule-source"
             data-test="health-rule-source-alert"
             label={t('Alert')}
-            description={
-              choice === 'alert'
-                ? t(
-                    // eslint-disable-next-line max-len
-                    'Next: write PromQL and Alertmanager fields (severity, summary, description). Optional Network Health display fields control the dashboard.'
-                  )
-                : t(
-                    // eslint-disable-next-line max-len
-                    'Custom Prometheus alert with notifications via Alertmanager and Network Health. Prefer a namespace other than the NetObserv install namespace.'
-                  )
-            }
+            description={t(
+              // eslint-disable-next-line max-len
+              'Custom Prometheus alert with notifications via Alertmanager and Network Health. Prefer a namespace other than the NetObserv install namespace.'
+            )}
             isChecked={choice === 'alert'}
             isDisabled={lockSource}
             onChange={() => setChoice('alert')}
@@ -116,17 +101,10 @@ export const SourceModeStep: React.FC<SourceModeStepProps> = ({ state, onChange,
             name="health-rule-source"
             data-test="health-rule-source-recording"
             label={t('Recording rule')}
-            description={
-              choice === 'recording'
-                ? t(
-                    // eslint-disable-next-line max-len
-                    'Next: write PromQL and Network Health display fields. Recording rules do not notify; they feed the dashboard only.'
-                  )
-                : t(
-                    // eslint-disable-next-line max-len
-                    'Custom Prometheus recording rule for Network Health only (no Alertmanager notifications). Prefer a namespace other than the NetObserv install namespace.'
-                  )
-            }
+            description={t(
+              // eslint-disable-next-line max-len
+              'Custom Prometheus recording rule for Network Health only (no Alertmanager notifications). Prefer a namespace other than the NetObserv install namespace.'
+            )}
             isChecked={choice === 'recording'}
             isDisabled={lockSource}
             onChange={() => setChoice('recording')}
