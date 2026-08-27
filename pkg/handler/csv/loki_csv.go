@@ -57,15 +57,15 @@ func GetCSVData(qr *model.AggregatedQueryResponse, columns []string) ([][]string
 
 	for _, record := range data.records {
 		row := []string{
-			fmt.Sprint(record.Fields[startTimeCol]),
-			fmt.Sprint(record.Fields[endTimeCol]),
-			fmt.Sprint(record.Fields[receivedTimeCol]),
+			stringify(record.Fields[startTimeCol]),
+			stringify(record.Fields[endTimeCol]),
+			stringify(record.Fields[receivedTimeCol]),
 		}
 		for _, label := range data.labels {
 			row = append(row, record.Labels[label])
 		}
 		for _, field := range data.fields {
-			row = append(row, fmt.Sprint(record.Fields[field]))
+			row = append(row, stringify(record.Fields[field]))
 		}
 		rows = append(rows, row)
 	}
@@ -138,6 +138,13 @@ func getFlowExportData(qr *model.AggregatedQueryResponse, columns []string) (*fl
 	}
 
 	return data, nil
+}
+
+func stringify(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	return fmt.Sprint(v)
 }
 
 func sortedKeys(set map[string]struct{}) []string {
