@@ -30,7 +30,7 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      - dependency-name: "docker.io/library/golang"
+      - dependency-name: "library/golang"
     groups:
       cypress-docker:
         applies-to: version-updates
@@ -59,7 +59,7 @@ updates:
     schedule:
       interval: "monthly"
     ignore:
-      - dependency-name: "docker.io/library/golang"
+      - dependency-name: "library/golang"
     groups:
       cypress-docker:
         applies-to: version-updates
