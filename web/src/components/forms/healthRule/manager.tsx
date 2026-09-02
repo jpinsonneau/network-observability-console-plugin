@@ -1,4 +1,11 @@
-import { k8sDelete, k8sUpdate, useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  k8sDelete,
+  k8sGet,
+  K8sModel,
+  K8sResourceKind,
+  k8sUpdate,
+  useK8sWatchResource
+} from '@openshift-console/dynamic-plugin-sdk';
 import {
   Button,
   DrawerActions,
@@ -19,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { useK8sModel } from '../../../utils/k8s-models-hook';
 import { navigateTo } from '../../../utils/url';
 import Modal from '../../modals/modal';
-import { k8sErrorMessage } from '../utils';
+import { isK8sConflictError, k8sErrorMessage } from '../utils';
 import { healthRuleEditCustomPath, healthRuleEditTemplatePath, healthRuleSetupPath } from './paths';
 import { removeHealthRuleFromFlowCollector } from './templateForm';
 import { FLOW_COLLECTOR_GVK, FLPHealthRule, PROMETHEUS_RULE_GVK, PrometheusRuleResource } from './types';
@@ -31,6 +38,31 @@ export type HealthRulesManagerProps = {
 };
 
 type PendingAction = { type: 'reset'; template: string } | { type: 'delete'; namespace: string; name: string } | null;
+
+/**
+ * The manager's `fc` comes from a watch that can lag a write made elsewhere (e.g. the
+ * wizard just saved an override), so a naive update would 409 on a stale resourceVersion
+ * and silently drop the user's reset. Re-fetch on conflict instead of failing the action.
+ */
+const updateFlowCollectorWithRetry = async (
+  model: K8sModel,
+  seed: K8sResourceKind,
+  transform: (fc: K8sResourceKind) => K8sResourceKind,
+  attempts = 3
+): Promise<void> => {
+  let current = seed;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      await k8sUpdate({ model, data: transform(current) });
+      return;
+    } catch (e) {
+      if (attempt === attempts - 1 || !isK8sConflictError(e)) {
+        throw e;
+      }
+      current = await k8sGet({ model, name: 'cluster' });
+    }
+  }
+};
 
 /**
  * Drawer panel for listing/editing health rules.
@@ -103,8 +135,9 @@ export const HealthRulesManager: React.FC<HealthRulesManagerProps> = ({ isOpen, 
         if (!flowCollectorModel || !fc) {
           throw new Error(t('FlowCollector is not available yet'));
         }
-        const next = removeHealthRuleFromFlowCollector(fc, pending.template);
-        await k8sUpdate({ model: flowCollectorModel, data: next });
+        await updateFlowCollectorWithRetry(flowCollectorModel, fc, current =>
+          removeHealthRuleFromFlowCollector(current, pending.template)
+        );
       } else if (pending.type === 'delete') {
         if (!prometheusRuleModel) {
           throw new Error(t('PrometheusRule API model is not available'));
