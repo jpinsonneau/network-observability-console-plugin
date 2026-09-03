@@ -3,12 +3,15 @@ import { AngleDownIcon, AngleRightIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { localStorageHealthOvnSummaryExpandedKey, useLocalStorage } from '../../utils/local-storage-hook';
+import { formatContextTabTitle, NETOBSERV_CONTEXT_OVN } from './health-context';
 import { HealthMetricCard } from './health-metric-card';
 import { getOvnSummaryCounts, OvnHealthStats } from './ovn-health-helper';
+import { getReadonlyContextCopy } from './readonly-context-copy';
 
 type StatusClass = 'success' | 'critical' | 'warning' | 'info';
 
 export interface HealthOvnSummaryProps {
+  contextId?: string;
   stats: OvnHealthStats;
   forceCollapsed?: boolean;
   isLoading?: boolean;
@@ -23,17 +26,19 @@ const sectionSummaryLayout = {
 };
 
 export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
+  contextId = NETOBSERV_CONTEXT_OVN,
   stats,
   forceCollapsed,
   isLoading,
   activeViewLabel
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+  const copy = getReadonlyContextCopy(contextId, t);
+  const titleName = contextId === NETOBSERV_CONTEXT_OVN ? t('OVN') : formatContextTabTitle(contextId);
+  const testPrefix = `health-${contextId}`;
   const [isExpanded, setIsExpanded] = useLocalStorage<boolean>(localStorageHealthOvnSummaryExpandedKey, false);
   const displayExpanded = forceCollapsed ? false : isExpanded;
-  const sectionDetails = t(
-    'Managed by the OpenShift cluster network operator. Not included in the NetObserv health score.'
-  );
+  const sectionDetails = copy.sectionDetails;
   const sectionDescription = activeViewLabel
     ? t('{{view}} · {{details}}', { view: activeViewLabel, details: sectionDetails })
     : sectionDetails;
@@ -45,9 +50,9 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
           <Content
             component={ContentVariants.h3}
             className="health-summary-section-title"
-            data-test="health-ovn-summary-label"
+            data-test={`${testPrefix}-summary-label`}
           >
-            {t('OVN-Kubernetes platform alerts')}
+            {copy.summaryLabel}
           </Content>
           <Content component={ContentVariants.p} className="health-summary-section-description">
             {sectionDescription}
@@ -57,10 +62,10 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
           <Flex
             className="health-summary-dashboard"
             alignItems={{ default: 'alignItemsCenter' }}
-            data-test="health-ovn-summary-loading"
+            data-test={`${testPrefix}-summary-loading`}
           >
             <FlexItem>
-              <Spinner size="lg" aria-label={t('Loading OVN platform alerts')} />
+              <Spinner size="lg" aria-label={copy.loadingLabel} />
             </FlexItem>
           </Flex>
         </FlexItem>
@@ -73,17 +78,17 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
   const warningTotal = counts.warning.firing + counts.warning.pending + counts.warning.silenced;
   const infoTotal = counts.info.firing + counts.info.pending + counts.info.silenced;
 
-  let title = t('No active OVN platform alerts');
+  let title = t('No active {{title}} alerts', { title: titleName });
   let statusClass: StatusClass = 'success';
   if (criticalTotal > 0) {
     statusClass = 'critical';
-    title = t('Critical OVN platform issues');
+    title = t('Critical {{title}} issues', { title: titleName });
   } else if (warningTotal > 0) {
     statusClass = 'warning';
-    title = t('OVN platform warnings');
+    title = t('{{title}} warnings', { title: titleName });
   } else if (infoTotal > 0) {
     statusClass = 'info';
-    title = t('Minor OVN platform observations');
+    title = t('Minor {{title}} observations', { title: titleName });
   }
 
   const formatDetail = (firing: number, pending: number, silenced: number): string | undefined => {
@@ -118,15 +123,15 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
     <Flex
       className="health-section-summary health-ovn-summary"
       {...sectionSummaryLayout}
-      data-test="health-ovn-summary"
+      data-test={`${testPrefix}-summary`}
     >
       <FlexItem className="health-section-summary-heading">
         <Content
           component={ContentVariants.h3}
           className="health-summary-section-title"
-          data-test="health-ovn-summary-label"
+          data-test={`${testPrefix}-summary-label`}
         >
-          {t('OVN-Kubernetes platform alerts')}
+          {copy.summaryLabel}
         </Content>
         <Content component={ContentVariants.p} className="health-summary-section-description">
           {sectionDescription}
@@ -134,7 +139,7 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
       </FlexItem>
       <FlexItem className="health-section-summary-body">
         <Flex
-          data-test="health-ovn-summary-dashboard"
+          data-test={`${testPrefix}-summary-dashboard`}
           gap={{ default: 'gapMd' }}
           alignItems={{ default: 'alignItemsCenter' }}
           className={`health-summary-dashboard ${forceCollapsed ? 'force-collapsed' : ''}`}
@@ -142,7 +147,11 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
           onKeyDown={handleKeyDown}
           tabIndex={forceCollapsed ? -1 : 0}
           role="button"
-          aria-label={displayExpanded ? t('Collapse OVN platform summary') : t('Expand OVN platform summary')}
+          aria-label={
+            displayExpanded
+              ? t('Collapse {{title}} summary', { title: titleName })
+              : t('Expand {{title}} summary', { title: titleName })
+          }
           aria-expanded={displayExpanded}
           aria-disabled={forceCollapsed}
           style={{ cursor: forceCollapsed ? 'default' : 'pointer' }}
