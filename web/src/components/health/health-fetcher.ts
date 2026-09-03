@@ -2,12 +2,15 @@ import { AlertStates, PrometheusResponse } from '@openshift-console/dynamic-plug
 import { SilenceMatcher } from '../../api/alert';
 import { getAlerts, getRecordingRules, getSilencedAlerts, queryPrometheusMetric } from '../../api/routes';
 import { RecordingAnnotations } from '../../model/config';
+import { isExcludedFromNetobservHealth } from './health-context';
 import { buildStats, isSilenced, RecordingRuleMetric, rulesToHealthItems } from './health-helper';
 import { injectAlertRuleIds } from './ovn-health-fetcher';
 
 export const fetchNetworkHealth = (recordingAnnotations: RecordingAnnotations) => {
   // matching netobserv="true" catches all alerts designed for netobserv (not necessarily owned by it)
-  const alertsP = getAlerts('netobserv="true"').then(res => injectAlertRuleIds(res.data.groups));
+  const alertsP = getAlerts('netobserv="true"').then(res =>
+    injectAlertRuleIds(res.data.groups).filter(rule => !isExcludedFromNetobservHealth(rule))
+  );
 
   const silencedP = getSilencedAlerts('netobserv=true')
     .then(res => {

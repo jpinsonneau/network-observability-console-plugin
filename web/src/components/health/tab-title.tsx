@@ -57,7 +57,7 @@ export const HealthTabTitle: React.FC<HealthTabTitleProps> = ({ stats, title }) 
   );
 };
 
-/** Context tab title (NetObserv / Platform): icon + total active items across all views. */
+/** Context tab title (NetObserv / OVN / …): icon + total active items across all views. */
 export const HealthContextTabTitle: React.FC<HealthTabTitleProps> = ({ stats, title }) => {
   const icon = getSeverityTabIcon(stats.map(getResourceSeverity));
   const count = getContextTabActiveCount(stats);

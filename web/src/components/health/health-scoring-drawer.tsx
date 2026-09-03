@@ -9,12 +9,12 @@ import {
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
-export type HealthScoringContext = 'netobserv' | 'ovn';
+import { NETOBSERV_CONTEXT_NETOBSERV, NETOBSERV_CONTEXT_OVN } from './health-context';
 
 export interface HealthScoringDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  context: HealthScoringContext;
+  contextId: string;
 }
 
 const NetobservScoringContent: React.FC = () => {
@@ -253,21 +253,50 @@ const OvnPlatformInfoContent: React.FC = () => {
   );
 };
 
-export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen, onClose, context }) => {
+const ReadonlyContextInfoContent: React.FC<{ contextId: string }> = ({ contextId }) => {
+  const { t } = useTranslation('plugin__netobserv-plugin');
+  const title = contextId === NETOBSERV_CONTEXT_OVN ? t('OVN') : contextId;
+  return (
+    <>
+      <Content component={ContentVariants.h3}>{t('What are {{title}} alerts?', { title })}</Content>
+      <Content component={ContentVariants.p}>
+        {t(
+          'These alerts are contributed by another component and shown for visibility only. They do not contribute to the 0–10 NetObserv health score.'
+        )}
+      </Content>
+      <Content component={ContentVariants.h3}>{t('Read-only view')}</Content>
+      <Content component={ContentVariants.p}>
+        {t(
+          'These alerts cannot be managed from NetObserv. Use the owning component documentation to investigate issues.'
+        )}
+      </Content>
+    </>
+  );
+};
+
+export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen, onClose, contextId }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const drawerRef = React.useRef<HTMLDivElement>(null);
-  const isOvnContext = context === 'ovn';
+  const isNetobservContext = contextId === NETOBSERV_CONTEXT_NETOBSERV;
+  const isOvnContext = contextId === NETOBSERV_CONTEXT_OVN;
+  const testPrefix = `health-${contextId}`;
 
   return (
     <DrawerPanelContent isResizable widths={{ default: 'width_50' }} minSize="400px">
       <DrawerHead>
         <span tabIndex={isOpen ? 0 : -1} ref={drawerRef}>
           <Content component={ContentVariants.h2} style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>
-            {isOvnContext ? t('Understanding OVN Platform Alerts') : t('Understanding Network Health Scores')}
+            {isNetobservContext
+              ? t('Understanding Network Health Scores')
+              : isOvnContext
+              ? t('Understanding OVN Alerts')
+              : t('Understanding {{title}} alerts', {
+                  title: contextId.charAt(0).toUpperCase() + contextId.slice(1)
+                })}
           </Content>
         </span>
         <DrawerActions>
-          <span data-test={isOvnContext ? 'health-ovn-info-drawer-close' : 'health-scoring-drawer-close'}>
+          <span data-test={isNetobservContext ? 'health-scoring-drawer-close' : `${testPrefix}-info-drawer-close`}>
             <DrawerCloseButton onClick={onClose} />
           </span>
         </DrawerActions>
@@ -275,9 +304,15 @@ export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen
       <div style={{ padding: '1.5rem', overflowY: 'auto', height: '100%' }}>
         <Content
           className="health-scoring-content"
-          data-test={isOvnContext ? 'health-ovn-info-drawer' : 'health-scoring-drawer'}
+          data-test={isNetobservContext ? 'health-scoring-drawer' : `${testPrefix}-info-drawer`}
         >
-          {isOvnContext ? <OvnPlatformInfoContent /> : <NetobservScoringContent />}
+          {isNetobservContext ? (
+            <NetobservScoringContent />
+          ) : isOvnContext ? (
+            <OvnPlatformInfoContent />
+          ) : (
+            <ReadonlyContextInfoContent contextId={contextId} />
+          )}
         </Content>
       </div>
     </DrawerPanelContent>

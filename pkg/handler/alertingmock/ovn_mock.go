@@ -57,8 +57,10 @@ func buildOvnPlatformAlert(name, severity, summary, description, runbookDoc stri
 		annotations["runbook_url"] = model.LabelValue(ovnRunbook(runbookDoc))
 	}
 	labels := model.LabelSet{
-		"severity":   model.LabelValue(severity),
-		"prometheus": "openshift-ovn-kubernetes/k8s",
+		"severity":                    model.LabelValue(severity),
+		"prometheus":                  "openshift-ovn-kubernetes/k8s",
+		"netobserv":                   "true",
+		"netobserv_io_health_context": "ovn",
 	}
 	for _, a := range alerts {
 		a.Annotations = annotations

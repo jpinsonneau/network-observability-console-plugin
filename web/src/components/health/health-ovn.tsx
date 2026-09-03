@@ -2,39 +2,48 @@ import { Bullseye, Content, ContentVariants, EmptyState, Spinner, Title } from '
 import { CheckCircleIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { NETOBSERV_CONTEXT_OVN } from './health-context';
 import { HealthDrawerContainer } from './health-drawer-container';
 import { getAllHealthItems } from './health-helper';
 import { OvnHealthStats } from './ovn-health-helper';
+import { getReadonlyContextCopy } from './readonly-context-copy';
 import { RuleDetails } from './rule-details';
 
-export type HealthOvnView = 'global' | 'per-node';
+export type HealthReadonlyView = 'global' | 'per-node';
 
-export interface HealthOvnProps {
+export interface HealthReadonlyContextProps {
+  contextId: string;
   stats: OvnHealthStats;
-  view: HealthOvnView;
+  view: HealthReadonlyView;
   isLoading?: boolean;
   isDark: boolean;
 }
 
-export const HealthOvn: React.FC<HealthOvnProps> = ({ stats, view, isLoading, isDark }) => {
+export const HealthReadonlyContext: React.FC<HealthReadonlyContextProps> = ({
+  contextId,
+  stats,
+  view,
+  isLoading,
+  isDark
+}) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
+  const copy = getReadonlyContextCopy(contextId, t);
+  const testPrefix = `health-${contextId}`;
   const globalItems = getAllHealthItems(stats.global);
   const hasNodeItems = stats.byNode.some(s => getAllHealthItems(s).length > 0);
 
   if (isLoading) {
     return (
-      <Bullseye data-test="health-ovn-loading">
-        <Spinner size="lg" aria-label={t('Loading OVN platform alerts')} />
+      <Bullseye data-test={`${testPrefix}-loading`}>
+        <Spinner size="lg" aria-label={copy.loadingLabel} />
       </Bullseye>
     );
   }
 
   if (!stats.available) {
     return (
-      <EmptyState data-test="health-ovn-unavailable" titleText={t('OVN platform alerts unavailable')} headingLevel="h2">
-        {t(
-          'OpenShift OVN-Kubernetes platform alerts were not found. This tab is available on OpenShift clusters using the OVN-Kubernetes network plugin.'
-        )}
+      <EmptyState data-test={`${testPrefix}-unavailable`} titleText={copy.unavailableTitle} headingLevel="h2">
+        {copy.unavailableBody}
       </EmptyState>
     );
   }
@@ -44,8 +53,8 @@ export const HealthOvn: React.FC<HealthOvnProps> = ({ stats, view, isLoading, is
       return (
         <Bullseye>
           <EmptyState
-            data-test="health-ovn-global-healthy"
-            titleText={<Title headingLevel="h2">{t('No cluster-wide OVN platform alerts')}</Title>}
+            data-test={`${testPrefix}-global-healthy`}
+            titleText={<Title headingLevel="h2">{copy.globalHealthyTitle}</Title>}
             icon={CheckCircleIcon}
           />
         </Bullseye>
@@ -53,8 +62,8 @@ export const HealthOvn: React.FC<HealthOvnProps> = ({ stats, view, isLoading, is
     }
 
     return (
-      <div className="health-ovn-content" data-test="health-ovn-content">
-        <Content component={ContentVariants.h3}>{t('Cluster-wide OVN alerts')}</Content>
+      <div className="health-readonly-content" data-test={`${testPrefix}-content`}>
+        <Content component={ContentVariants.h3}>{copy.globalSectionTitle}</Content>
         <RuleDetails kind={'Global'} resourceHealth={stats.global} />
       </div>
     );
@@ -64,8 +73,8 @@ export const HealthOvn: React.FC<HealthOvnProps> = ({ stats, view, isLoading, is
     return (
       <Bullseye>
         <EmptyState
-          data-test="health-ovn-nodes-healthy"
-          titleText={<Title headingLevel="h2">{t('No OVN platform alerts per node')}</Title>}
+          data-test={`${testPrefix}-nodes-healthy`}
+          titleText={<Title headingLevel="h2">{copy.nodesHealthyTitle}</Title>}
           icon={CheckCircleIcon}
         />
       </Bullseye>
@@ -73,8 +82,16 @@ export const HealthOvn: React.FC<HealthOvnProps> = ({ stats, view, isLoading, is
   }
 
   return (
-    <div className="health-ovn-content" data-test="health-ovn-content">
-      <HealthDrawerContainer title={t('OVN alerts per node')} stats={stats.byNode} kind={'Node'} isDark={isDark} />
+    <div className="health-readonly-content" data-test={`health-${contextId}-content`}>
+      <HealthDrawerContainer title={copy.nodesSectionTitle} stats={stats.byNode} kind={'Node'} isDark={isDark} />
     </div>
   );
 };
+
+/** @deprecated Use HealthReadonlyContext with contextId="ovn" */
+export type HealthOvnView = HealthReadonlyView;
+
+/** @deprecated Use HealthReadonlyContext */
+export const HealthOvn: React.FC<Omit<HealthReadonlyContextProps, 'contextId'> & { contextId?: string }> = props => (
+  <HealthReadonlyContext contextId={props.contextId ?? NETOBSERV_CONTEXT_OVN} {...props} />
+);

@@ -23,24 +23,28 @@ import { usePoll } from '../../utils/poll-hook';
 import { useTheme } from '../../utils/theme-hook';
 import { RefreshDropdown } from '../dropdowns/refresh-dropdown';
 import FlowCollectorStatusIndicator from '../status/flowcollector-status-indicator';
+import {
+  formatContextTabTitle,
+  getHealthContextDefinition,
+  isReadonlyAlertsContext,
+  NETOBSERV_CONTEXT_NETOBSERV,
+  NETOBSERV_CONTEXT_OVN
+} from './health-context';
+import { fetchHealthContexts } from './health-contexts-fetcher';
 import { HealthDrawerContainer } from './health-drawer-container';
 import HealthError from './health-error';
-import { fetchNetworkHealth } from './health-fetcher';
 import { HealthGlobal } from './health-global';
 import { buildStats, HealthStats } from './health-helper';
-import { HealthOvn, HealthOvnView } from './health-ovn';
+import { HealthReadonlyContext, HealthReadonlyView } from './health-ovn';
 import { HealthOvnSummary } from './health-ovn-summary';
 import { HealthScoringDrawer } from './health-scoring-drawer';
 import { HealthSummary } from './health-summary';
-import { fetchOvnPlatformHealth } from './ovn-health-fetcher';
-import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
+import { buildOvnStats } from './ovn-health-helper';
 import { getNetobservContextStats, getOvnContextStats, HealthContextTabTitle, HealthTabTitle } from './tab-title';
 
 import './health.css';
 
-type HealthContextTab = 'netobserv' | 'platform';
 type NetobservSubTab = 'global' | 'per-node' | 'per-namespace' | 'per-owner';
-type PlatformSubTab = HealthOvnView;
 
 export const NetworkHealth: React.FC<{}> = ({}) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
@@ -51,10 +55,11 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const [interval, setInterval] = useLocalStorage<number | undefined>(localStorageHealthRefreshKey, undefined);
   const [rules, setRules] = React.useState<Rule[]>([]);
   const [health, setHealth] = React.useState<HealthStats>(buildStats([]));
-  const [ovnHealth, setOvnHealth] = React.useState<OvnHealthStats>(() => buildOvnStats([], false));
-  const [activeContextTab, setActiveContextTab] = React.useState<HealthContextTab>('netobserv');
+  const [readonlyContexts, setReadonlyContexts] = React.useState<Record<string, ReturnType<typeof buildOvnStats>>>({});
+  const [availableContextIds, setAvailableContextIds] = React.useState<string[]>([NETOBSERV_CONTEXT_NETOBSERV]);
+  const [activeContextTab, setActiveContextTab] = React.useState<string>(NETOBSERV_CONTEXT_NETOBSERV);
   const [activeNetobservTab, setActiveNetobservTab] = React.useState<NetobservSubTab>('global');
-  const [activePlatformTab, setActivePlatformTab] = React.useState<PlatformSubTab>('global');
+  const [activeReadonlySubTabs, setActiveReadonlySubTabs] = React.useState<Record<string, HealthReadonlyView>>({});
   const [config, setConfig] = React.useState<Config>(defaultConfig);
   const [configLoaded, setConfigLoaded] = React.useState(false);
   const [isScoringDrawerOpen, setIsScoringDrawerOpen] = React.useState<boolean>(false);
@@ -73,17 +78,12 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
     setLoading(true);
     setError(undefined);
 
-    Promise.all([
-      fetchNetworkHealth(config.recordingAnnotations || {}),
-      fetchOvnPlatformHealth().catch(err => {
-        console.log('Could not fetch OVN platform alerts:', err);
-        return { stats: buildOvnStats([], false), alertRules: [] };
-      })
-    ])
-      .then(([netobservRes, ovnRes]) => {
-        setHealth(netobservRes.stats);
-        setRules(netobservRes.alertRules);
-        setOvnHealth(ovnRes.stats);
+    Promise.all([fetchHealthContexts(config.recordingAnnotations || {})])
+      .then(([contextsRes]) => {
+        setHealth(contextsRes.netobserv.stats);
+        setRules(contextsRes.netobserv.alertRules);
+        setReadonlyContexts(contextsRes.readonlyContexts);
+        setAvailableContextIds(contextsRes.availableContextIds);
       })
       .catch(err => {
         const errStr = getGenericHTTPError(err);
@@ -103,18 +103,28 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   }, [configLoaded, fetch]);
 
   React.useEffect(() => {
-    if (activeContextTab === 'platform' && !ovnHealth.available) {
-      setActiveContextTab('netobserv');
+    if (!availableContextIds.includes(activeContextTab)) {
+      setActiveContextTab(NETOBSERV_CONTEXT_NETOBSERV);
     }
-  }, [activeContextTab, ovnHealth.available]);
+  }, [activeContextTab, availableContextIds]);
 
   const isInitialLoading = !configLoaded || !initialized;
-  const isPlatformContext = activeContextTab === 'platform' && ovnHealth.available;
+  const isReadonlyContext = isReadonlyAlertsContext(activeContextTab);
+  const activeReadonlyStats = readonlyContexts[activeContextTab];
+  const activeReadonlySubTab = activeReadonlySubTabs[activeContextTab] ?? 'global';
   const summaryForceCollapsed = isScoringDrawerOpen;
 
+  const getContextTabTitle = React.useCallback(
+    (contextId: string) => {
+      const definition = getHealthContextDefinition(contextId);
+      return definition.titleKey ? t(definition.titleKey) : formatContextTabTitle(contextId);
+    },
+    [t]
+  );
+
   const activeViewLabel = React.useMemo(() => {
-    if (isPlatformContext) {
-      return activePlatformTab === 'per-node' ? t('Nodes') : t('Global');
+    if (isReadonlyContext) {
+      return activeReadonlySubTab === 'per-node' ? t('Nodes') : t('Global');
     }
     switch (activeNetobservTab) {
       case 'global':
@@ -128,7 +138,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       default:
         return t('Global');
     }
-  }, [activeNetobservTab, activePlatformTab, isPlatformContext, t]);
+  }, [activeNetobservTab, activeReadonlySubTab, isReadonlyContext, t]);
 
   const panelContent = () => {
     if (isScoringDrawerOpen) {
@@ -136,7 +146,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
         <HealthScoringDrawer
           isOpen={isScoringDrawerOpen}
           onClose={() => setIsScoringDrawerOpen(false)}
-          context={isPlatformContext ? 'ovn' : 'netobserv'}
+          contextId={activeContextTab}
         />
       );
     }
@@ -148,39 +158,52 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       <FlexItem flex={{ default: 'flex_1' }}>
         <Tabs
           activeKey={activeContextTab}
-          onSelect={(_, tabIndex) => setActiveContextTab(String(tabIndex) as HealthContextTab)}
+          onSelect={(_, tabIndex) => setActiveContextTab(String(tabIndex))}
           aria-label={t('Health data source')}
           className={`health-context-tabs ${isDarkTheme ? 'dark' : ''}`}
           data-test="health-context-tabs"
         >
-          <Tab
-            eventKey={'netobserv'}
-            title={<HealthContextTabTitle title={t('NetObserv')} stats={getNetobservContextStats(health)} />}
-            data-test="health-context-tab-netobserv"
-          />
-          {ovnHealth.available && (
-            <Tab
-              eventKey={'platform'}
-              title={<HealthContextTabTitle title={t('Platform')} stats={getOvnContextStats(ovnHealth)} />}
-              data-test="health-context-tab-platform"
-            />
-          )}
+          {availableContextIds.map(contextId => {
+            const definition = getHealthContextDefinition(contextId);
+            const stats =
+              definition.kind === 'netobserv'
+                ? getNetobservContextStats(health)
+                : getOvnContextStats(readonlyContexts[contextId] ?? buildOvnStats([], false));
+            const testId =
+              contextId === NETOBSERV_CONTEXT_NETOBSERV
+                ? 'health-context-tab-netobserv'
+                : `health-context-tab-${contextId}`;
+            return (
+              <Tab
+                key={contextId}
+                eventKey={contextId}
+                title={<HealthContextTabTitle title={getContextTabTitle(contextId)} stats={stats} />}
+                data-test={testId}
+              />
+            );
+          })}
         </Tabs>
       </FlexItem>
       <FlexItem className={'bottom-border'}>
         <Button
-          data-test={isPlatformContext ? 'health-ovn-info-button' : 'health-scoring-info-button'}
+          data-test={
+            activeContextTab === NETOBSERV_CONTEXT_OVN
+              ? 'health-ovn-info-button'
+              : isReadonlyContext
+              ? `health-${activeContextTab}-info-button`
+              : 'health-scoring-info-button'
+          }
           className="overflow-button"
           variant="link"
           onClick={() => setIsScoringDrawerOpen(!isScoringDrawerOpen)}
           icon={<QuestionCircleIcon />}
         >
           {isScoringDrawerOpen
-            ? isPlatformContext
-              ? t('Hide platform alert information')
+            ? isReadonlyContext
+              ? t('Hide alert information')
               : t('Hide scoring information')
-            : isPlatformContext
-            ? t('Show platform alert information')
+            : isReadonlyContext
+            ? t('Show alert information')
             : t('Show scoring information')}
         </Button>
       </FlexItem>
@@ -189,14 +212,15 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
 
   const renderContextSummary = () => (
     <div
-      key={isPlatformContext ? 'platform' : 'netobserv'}
+      key={activeContextTab}
       className="health-context-summary"
       aria-live="polite"
       data-test="health-context-summary"
     >
-      {isPlatformContext ? (
+      {isReadonlyContext && activeReadonlyStats ? (
         <HealthOvnSummary
-          stats={ovnHealth}
+          contextId={activeContextTab}
+          stats={activeReadonlyStats}
           forceCollapsed={summaryForceCollapsed}
           isLoading={isInitialLoading}
           activeViewLabel={activeViewLabel}
@@ -214,26 +238,32 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   );
 
   const renderSubTabs = () => {
-    if (isPlatformContext) {
+    if (isReadonlyContext && activeReadonlyStats) {
+      const subTabPrefix = `health-${activeContextTab}`;
       return (
         <Tabs
-          activeKey={activePlatformTab}
-          onSelect={(_, tabIndex) => setActivePlatformTab(String(tabIndex) as PlatformSubTab)}
-          aria-label={t('Platform networking alerts')}
-          className={`health-subtabs health-platform-subtabs ${isDarkTheme ? 'dark' : ''}`}
-          data-test="health-platform-subtabs"
+          activeKey={activeReadonlySubTab}
+          onSelect={(_, tabIndex) =>
+            setActiveReadonlySubTabs(current => ({
+              ...current,
+              [activeContextTab]: String(tabIndex) as HealthReadonlyView
+            }))
+          }
+          aria-label={t('{{title}} alerts', { title: getContextTabTitle(activeContextTab) })}
+          className={`health-subtabs health-readonly-subtabs ${isDarkTheme ? 'dark' : ''}`}
+          data-test={`${subTabPrefix}-subtabs`}
         >
           <Tab
             eventKey={'global'}
-            data-test="health-platform-tab-global"
-            title={<HealthTabTitle title={t('Global')} stats={[ovnHealth.global]} />}
-            aria-label={t('Tab global platform alerts')}
+            data-test={`${subTabPrefix}-tab-global`}
+            title={<HealthTabTitle title={t('Global')} stats={[activeReadonlyStats.global]} />}
+            aria-label={t('Tab global alerts')}
           />
           <Tab
             eventKey={'per-node'}
-            data-test="health-platform-tab-nodes"
-            title={<HealthTabTitle title={t('Nodes')} stats={ovnHealth.byNode} />}
-            aria-label={t('Tab OVN platform alerts per node')}
+            data-test={`${subTabPrefix}-tab-nodes`}
+            title={<HealthTabTitle title={t('Nodes')} stats={activeReadonlyStats.byNode} />}
+            aria-label={t('Tab alerts per node')}
           />
         </Tabs>
       );
@@ -276,37 +306,44 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   };
 
   const renderTabContent = () => {
-    const content = isPlatformContext ? (
-      <HealthOvn stats={ovnHealth} view={activePlatformTab} isLoading={isInitialLoading} isDark={isDarkTheme} />
-    ) : (
-      <>
-        {activeNetobservTab === 'global' && <HealthGlobal info={health.global} isDark={isDarkTheme} />}
-        {activeNetobservTab === 'per-node' && (
-          <HealthDrawerContainer
-            title={t('Rule violations per node')}
-            stats={health.byNode}
-            kind={'Node'}
-            isDark={isDarkTheme}
-          />
-        )}
-        {activeNetobservTab === 'per-namespace' && (
-          <HealthDrawerContainer
-            title={t('Rule violations per namespace')}
-            stats={health.byNamespace}
-            kind={'Namespace'}
-            isDark={isDarkTheme}
-          />
-        )}
-        {activeNetobservTab === 'per-owner' && (
-          <HealthDrawerContainer
-            title={t('Rule violations per workload')}
-            stats={health.byOwner}
-            kind={'Owner'}
-            isDark={isDarkTheme}
-          />
-        )}
-      </>
-    );
+    const content =
+      isReadonlyContext && activeReadonlyStats ? (
+        <HealthReadonlyContext
+          contextId={activeContextTab}
+          stats={activeReadonlyStats}
+          view={activeReadonlySubTab}
+          isLoading={isInitialLoading}
+          isDark={isDarkTheme}
+        />
+      ) : (
+        <>
+          {activeNetobservTab === 'global' && <HealthGlobal info={health.global} isDark={isDarkTheme} />}
+          {activeNetobservTab === 'per-node' && (
+            <HealthDrawerContainer
+              title={t('Rule violations per node')}
+              stats={health.byNode}
+              kind={'Node'}
+              isDark={isDarkTheme}
+            />
+          )}
+          {activeNetobservTab === 'per-namespace' && (
+            <HealthDrawerContainer
+              title={t('Rule violations per namespace')}
+              stats={health.byNamespace}
+              kind={'Namespace'}
+              isDark={isDarkTheme}
+            />
+          )}
+          {activeNetobservTab === 'per-owner' && (
+            <HealthDrawerContainer
+              title={t('Rule violations per workload')}
+              stats={health.byOwner}
+              kind={'Owner'}
+              isDark={isDarkTheme}
+            />
+          )}
+        </>
+      );
 
     return <div className="health-tab-panel">{content}</div>;
   };

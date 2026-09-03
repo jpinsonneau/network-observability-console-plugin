@@ -3,9 +3,9 @@ export namespace networkHealthSelectors {
     export const node = '[id^="pf-tab-per-node"]'
     export const namespace = '[id^="pf-tab-per-namespace"]'
     export const workload = '[id^="pf-tab-per-owner"]'
-    export const platform = '[data-test="health-context-tab-platform"]'
-    export const platformGlobal = '[data-test="health-platform-tab-global"]'
-    export const platformNodes = '[data-test="health-platform-tab-nodes"]'
+    export const ovn = '[data-test="health-context-tab-ovn"]'
+    export const ovnGlobal = '[data-test="health-ovn-tab-global"]'
+    export const ovnNodes = '[data-test="health-ovn-tab-nodes"]'
     export const nodeCard = '[data-test^="health-card-"]'
     export const sidePanel = '[data-test="health-drawer-content"]'
 }

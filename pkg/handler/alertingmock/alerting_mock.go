@@ -579,6 +579,15 @@ func GetRules() func(w http.ResponseWriter, r *http.Request) {
 					"rules":    ovnRules,
 				})
 			}
+			kialiRules := filterAlertingRules(getKialiMockAlertRules(), matchers)
+			if len(kialiRules) > 0 {
+				groups = append(groups, map[string]any{
+					"name":     "kiali-health.rules",
+					"file":     "/etc/prometheus/rules/kiali/health-rules.yaml",
+					"interval": 30,
+					"rules":    kialiRules,
+				})
+			}
 		}
 
 		res := map[string]any{

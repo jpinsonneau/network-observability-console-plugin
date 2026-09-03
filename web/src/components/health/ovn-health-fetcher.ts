@@ -3,11 +3,18 @@ import * as _ from 'lodash';
 import { murmur3 } from 'murmurhash-js';
 import { AlertsResult, SilenceMatcher } from '../../api/alert';
 import { getAlerts, getAllSilencedAlerts } from '../../api/routes';
+import { hasOvnHealthContextLabel } from './health-context';
 import { isSilenced } from './health-helper';
 import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
 import { isOvnPlatformAlertName } from './ovn-platform-alerts';
 
-/** CNO OVN-Kubernetes alert group in Prometheus /api/v1/rules (label on PrometheusRule CR is not exposed on rules). */
+/**
+ * Platform alert discovery:
+ * 1. Legacy (current OCP): CNO OVN rule group + allowlisted alert names.
+ * 2. Labeled (CNO follow-up): netobserv="true" + netobserv_io_health_context="ovn".
+ *    New platform alerts can appear without updating the console allowlist.
+ */
+/** CNO OVN-Kubernetes alert group in Prometheus /api/v1/rules (PrometheusRule CR labels are not exposed on rules). */
 const OVN_RULES_GROUP_NAME = 'cluster-network-operator-ovn.rules';
 
 export const isOvnPlatformRulesGroup = (group: AlertsResult['data']['groups'][number]): boolean =>
@@ -24,6 +31,30 @@ export const injectAlertRuleIds = (groups: AlertsResult['data']['groups']): Rule
     });
     return group.rules;
   });
+};
+
+const discoverLegacyOvnPlatformRules = (groups: AlertsResult['data']['groups']): Rule[] => {
+  const ovnGroups = groups.filter(isOvnPlatformRulesGroup);
+  return injectAlertRuleIds(ovnGroups).filter(r => isOvnPlatformAlertName(r.name));
+};
+
+const discoverLabeledOvnPlatformRules = (groups: AlertsResult['data']['groups']): Rule[] => {
+  return injectAlertRuleIds(groups).filter(r => r.labels?.netobserv === 'true' && hasOvnHealthContextLabel(r));
+};
+
+/** Union of legacy group/allowlist discovery and future label-based discovery. */
+export const discoverOvnPlatformRules = (groups: AlertsResult['data']['groups']): Rule[] => {
+  return _.uniqBy(
+    [...discoverLabeledOvnPlatformRules(groups), ...discoverLegacyOvnPlatformRules(groups)],
+    r => r.id ?? r.name
+  );
+};
+
+export const isOvnPlatformTabAvailable = (groups: AlertsResult['data']['groups'], platformRules: Rule[]): boolean => {
+  if (platformRules.length > 0) {
+    return true;
+  }
+  return groups.some(isOvnPlatformRulesGroup);
 };
 
 const applySilences = (rawRules: Rule[], silenced: SilenceMatcher[][]): Rule[] =>
@@ -46,8 +77,8 @@ export type OvnPlatformHealthResult = {
 
 export const fetchOvnPlatformHealth = (): Promise<OvnPlatformHealthResult> => {
   const alertsP = getAlerts().then(res => {
-    const ovnGroups = res.data.groups.filter(isOvnPlatformRulesGroup);
-    return injectAlertRuleIds(ovnGroups).filter(r => isOvnPlatformAlertName(r.name));
+    const platformRules = discoverOvnPlatformRules(res.data.groups);
+    return { groups: res.data.groups, platformRules };
   });
 
   const silencedP = getAllSilencedAlerts()
@@ -57,10 +88,10 @@ export const fetchOvnPlatformHealth = (): Promise<OvnPlatformHealthResult> => {
       return [] as SilenceMatcher[][];
     });
 
-  return Promise.all([alertsP, silencedP]).then(([platformRules, silenced]) => {
+  return Promise.all([alertsP, silencedP]).then(([{ groups, platformRules }, silenced]) => {
     const alertRules = applySilences(platformRules, silenced);
     return {
-      stats: buildOvnStats(alertRules, platformRules.length > 0),
+      stats: buildOvnStats(alertRules, isOvnPlatformTabAvailable(groups, platformRules)),
       alertRules
     };
   });
