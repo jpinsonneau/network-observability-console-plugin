@@ -93,5 +93,5 @@ export type HealthOvnView = HealthReadonlyView;
 
 /** @deprecated Use HealthReadonlyContext */
 export const HealthOvn: React.FC<Omit<HealthReadonlyContextProps, 'contextId'> & { contextId?: string }> = props => (
-  <HealthReadonlyContext contextId={props.contextId ?? NETOBSERV_CONTEXT_OVN} {...props} />
+  <HealthReadonlyContext {...props} contextId={props.contextId ?? NETOBSERV_CONTEXT_OVN} />
 );

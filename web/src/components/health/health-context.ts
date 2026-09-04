@@ -51,15 +51,24 @@ export const getHealthContextTabFromAnnotations = (annotations?: PrometheusLabel
   }
   try {
     const parsed = JSON.parse(annotations['netobserv_io_network_health'] as string) as { contextTab?: string };
-    return parsed?.contextTab;
+    return sanitizeHealthContextId(parsed?.contextTab);
   } catch {
     return undefined;
   }
 };
 
+const UNSAFE_CONTEXT_IDS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/** Valid third-party / labeled context tab identifiers (alphanumeric, dash, underscore). */
+export const isValidHealthContextId = (id: unknown): id is string =>
+  typeof id === 'string' && id.length > 0 && /^[A-Za-z][A-Za-z0-9_-]*$/.test(id) && !UNSAFE_CONTEXT_IDS.has(id);
+
+const sanitizeHealthContextId = (id: string | undefined): string | undefined =>
+  id && isValidHealthContextId(id) ? id : undefined;
+
 /** Resolve which context tab owns a Prometheus alert rule. */
 export const getRuleHealthContextId = (rule: Pick<Rule, 'name' | 'labels' | 'annotations'>): string => {
-  const fromLabel = rule.labels?.[NETOBSERV_HEALTH_CONTEXT_LABEL];
+  const fromLabel = sanitizeHealthContextId(rule.labels?.[NETOBSERV_HEALTH_CONTEXT_LABEL] as string | undefined);
   if (fromLabel) {
     return fromLabel;
   }

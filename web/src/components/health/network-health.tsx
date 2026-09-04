@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Config, defaultConfig } from '../../model/config';
 import { loadConfig } from '../../utils/config';
 import { getGenericHTTPError } from '../../utils/errors';
+import { useHealthContexts } from '../../utils/health-contexts-hook';
 import { localStorageHealthRefreshKey, useLocalStorage } from '../../utils/local-storage-hook';
 import { usePoll } from '../../utils/poll-hook';
 import { useTheme } from '../../utils/theme-hook';
@@ -26,7 +27,6 @@ import FlowCollectorStatusIndicator from '../status/flowcollector-status-indicat
 import {
   formatContextTabTitle,
   getHealthContextDefinition,
-  isReadonlyAlertsContext,
   NETOBSERV_CONTEXT_NETOBSERV,
   NETOBSERV_CONTEXT_OVN
 } from './health-context';
@@ -55,11 +55,18 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const [interval, setInterval] = useLocalStorage<number | undefined>(localStorageHealthRefreshKey, undefined);
   const [rules, setRules] = React.useState<Rule[]>([]);
   const [health, setHealth] = React.useState<HealthStats>(buildStats([]));
-  const [readonlyContexts, setReadonlyContexts] = React.useState<Record<string, ReturnType<typeof buildOvnStats>>>({});
-  const [availableContextIds, setAvailableContextIds] = React.useState<string[]>([NETOBSERV_CONTEXT_NETOBSERV]);
-  const [activeContextTab, setActiveContextTab] = React.useState<string>(NETOBSERV_CONTEXT_NETOBSERV);
+  const {
+    readonlyContexts,
+    availableContextIds,
+    activeContextTab,
+    setActiveContextTab,
+    setReadonlySubTab,
+    isReadonlyContext,
+    activeReadonlyStats,
+    activeReadonlySubTab,
+    updateFromFetch
+  } = useHealthContexts();
   const [activeNetobservTab, setActiveNetobservTab] = React.useState<NetobservSubTab>('global');
-  const [activeReadonlySubTabs, setActiveReadonlySubTabs] = React.useState<Record<string, HealthReadonlyView>>({});
   const [config, setConfig] = React.useState<Config>(defaultConfig);
   const [configLoaded, setConfigLoaded] = React.useState(false);
   const [isScoringDrawerOpen, setIsScoringDrawerOpen] = React.useState<boolean>(false);
@@ -82,8 +89,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       .then(([contextsRes]) => {
         setHealth(contextsRes.netobserv.stats);
         setRules(contextsRes.netobserv.alertRules);
-        setReadonlyContexts(contextsRes.readonlyContexts);
-        setAvailableContextIds(contextsRes.availableContextIds);
+        updateFromFetch(contextsRes);
       })
       .catch(err => {
         const errStr = getGenericHTTPError(err);
@@ -93,7 +99,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
         setLoading(false);
         setInitialized(true);
       });
-  }, [config]);
+  }, [config, updateFromFetch]);
 
   usePoll(fetch, interval);
   React.useEffect(() => {
@@ -102,16 +108,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
     }
   }, [configLoaded, fetch]);
 
-  React.useEffect(() => {
-    if (!availableContextIds.includes(activeContextTab)) {
-      setActiveContextTab(NETOBSERV_CONTEXT_NETOBSERV);
-    }
-  }, [activeContextTab, availableContextIds]);
-
   const isInitialLoading = !configLoaded || !initialized;
-  const isReadonlyContext = isReadonlyAlertsContext(activeContextTab);
-  const activeReadonlyStats = readonlyContexts[activeContextTab];
-  const activeReadonlySubTab = activeReadonlySubTabs[activeContextTab] ?? 'global';
   const summaryForceCollapsed = isScoringDrawerOpen;
 
   const getContextTabTitle = React.useCallback(
@@ -243,12 +240,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       return (
         <Tabs
           activeKey={activeReadonlySubTab}
-          onSelect={(_, tabIndex) =>
-            setActiveReadonlySubTabs(current => ({
-              ...current,
-              [activeContextTab]: String(tabIndex) as HealthReadonlyView
-            }))
-          }
+          onSelect={(_, tabIndex) => setReadonlySubTab(activeContextTab, String(tabIndex) as HealthReadonlyView)}
           aria-label={t('{{title}} alerts', { title: getContextTabTitle(activeContextTab) })}
           className={`health-subtabs health-readonly-subtabs ${isDarkTheme ? 'dark' : ''}`}
           data-test={`${subTabPrefix}-subtabs`}
