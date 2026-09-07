@@ -26,8 +26,8 @@ export const injectAlertRuleIds = (groups: AlertsResult['data']['groups']): Rule
       const key = [group.file, group.name, r.name, r.duration, r.query, ..._.map(r.labels, (k, v) => `${k}=${v}`)].join(
         ','
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      r.id = String(murmur3(key, 'monitoring-salt' as any));
+      // murmurhash-js coerces invalid seeds (e.g. OpenShift's 'monitoring-salt') to 0.
+      r.id = String(murmur3(key, 0));
     });
     return group.rules;
   });

@@ -8,6 +8,7 @@ import {
   computeResourceScore,
   HealthItem,
   HealthStat,
+  isSilenced,
   NamedItem,
   Severity
 } from '../health-helper';
@@ -214,5 +215,18 @@ describe('health helpers, grouping', () => {
     const g = mockAlert('test5', 'warning', 'firing', 20, 30, {});
 
     expect(collectAvailableNamespaces([a1, a2, b, w, g])).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('isSilenced', () => {
+  it('matches positive equality matchers', () => {
+    expect(isSilenced([{ name: 'alertname', value: 'Foo' }], { alertname: 'Foo' })).toBe(true);
+    expect(isSilenced([{ name: 'alertname', value: 'Foo' }], { alertname: 'Bar' })).toBe(false);
+  });
+
+  it('honors negative and regex matchers', () => {
+    expect(isSilenced([{ name: 'severity', value: 'info', isEqual: false }], { severity: 'warning' })).toBe(true);
+    expect(isSilenced([{ name: 'alertname', value: 'Foo.*', isRegex: true }], { alertname: 'FooBar' })).toBe(true);
+    expect(isSilenced([{ name: 'alertname', value: 'Foo.*', isRegex: true }], { alertname: 'Bar' })).toBe(false);
   });
 });

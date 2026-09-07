@@ -6,6 +6,7 @@ import { RecordingAnnotations } from '../../model/config';
 import {
   getRuleHealthContextId,
   isReadonlyAlertsContext,
+  isValidHealthContextId,
   NETOBSERV_CONTEXT_NETOBSERV,
   NETOBSERV_CONTEXT_OVN,
   sortContextTabIds
@@ -16,6 +17,8 @@ import { discoverOvnPlatformRules, injectAlertRuleIds, isOvnPlatformTabAvailable
 import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
 
 export type ReadonlyHealthContexts = Record<string, OvnHealthStats>;
+
+const createReadonlyContexts = (): ReadonlyHealthContexts => Object.create(null) as ReadonlyHealthContexts;
 
 export type HealthContextsState = {
   netobserv: {
@@ -62,7 +65,7 @@ export const fetchHealthContexts = (recordingAnnotations: RecordingAnnotations):
 
   return Promise.all([netobservP, allAlertsP, silencedP]).then(([netobserv, allAlerts, silenced]) => {
     const groups = allAlerts.data.groups;
-    const readonlyContexts: ReadonlyHealthContexts = {};
+    const readonlyContexts = createReadonlyContexts();
 
     const ovnRules = applySilences(discoverOvnPlatformRules(groups), silenced);
     const ovnStats = buildOvnStats(ovnRules, isOvnPlatformTabAvailable(groups, ovnRules));
@@ -73,6 +76,9 @@ export const fetchHealthContexts = (recordingAnnotations: RecordingAnnotations):
     const thirdPartyRules = applySilences(discoverThirdPartyReadonlyRules(groups), silenced);
     const thirdPartyByContext = _.groupBy(thirdPartyRules, r => getRuleHealthContextId(r));
     Object.entries(thirdPartyByContext).forEach(([contextId, rules]) => {
+      if (!isValidHealthContextId(contextId)) {
+        return;
+      }
       readonlyContexts[contextId] = buildOvnStats(rules, rules.length > 0);
     });
 
