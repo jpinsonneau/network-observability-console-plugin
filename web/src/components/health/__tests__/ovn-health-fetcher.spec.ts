@@ -1,6 +1,6 @@
 import { Rule, RuleStates } from '@openshift-console/dynamic-plugin-sdk';
 import { AlertsResult } from '../../../api/alert';
-import { NETOBSERV_CONTEXT_OVN, NETOBSERV_HEALTH_CONTEXT_LABEL } from '../health-context';
+import { getRuleHealthContextId, NETOBSERV_CONTEXT_OVN, NETOBSERV_HEALTH_CONTEXT_LABEL } from '../health-context';
 import { discoverOvnPlatformRules, isOvnPlatformRulesGroup, isOvnPlatformTabAvailable } from '../ovn-health-fetcher';
 
 const makeGroup = (
@@ -71,5 +71,25 @@ describe('ovn-health-fetcher discovery', () => {
     expect(isOvnPlatformTabAvailable(groups, [])).toBe(true);
     expect(isOvnPlatformTabAvailable([], [])).toBe(false);
     expect(isOvnPlatformTabAvailable([], [makeRule('NorthboundStale')])).toBe(true);
+  });
+
+  it('excludes legacy OVN-named rule with kiali health-context annotation from OVN context', () => {
+    // Regression: a rule with a legacy OVN allowlisted name but a kiali annotation
+    // should be discovered by discoverOvnPlatformRules (legacy path) but filtered out
+    // by getRuleHealthContextId when building the OVN tab.
+    const groups = [
+      makeGroup('cluster-network-operator-ovn.rules', [
+        makeRule('NorthboundStale', {
+          netobserv: 'true',
+          [NETOBSERV_HEALTH_CONTEXT_LABEL]: 'kiali'
+        })
+      ])
+    ];
+    const discovered = discoverOvnPlatformRules(groups);
+    // Legacy discovery still finds the rule by name
+    expect(discovered.map(r => r.name)).toContain('NorthboundStale');
+    // But resolved context is kiali, so context-aware filtering excludes it from OVN
+    const ovnOnly = discovered.filter(r => getRuleHealthContextId(r) === NETOBSERV_CONTEXT_OVN);
+    expect(ovnOnly).toHaveLength(0);
   });
 });
