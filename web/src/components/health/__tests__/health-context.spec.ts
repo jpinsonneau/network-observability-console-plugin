@@ -4,6 +4,7 @@ import {
   getHealthContextTabFromAnnotations,
   getRuleHealthContextId,
   isExcludedFromNetobservHealth,
+  isValidHealthContextId,
   NETOBSERV_CONTEXT_NETOBSERV,
   NETOBSERV_CONTEXT_OVN,
   sortContextTabIds
@@ -83,5 +84,25 @@ describe('health-context', () => {
         netobserv_io_network_health: JSON.stringify({ contextTab: 'ovn' })
       })
     ).toBe('ovn');
+  });
+
+  it('rejects unsafe or invalid context tab identifiers', () => {
+    expect(isValidHealthContextId('kiali')).toBe(true);
+    expect(isValidHealthContextId('')).toBe(false);
+    expect(isValidHealthContextId('__proto__')).toBe(false);
+    expect(
+      getRuleHealthContextId({
+        name: 'BadLabel',
+        labels: { netobserv_io_health_context: '__proto__' },
+        annotations: {}
+      })
+    ).toBe(NETOBSERV_CONTEXT_NETOBSERV);
+    expect(
+      getRuleHealthContextId({
+        name: 'BadAnnotation',
+        labels: {},
+        annotations: { netobserv_io_network_health: JSON.stringify({ contextTab: 'bad id' }) }
+      })
+    ).toBe(NETOBSERV_CONTEXT_NETOBSERV);
   });
 });
