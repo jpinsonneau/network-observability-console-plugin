@@ -2,6 +2,7 @@
  * Helpers to wrap TemplateRuleForm for DynamicForm and unwrap for submit/preview.
  * Group-by uses "Cluster" in the form UI (SelectWidget cannot display empty string well).
  */
+import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
 import { defaultTemplateForm, FLPHealthRule, HealthRuleGroupBy, TemplateRuleForm } from './types';
 import { thresholdToCRDString, thresholdToFormNumber } from './validators';
 import { getHealthRuleDefault, healthRuleDefaultToFLP } from './variantDefaults';
@@ -153,6 +154,33 @@ export const mergeHealthRuleIntoFlowCollector = (flowCollector: any, rule: FLPHe
   }
   next.spec.processor.metrics.healthRules = existing;
   return next;
+};
+
+/**
+ * The wizard's one-shot seed can capture the CSVExample fallback (no resourceVersion)
+ * before the FlowCollector watch resolves; without this the later save fails with
+ * `resourceVersion: Invalid value: 0: must be specified for an update`. Spec edits made
+ * before the watch resolves must survive, so only metadata is refreshed.
+ */
+export const syncFlowCollectorMeta = (prev: K8sResourceKind | null, live: K8sResourceKind): K8sResourceKind => {
+  if (prev == null) {
+    return live;
+  }
+  const liveMeta = live?.metadata || {};
+  if (
+    liveMeta.resourceVersion &&
+    (prev.metadata?.resourceVersion !== liveMeta.resourceVersion || prev.metadata?.uid !== liveMeta.uid)
+  ) {
+    return {
+      ...prev,
+      metadata: {
+        ...prev.metadata,
+        resourceVersion: liveMeta.resourceVersion,
+        uid: liveMeta.uid
+      }
+    };
+  }
+  return prev;
 };
 
 /** Remove a template override so the operator DefaultHealthRules apply again. */

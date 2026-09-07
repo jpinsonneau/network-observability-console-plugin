@@ -1,3 +1,4 @@
+import { isK8sConflictError } from '../../utils';
 import { resolveHealthRuleWizardArgs } from '../paths';
 import {
   buildAlertHealthAnnotation,
@@ -15,6 +16,7 @@ import {
   mergeHealthRuleIntoFlowCollector,
   removeHealthRuleFromFlowCollector,
   resolveTemplateRuleForSave,
+  syncFlowCollectorMeta,
   templateFormToFLPHealthRule
 } from '../templateForm';
 import { defaultCustomForm, defaultTemplateForm } from '../types';
@@ -398,5 +400,79 @@ describe('resolveHealthRuleWizardArgs', () => {
   it('keeps malformed percent-encoding instead of throwing', () => {
     history.replaceState({}, '', '/network-health/rules/template/bad%2');
     expect(resolveHealthRuleWizardArgs({}).template).toBe('bad%2');
+  });
+});
+
+describe('syncFlowCollectorMeta', () => {
+  const live = {
+    apiVersion: 'flows.netobserv.io/v1beta2',
+    kind: 'FlowCollector',
+    metadata: { name: 'cluster', resourceVersion: '12345', uid: 'abc-123' },
+    spec: { processor: {} }
+  };
+
+  it('returns the live resource when there is no seed yet', () => {
+    expect(syncFlowCollectorMeta(null, live)).toBe(live);
+  });
+
+  it('adopts the live resourceVersion/uid onto a stale CSVExample seed', () => {
+    // CSVExample fallback: seeded before the watch resolved, so no resourceVersion.
+    const seed = { metadata: { name: 'cluster' }, spec: { processor: { metrics: { healthRules: [] } } } };
+    const result = syncFlowCollectorMeta(seed, live);
+    expect(result.metadata?.resourceVersion).toBe('12345');
+    expect(result.metadata?.uid).toBe('abc-123');
+    // In-progress spec edits must survive the refresh.
+    expect(result.spec).toBe(seed.spec);
+  });
+
+  it('preserves the user spec while refreshing metadata', () => {
+    const edited = {
+      metadata: { name: 'cluster' },
+      spec: { processor: { metrics: { healthRules: [{ template: 'DNSErrors', mode: 'Recording', variants: [] }] } } }
+    };
+    const result = syncFlowCollectorMeta(edited, live);
+    expect(result.spec?.processor.metrics.healthRules[0]).toEqual({
+      template: 'DNSErrors',
+      mode: 'Recording',
+      variants: []
+    });
+    expect(result.metadata?.resourceVersion).toBe('12345');
+  });
+
+  it('is a no-op when the resourceVersion already matches', () => {
+    const seed = { metadata: { name: 'cluster', resourceVersion: '12345', uid: 'abc-123' }, spec: {} };
+    // Same reference back so React bails out of a redundant re-render.
+    expect(syncFlowCollectorMeta(seed, live)).toBe(seed);
+  });
+
+  it('leaves the seed untouched while the watch is still on the fallback', () => {
+    const seed = { metadata: { name: 'cluster' }, spec: {} };
+    const fallback = { metadata: { name: 'cluster' } }; // no resourceVersion yet
+    expect(syncFlowCollectorMeta(seed, fallback)).toBe(seed);
+  });
+});
+
+describe('isK8sConflictError', () => {
+  it('detects HTTP 409 across the code/status/response/json shapes', () => {
+    expect(isK8sConflictError({ code: 409 })).toBe(true);
+    expect(isK8sConflictError({ status: 409 })).toBe(true);
+    expect(isK8sConflictError({ response: { status: 409 } })).toBe(true);
+    expect(isK8sConflictError({ json: { code: 409 } })).toBe(true);
+  });
+
+  it('detects the Conflict reason and the server conflict message', () => {
+    expect(isK8sConflictError({ json: { reason: 'Conflict' } })).toBe(true);
+    expect(
+      isK8sConflictError(
+        new Error('Operation cannot be fulfilled on flowcollectors "cluster": the object has been modified')
+      )
+    ).toBe(true);
+  });
+
+  it('is false for non-conflict errors and empty input', () => {
+    expect(isK8sConflictError(null)).toBe(false);
+    expect(isK8sConflictError(undefined)).toBe(false);
+    expect(isK8sConflictError({ code: 404 })).toBe(false);
+    expect(isK8sConflictError(new Error('boom'))).toBe(false);
   });
 });

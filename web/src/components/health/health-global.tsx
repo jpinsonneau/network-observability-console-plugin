@@ -45,7 +45,7 @@ export const HealthGlobal: React.FC<HealthGlobalProps> = ({ info, isLoading }) =
   const all = getAllHealthItems(info);
   const [severityFilter, setSeverityFilter] = React.useState<Severity | undefined>(undefined);
 
-  const score = React.useMemo(() => computeResourceScore(info), [info]);
+  const score = React.useMemo(() => computeResourceScore(info).score, [info]);
   const criticalCount = React.useMemo(
     () =>
       (info.critical.firing.length || 0) +

@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { k8sCreate, k8sDelete, k8sGet, k8sUpdate, ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  k8sCreate,
+  k8sDelete,
+  k8sGet,
+  K8sResourceKind,
+  k8sUpdate,
+  ResourceYAMLEditor
+} from '@openshift-console/dynamic-plugin-sdk';
 import {
   ActionList,
   ActionListGroup,
@@ -49,6 +56,7 @@ import {
   resolveTemplateRuleForSave,
   ruleToTemplateFormData,
   seedTemplateRule,
+  syncFlowCollectorMeta,
   unwrapTemplateForm
 } from './templateForm';
 import { getHealthRuleTemplateSchema } from './templateSchema';
@@ -223,12 +231,12 @@ const HealthRuleWizardInner: React.FC<WizardInnerProps> = ({ ctx, initialState }
     isEdit && (isTemplate ? hasTemplateOverride : Boolean(existingPR || (editNamespace && editName)));
   const dangerLabel = isTemplate ? t('Reset to defaults') : t('Delete');
 
-  // Seed FlowCollector once from watcher — do not setState during Consumer render.
+  // Keep metadata tracking the watch; see syncFlowCollectorMeta for why.
   React.useEffect(() => {
     if (!ctx.data) {
       return;
     }
-    setFlowCollectorData((prev: any) => (prev == null ? ctx.data : prev));
+    setFlowCollectorData((prev: K8sResourceKind | null) => syncFlowCollectorMeta(prev, ctx.data));
   }, [ctx.data]);
 
   React.useEffect(() => {
