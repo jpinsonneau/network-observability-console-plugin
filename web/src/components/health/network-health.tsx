@@ -131,13 +131,10 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
     if (!availableContextIds.includes(activeContextTab)) {
       setActiveContextTab(NETOBSERV_CONTEXT_NETOBSERV);
     }
-  }, [activeContextTab, availableContextIds]);
+  }, [activeContextTab, availableContextIds, setActiveContextTab]);
 
   // Avoid flashing empty/zero stats before the first successful (or failed) load.
   const isInitialLoading = !configLoaded || !initialized;
-  const isReadonlyContext = isReadonlyAlertsContext(activeContextTab);
-  const activeReadonlyStats = readonlyContexts[activeContextTab];
-  const activeReadonlySubTab = activeReadonlySubTabs[activeContextTab] ?? 'global';
   const summaryForceCollapsed = isScoringDrawerOpen || isRulesManagerOpen;
 
   const getContextTabTitle = React.useCallback(
@@ -346,9 +343,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
         />
       ) : (
         <>
-          {activeNetobservTab === 'global' && (
-            <HealthGlobal info={health.global} isLoading={isInitialLoading} />
-          )}
+          {activeNetobservTab === 'global' && <HealthGlobal info={health.global} isLoading={isInitialLoading} />}
           {activeNetobservTab === 'per-node' && (
             <HealthDrawerContainer
               title={t('Rule violations per node')}

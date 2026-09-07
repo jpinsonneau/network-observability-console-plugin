@@ -43,13 +43,9 @@ const applySilences = (rawRules: Rule[], silenced: SilenceMatcher[][]): Rule[] =
   });
 
 const discoverThirdPartyReadonlyRules = (groups: Parameters<typeof injectAlertRuleIds>[0]): Rule[] => {
-  const ovnRuleKeys = new Set(discoverOvnPlatformRules(groups).map(r => r.id ?? r.name));
   return injectAlertRuleIds(groups).filter(r => {
     const contextId = getRuleHealthContextId(r);
-    if (!isReadonlyAlertsContext(contextId) || contextId === NETOBSERV_CONTEXT_OVN) {
-      return false;
-    }
-    return !ovnRuleKeys.has(r.id ?? r.name);
+    return isReadonlyAlertsContext(contextId) && contextId !== NETOBSERV_CONTEXT_OVN;
   });
 };
 
@@ -67,7 +63,10 @@ export const fetchHealthContexts = (recordingAnnotations: RecordingAnnotations):
     const groups = allAlerts.data.groups;
     const readonlyContexts = createReadonlyContexts();
 
-    const ovnRules = applySilences(discoverOvnPlatformRules(groups), silenced);
+    const ovnRules = applySilences(
+      discoverOvnPlatformRules(groups).filter(r => getRuleHealthContextId(r) === NETOBSERV_CONTEXT_OVN),
+      silenced
+    );
     const ovnStats = buildOvnStats(ovnRules, isOvnPlatformTabAvailable(groups, ovnRules));
     if (ovnStats.available) {
       readonlyContexts[NETOBSERV_CONTEXT_OVN] = ovnStats;

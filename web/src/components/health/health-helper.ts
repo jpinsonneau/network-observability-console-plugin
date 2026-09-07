@@ -697,7 +697,7 @@ export const isSilenced = (silence: SilenceMatcher[], labels: PrometheusLabels):
   silence.every(m => {
     const labelValue = labels[m.name] ?? '';
     const isMatch = m.isRegex ? new RegExp(`^${m.value}$`).test(labelValue) : labelValue === m.value;
-    return m.isEqual === false && labelValue ? !isMatch : isMatch;
+    return m.isEqual === false ? !isMatch : isMatch;
   });
 
 export const getResourceSeverity = (s: HealthStat): Severity | undefined => {

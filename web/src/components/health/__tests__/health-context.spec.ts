@@ -86,6 +86,28 @@ describe('health-context', () => {
     ).toBe('ovn');
   });
 
+  it('routes legacy OVN-named rule to kiali when health-context label overrides', () => {
+    // Regression: a rule with a legacy OVN allowlisted name but an explicit kiali
+    // health-context label must route to kiali, not ovn.
+    expect(
+      getRuleHealthContextId({
+        name: 'NorthboundStale',
+        labels: { netobserv_io_health_context: 'kiali', netobserv: 'true' },
+        annotations: {}
+      })
+    ).toBe('kiali');
+  });
+
+  it('routes legacy OVN-named rule to kiali when annotation overrides', () => {
+    expect(
+      getRuleHealthContextId({
+        name: 'NorthboundStale',
+        labels: {},
+        annotations: { netobserv_io_network_health: JSON.stringify({ contextTab: 'kiali' }) }
+      })
+    ).toBe('kiali');
+  });
+
   it('rejects unsafe or invalid context tab identifiers', () => {
     expect(isValidHealthContextId('kiali')).toBe(true);
     expect(isValidHealthContextId('')).toBe(false);

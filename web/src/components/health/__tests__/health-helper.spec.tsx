@@ -229,4 +229,18 @@ describe('isSilenced', () => {
     expect(isSilenced([{ name: 'alertname', value: 'Foo.*', isRegex: true }], { alertname: 'FooBar' })).toBe(true);
     expect(isSilenced([{ name: 'alertname', value: 'Foo.*', isRegex: true }], { alertname: 'Bar' })).toBe(false);
   });
+
+  it('negative matcher matches when label is absent', () => {
+    // {severity!="info"} should match when the label is entirely absent
+    expect(isSilenced([{ name: 'severity', value: 'info', isEqual: false }], {})).toBe(true);
+  });
+
+  it('negative matcher matches when label value is empty', () => {
+    // {severity!="info"} should match when the label is present but empty
+    expect(isSilenced([{ name: 'severity', value: 'info', isEqual: false }], { severity: '' })).toBe(true);
+  });
+
+  it('negative matcher does not match when label equals the matcher value', () => {
+    expect(isSilenced([{ name: 'severity', value: 'info', isEqual: false }], { severity: 'info' })).toBe(false);
+  });
 });
