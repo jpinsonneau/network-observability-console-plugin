@@ -2,17 +2,16 @@ import { Card, CardBody, Content, ContentVariants, Flex, FlexItem, Spinner } fro
 import { AngleDownIcon, AngleRightIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { localStorageHealthOvnSummaryExpandedKey, useLocalStorage } from '../../utils/local-storage-hook';
-import { formatContextTabTitle, NETOBSERV_CONTEXT_OVN } from './health-context';
+import { localStorageHealthReadonlySummaryExpandedKey, useLocalStorage } from '../../utils/local-storage-hook';
 import { HealthMetricCard } from './health-metric-card';
-import { getOvnSummaryCounts, OvnHealthStats } from './ovn-health-helper';
-import { getReadonlyContextCopy } from './readonly-context-copy';
+import { getReadonlyContextDescriptor } from './readonly-context-descriptors';
+import { getReadonlySummaryCounts, ReadonlyHealthStats } from './readonly-health-helper';
 
 type StatusClass = 'success' | 'critical' | 'warning' | 'info';
 
-export interface HealthOvnSummaryProps {
-  contextId?: string;
-  stats: OvnHealthStats;
+export interface HealthReadonlySummaryProps {
+  contextId: string;
+  stats: ReadonlyHealthStats;
   forceCollapsed?: boolean;
   isLoading?: boolean;
   activeViewLabel?: string;
@@ -25,18 +24,19 @@ const sectionSummaryLayout = {
   gap: { default: 'gapMd' as const }
 };
 
-export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
-  contextId = NETOBSERV_CONTEXT_OVN,
+export const HealthReadonlySummary: React.FC<HealthReadonlySummaryProps> = ({
+  contextId,
   stats,
   forceCollapsed,
   isLoading,
   activeViewLabel
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
-  const copy = getReadonlyContextCopy(contextId, t);
-  const titleName = contextId === NETOBSERV_CONTEXT_OVN ? t('OVN') : formatContextTabTitle(contextId);
+  const descriptor = getReadonlyContextDescriptor(contextId, stats.displayName, t);
+  const copy = descriptor.copy;
+  const titleName = descriptor.displayName;
   const testPrefix = `health-${contextId}`;
-  const [isExpanded, setIsExpanded] = useLocalStorage<boolean>(localStorageHealthOvnSummaryExpandedKey, false);
+  const [isExpanded, setIsExpanded] = useLocalStorage<boolean>(localStorageHealthReadonlySummaryExpandedKey, false);
   const displayExpanded = forceCollapsed ? false : isExpanded;
   const sectionDetails = copy.sectionDetails;
   const sectionDescription = activeViewLabel
@@ -45,7 +45,7 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
 
   if (isLoading) {
     return (
-      <Flex className="health-section-summary health-ovn-summary" {...sectionSummaryLayout}>
+      <Flex className="health-section-summary health-readonly-summary" {...sectionSummaryLayout}>
         <FlexItem className="health-section-summary-heading">
           <Content
             component={ContentVariants.h3}
@@ -73,7 +73,7 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
     );
   }
 
-  const counts = getOvnSummaryCounts(stats);
+  const counts = getReadonlySummaryCounts(stats);
   const criticalTotal = counts.critical.firing + counts.critical.pending + counts.critical.silenced;
   const warningTotal = counts.warning.firing + counts.warning.pending + counts.warning.silenced;
   const infoTotal = counts.info.firing + counts.info.pending + counts.info.silenced;
@@ -121,7 +121,7 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
 
   return (
     <Flex
-      className="health-section-summary health-ovn-summary"
+      className="health-section-summary health-readonly-summary"
       {...sectionSummaryLayout}
       data-test={`${testPrefix}-summary`}
     >
@@ -161,10 +161,10 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
               {displayExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
             </FlexItem>
           )}
-          <FlexItem className="health-section-summary-cards-container health-ovn-summary-cards-container">
+          <FlexItem className="health-section-summary-cards-container health-readonly-summary-cards-container">
             {displayExpanded ? (
               <Flex
-                className="health-summary-cards health-ovn-summary-cards"
+                className="health-summary-cards health-readonly-summary-cards"
                 gap={{ default: 'gapMd' }}
                 alignItems={{ default: 'alignItemsStretch' }}
                 flexWrap={{ default: 'nowrap' }}
@@ -214,7 +214,7 @@ export const HealthOvnSummary: React.FC<HealthOvnSummaryProps> = ({
               </Flex>
             ) : (
               <Flex
-                className="health-summary-compact-row health-section-summary-compact-row health-ovn-summary-compact-row"
+                className="health-summary-compact-row health-section-summary-compact-row health-readonly-summary-compact-row"
                 gap={{ default: 'gapSm' }}
                 alignItems={{ default: 'alignItemsCenter' }}
                 flexWrap={{ default: 'nowrap' }}

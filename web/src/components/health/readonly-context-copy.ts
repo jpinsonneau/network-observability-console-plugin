@@ -1,5 +1,4 @@
 import { TFunction } from 'i18next';
-import { formatContextTabTitle, NETOBSERV_CONTEXT_OVN } from './health-context';
 
 export type ReadonlyContextCopy = {
   summaryLabel: string;
@@ -13,26 +12,9 @@ export type ReadonlyContextCopy = {
   loadingLabel: string;
 };
 
-export const getReadonlyContextCopy = (contextId: string, t: TFunction): ReadonlyContextCopy => {
-  if (contextId === NETOBSERV_CONTEXT_OVN) {
-    return {
-      summaryLabel: t('OVN-Kubernetes platform alerts'),
-      sectionDetails: t(
-        'Managed by the OpenShift cluster network operator. Not included in the NetObserv health score.'
-      ),
-      globalHealthyTitle: t('No cluster-wide OVN platform alerts'),
-      globalSectionTitle: t('Cluster-wide OVN alerts'),
-      nodesHealthyTitle: t('No OVN platform alerts per node'),
-      nodesSectionTitle: t('OVN alerts per node'),
-      unavailableTitle: t('OVN platform alerts unavailable'),
-      unavailableBody: t(
-        'OpenShift OVN-Kubernetes platform alerts were not found. This tab is available on OpenShift clusters using the OVN-Kubernetes network plugin.'
-      ),
-      loadingLabel: t('Loading OVN platform alerts')
-    };
-  }
-
-  const title = formatContextTabTitle(contextId);
+/** Generic, display-name driven copy for any read-only alerts context tab. */
+export const buildGenericReadonlyCopy = (displayName: string, t: TFunction): ReadonlyContextCopy => {
+  const title = displayName;
   return {
     summaryLabel: t('{{title}} alerts', { title }),
     sectionDetails: t('Managed by {{title}}. Not included in the NetObserv health score.', { title }),

@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { isReadonlyAlertsContext, NETOBSERV_CONTEXT_NETOBSERV } from '../components/health/health-context';
 import { HealthContextsState } from '../components/health/health-contexts-fetcher';
-import { HealthReadonlyView } from '../components/health/health-ovn';
-import { OvnHealthStats } from '../components/health/ovn-health-helper';
+import { HealthReadonlyView } from '../components/health/health-readonly-context';
+import { ReadonlyHealthStats } from '../components/health/readonly-health-helper';
 
 export const useHealthContexts = () => {
-  const [readonlyContexts, setReadonlyContexts] = React.useState<Record<string, OvnHealthStats>>({});
+  const [readonlyContexts, setReadonlyContexts] = React.useState<Record<string, ReadonlyHealthStats>>({});
   const [availableContextIds, setAvailableContextIds] = React.useState<string[]>([NETOBSERV_CONTEXT_NETOBSERV]);
   const [activeContextTab, setActiveContextTab] = React.useState<string>(NETOBSERV_CONTEXT_NETOBSERV);
   const [activeReadonlySubTabs, setActiveReadonlySubTabs] = React.useState<Record<string, HealthReadonlyView>>({});

@@ -2,18 +2,17 @@ import { Bullseye, Content, ContentVariants, EmptyState, Spinner, Title } from '
 import { CheckCircleIcon } from '@patternfly/react-icons';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { NETOBSERV_CONTEXT_OVN } from './health-context';
 import { HealthDrawerContainer } from './health-drawer-container';
 import { getAllHealthItems } from './health-helper';
-import { OvnHealthStats } from './ovn-health-helper';
-import { getReadonlyContextCopy } from './readonly-context-copy';
+import { getReadonlyContextDescriptor } from './readonly-context-descriptors';
+import { ReadonlyHealthStats } from './readonly-health-helper';
 import { RuleDetails } from './rule-details';
 
 export type HealthReadonlyView = 'global' | 'per-node';
 
 export interface HealthReadonlyContextProps {
   contextId: string;
-  stats: OvnHealthStats;
+  stats: ReadonlyHealthStats;
   view: HealthReadonlyView;
   isLoading?: boolean;
   isDark: boolean;
@@ -27,7 +26,7 @@ export const HealthReadonlyContext: React.FC<HealthReadonlyContextProps> = ({
   isDark
 }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
-  const copy = getReadonlyContextCopy(contextId, t);
+  const copy = getReadonlyContextDescriptor(contextId, stats.displayName, t).copy;
   const testPrefix = `health-${contextId}`;
   const globalItems = getAllHealthItems(stats.global);
   const hasNodeItems = stats.byNode.some(s => getAllHealthItems(s).length > 0);
@@ -87,11 +86,3 @@ export const HealthReadonlyContext: React.FC<HealthReadonlyContextProps> = ({
     </div>
   );
 };
-
-/** @deprecated Use HealthReadonlyContext with contextId="ovn" */
-export type HealthOvnView = HealthReadonlyView;
-
-/** @deprecated Use HealthReadonlyContext */
-export const HealthOvn: React.FC<Omit<HealthReadonlyContextProps, 'contextId'> & { contextId?: string }> = props => (
-  <HealthReadonlyContext {...props} contextId={props.contextId ?? NETOBSERV_CONTEXT_OVN} />
-);

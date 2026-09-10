@@ -9,12 +9,15 @@ import {
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { NETOBSERV_CONTEXT_NETOBSERV, NETOBSERV_CONTEXT_OVN } from './health-context';
+import { formatContextTabTitle, NETOBSERV_CONTEXT_NETOBSERV } from './health-context';
+import { getReadonlyContextDescriptor } from './readonly-context-descriptors';
 
 export interface HealthScoringDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   contextId: string;
+  /** Human title for read-only contexts (ignored for the NetObserv context). */
+  displayName?: string;
 }
 
 const NetobservScoringContent: React.FC = () => {
@@ -155,130 +158,18 @@ const NetobservScoringContent: React.FC = () => {
   );
 };
 
-const OvnPlatformInfoContent: React.FC = () => {
-  const { t } = useTranslation('plugin__netobserv-plugin');
-
-  return (
-    <>
-      <Content component={ContentVariants.h3}>{t('What are OVN platform alerts?')}</Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          // eslint-disable-next-line max-len
-          'These are Prometheus alerts defined and managed by the OpenShift cluster network operator for OVN-Kubernetes. They monitor control plane health, node networking components, and OVN database state.'
-        )}
-      </Content>
-
-      <Content component={ContentVariants.h3}>{t('Not included in the NetObserv health score')}</Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          'Platform alerts are shown for visibility only. They do not contribute to the 0–10 NetObserv health score calculated from NetObserv health rules.'
-        )}
-      </Content>
-
-      <Content component={ContentVariants.h3}>{t('Severity Levels')}</Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          'Alerts are grouped by their Prometheus severity label. Counts in the summary reflect firing, pending, and silenced alerts at each level:'
-        )}
-      </Content>
-
-      <Content component={ContentVariants.h4}>
-        <span
-          style={{
-            color: 'var(--pf-t--global--text--color--status--danger--default)'
-          }}
-        >
-          {t('Critical')}
-        </span>
-      </Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          'Severe platform problems requiring immediate attention, such as a missing OVN control plane or database connectivity loss.'
-        )}
-      </Content>
-
-      <Content component={ContentVariants.h4}>
-        <span
-          style={{
-            color: 'var(--pf-t--global--text--color--status--warning--default)'
-          }}
-        >
-          {t('Warning')}
-        </span>
-      </Content>
-      <Content component={ContentVariants.p}>
-        {t('Moderate platform issues that should be reviewed, such as elevated database CPU or stale OVN state.')}
-      </Content>
-
-      <Content component={ContentVariants.h4}>
-        <span
-          style={{
-            color: 'var(--pf-t--global--text--color--status--info--default)'
-          }}
-        >
-          {t('Info')}
-        </span>
-      </Content>
-      <Content component={ContentVariants.p}>
-        {t('Minor platform observations worth noting, such as approaching subnet allocation thresholds.')}
-      </Content>
-
-      <Content component={ContentVariants.h3}>{t('Alert States')}</Content>
-      <Content component="p" className="health-scoring-list-item">
-        <strong>{t('Firing')}</strong>: {t('Active alert condition - counted in severity totals')}
-      </Content>
-      <Content component="p" className="health-scoring-list-item">
-        <strong>{t('Pending')}</strong>: {t('Condition detected, awaiting confirmation - counted in severity totals')}
-      </Content>
-      <Content component="p" className="health-scoring-list-item">
-        <strong>{t('Silenced')}</strong>:{' '}
-        {t('Known issue, temporarily ignored in Alertmanager - still shown here for visibility')}
-      </Content>
-
-      <Content component={ContentVariants.h3}>{t('How the summary status is determined')}</Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          // eslint-disable-next-line max-len
-          'The status message reflects the highest severity with active alerts: critical issues take precedence over warnings, then info. When no alerts are active, the summary reports a healthy platform state.'
-        )}
-      </Content>
-
-      <Content component={ContentVariants.h3}>{t('Read-only platform view')}</Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          'These alerts cannot be managed from NetObserv. Use OpenShift monitoring tools or cluster network operator runbooks to investigate and resolve platform issues.'
-        )}
-      </Content>
-    </>
-  );
-};
-
-const ReadonlyContextInfoContent: React.FC<{ contextId: string }> = ({ contextId }) => {
-  const { t } = useTranslation('plugin__netobserv-plugin');
-  const title = contextId === NETOBSERV_CONTEXT_OVN ? t('OVN') : contextId;
-  return (
-    <>
-      <Content component={ContentVariants.h3}>{t('What are {{title}} alerts?', { title })}</Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          'These alerts are contributed by another component and shown for visibility only. They do not contribute to the 0–10 NetObserv health score.'
-        )}
-      </Content>
-      <Content component={ContentVariants.h3}>{t('Read-only view')}</Content>
-      <Content component={ContentVariants.p}>
-        {t(
-          'These alerts cannot be managed from NetObserv. Use the owning component documentation to investigate issues.'
-        )}
-      </Content>
-    </>
-  );
-};
-
-export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen, onClose, contextId }) => {
+export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({
+  isOpen,
+  onClose,
+  contextId,
+  displayName
+}) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   const drawerRef = React.useRef<HTMLDivElement>(null);
   const isNetobservContext = contextId === NETOBSERV_CONTEXT_NETOBSERV;
-  const isOvnContext = contextId === NETOBSERV_CONTEXT_OVN;
+  const descriptor = isNetobservContext
+    ? undefined
+    : getReadonlyContextDescriptor(contextId, displayName ?? formatContextTabTitle(contextId), t);
   const testPrefix = `health-${contextId}`;
 
   return (
@@ -286,13 +177,7 @@ export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen
       <DrawerHead>
         <span tabIndex={isOpen ? 0 : -1} ref={drawerRef}>
           <Content component={ContentVariants.h2} style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>
-            {isNetobservContext
-              ? t('Understanding Network Health Scores')
-              : isOvnContext
-              ? t('Understanding OVN Alerts')
-              : t('Understanding {{title}} alerts', {
-                  title: contextId.charAt(0).toUpperCase() + contextId.slice(1)
-                })}
+            {descriptor ? descriptor.scoringTitle : t('Understanding Network Health Scores')}
           </Content>
         </span>
         <DrawerActions>
@@ -306,13 +191,7 @@ export const HealthScoringDrawer: React.FC<HealthScoringDrawerProps> = ({ isOpen
           className="health-scoring-content"
           data-test={isNetobservContext ? 'health-scoring-drawer' : `${testPrefix}-info-drawer`}
         >
-          {isNetobservContext ? (
-            <NetobservScoringContent />
-          ) : isOvnContext ? (
-            <OvnPlatformInfoContent />
-          ) : (
-            <ReadonlyContextInfoContent contextId={contextId} />
-          )}
+          {descriptor ? <descriptor.ScoringInfoContent /> : <NetobservScoringContent />}
         </Content>
       </div>
     </DrawerPanelContent>

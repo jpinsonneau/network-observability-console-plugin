@@ -30,12 +30,7 @@ import { RefreshDropdown } from '../dropdowns/refresh-dropdown';
 import { HealthRulesManager } from '../forms/healthRule/manager';
 import { healthRuleSetupPath } from '../forms/healthRule/paths';
 import FlowCollectorStatusIndicator from '../status/flowcollector-status-indicator';
-import {
-  formatContextTabTitle,
-  getHealthContextDefinition,
-  NETOBSERV_CONTEXT_NETOBSERV,
-  NETOBSERV_CONTEXT_OVN
-} from './health-context';
+import { formatContextTabTitle, getHealthContextDefinition, NETOBSERV_CONTEXT_NETOBSERV } from './health-context';
 import { fetchHealthContexts } from './health-contexts-fetcher';
 import { HealthDrawerContainer } from './health-drawer-container';
 import HealthError from './health-error';
@@ -44,12 +39,13 @@ import { useHealthFilters } from './health-filters-hook';
 import { HealthFiltersToolbar } from './health-filters-toolbar';
 import { HealthGlobal } from './health-global';
 import { buildStats, collectAvailableNamespaces, HealthItem } from './health-helper';
-import { HealthReadonlyContext, HealthReadonlyView } from './health-ovn';
-import { HealthOvnSummary } from './health-ovn-summary';
+import { HealthReadonlyContext, HealthReadonlyView } from './health-readonly-context';
+import { HealthReadonlySummary } from './health-readonly-summary';
 import { HealthScoringDrawer } from './health-scoring-drawer';
 import { HealthSummary } from './health-summary';
-import { buildOvnStats } from './ovn-health-helper';
-import { getNetobservContextStats, getOvnContextStats, HealthContextTabTitle, HealthTabTitle } from './tab-title';
+import { getReadonlyContextDescriptor } from './readonly-context-descriptors';
+import { buildReadonlyStats } from './readonly-health-helper';
+import { getNetobservContextStats, getReadonlyContextStats, HealthContextTabTitle, HealthTabTitle } from './tab-title';
 
 import './health.css';
 
@@ -140,9 +136,13 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
   const getContextTabTitle = React.useCallback(
     (contextId: string) => {
       const definition = getHealthContextDefinition(contextId);
-      return definition.titleKey ? t(definition.titleKey) : formatContextTabTitle(contextId);
+      if (definition.titleKey) {
+        return t(definition.titleKey);
+      }
+      const fallback = readonlyContexts[contextId]?.displayName ?? formatContextTabTitle(contextId);
+      return getReadonlyContextDescriptor(contextId, fallback, t).displayName;
     },
-    [t]
+    [readonlyContexts, t]
   );
 
   const activeViewLabel = React.useMemo(() => {
@@ -173,6 +173,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
           isOpen={isScoringDrawerOpen}
           onClose={() => setIsScoringDrawerOpen(false)}
           contextId={activeContextTab}
+          displayName={readonlyContexts[activeContextTab]?.displayName}
         />
       );
     }
@@ -196,7 +197,9 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
             const stats =
               definition.kind === 'netobserv'
                 ? getNetobservContextStats(health)
-                : getOvnContextStats(readonlyContexts[contextId] ?? buildOvnStats([], false));
+                : getReadonlyContextStats(
+                    readonlyContexts[contextId] ?? buildReadonlyStats([], false, formatContextTabTitle(contextId))
+                  );
             const testId =
               contextId === NETOBSERV_CONTEXT_NETOBSERV
                 ? 'health-context-tab-netobserv'
@@ -214,13 +217,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       </FlexItem>
       <FlexItem className={'bottom-border'}>
         <Button
-          data-test={
-            activeContextTab === NETOBSERV_CONTEXT_OVN
-              ? 'health-ovn-info-button'
-              : isReadonlyContext
-              ? `health-${activeContextTab}-info-button`
-              : 'health-scoring-info-button'
-          }
+          data-test={isReadonlyContext ? `health-${activeContextTab}-info-button` : 'health-scoring-info-button'}
           className="overflow-button"
           variant="link"
           onClick={() => {
@@ -249,7 +246,7 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
       data-test="health-context-summary"
     >
       {isReadonlyContext && activeReadonlyStats ? (
-        <HealthOvnSummary
+        <HealthReadonlySummary
           contextId={activeContextTab}
           stats={activeReadonlyStats}
           forceCollapsed={summaryForceCollapsed}

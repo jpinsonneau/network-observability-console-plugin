@@ -56,11 +56,11 @@ func buildOvnPlatformAlert(name, severity, summary, description, runbookDoc stri
 	if runbookDoc != "" {
 		annotations["runbook_url"] = model.LabelValue(ovnRunbook(runbookDoc))
 	}
+	// Legacy CNO OVN-Kubernetes alerts carry no netobserv labels/annotation; the frontend discovers
+	// them via the hard-coded shim (CNO rule group + allowlisted names). See ovn-health-fetcher.ts.
 	labels := model.LabelSet{
-		"severity":                    model.LabelValue(severity),
-		"prometheus":                  "openshift-ovn-kubernetes/k8s",
-		"netobserv":                   "true",
-		"netobserv_io_health_context": "ovn",
+		"severity":   model.LabelValue(severity),
+		"prometheus": "openshift-ovn-kubernetes/k8s",
 	}
 	for _, a := range alerts {
 		a.Annotations = annotations

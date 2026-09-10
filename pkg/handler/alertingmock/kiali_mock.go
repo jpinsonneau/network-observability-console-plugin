@@ -26,14 +26,16 @@ func buildKialiAlert(name, severity, summary, description string, alerts []*Aler
 	if alerts == nil {
 		alerts = []*Alert{}
 	}
+	// Third-party producer using the netobserv_io_network_health annotation contract:
+	// netobserv="true" is only a fast fetch filter; the annotation carries routing + display config.
 	annotations := model.LabelSet{
-		"summary":     model.LabelValue(summary),
-		"description": model.LabelValue(description),
+		"summary":                     model.LabelValue(summary),
+		"description":                 model.LabelValue(description),
+		"netobserv_io_network_health": `{"contextTab":"kiali","displayName":"Kiali"}`,
 	}
 	labels := model.LabelSet{
-		"severity":                    model.LabelValue(severity),
-		"netobserv":                   "true",
-		"netobserv_io_health_context": "kiali",
+		"severity":  model.LabelValue(severity),
+		"netobserv": "true",
 	}
 	for _, a := range alerts {
 		a.Annotations = annotations

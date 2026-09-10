@@ -2,18 +2,18 @@ import { Rule } from '@openshift-console/dynamic-plugin-sdk';
 import * as _ from 'lodash';
 import { HealthItem, HealthStat, Severity, emptyStat, getAllHealthItems, rulesToHealthItems } from './health-helper';
 
-export type OvnSeverityCounts = {
+export type ReadonlySeverityCounts = {
   firing: number;
   pending: number;
   silenced: number;
 };
 
-export type OvnSummaryCounts = Record<Severity, OvnSeverityCounts>;
+export type ReadonlySummaryCounts = Record<Severity, ReadonlySeverityCounts>;
 
-const emptySeverityCounts = (): OvnSeverityCounts => ({ firing: 0, pending: 0, silenced: 0 });
+const emptySeverityCounts = (): ReadonlySeverityCounts => ({ firing: 0, pending: 0, silenced: 0 });
 
-export const getOvnSummaryCounts = (stats: OvnHealthStats): OvnSummaryCounts => {
-  const counts: OvnSummaryCounts = {
+export const getReadonlySummaryCounts = (stats: ReadonlyHealthStats): ReadonlySummaryCounts => {
+  const counts: ReadonlySummaryCounts = {
     critical: emptySeverityCounts(),
     warning: emptySeverityCounts(),
     info: emptySeverityCounts()
@@ -40,9 +40,11 @@ export const getOvnSummaryCounts = (stats: OvnHealthStats): OvnSummaryCounts => 
 
 const NODE_LABEL_KEYS = ['node', 'instance'] as const;
 
-export type OvnHealthStats = {
+export type ReadonlyHealthStats = {
   /** At least one allowlisted platform alert rule exists in Prometheus. */
   available: boolean;
+  /** Fallback human title for the context tab (annotation displayName or a formatted id). */
+  displayName: string;
   global: HealthStat;
   byNode: HealthStat[];
 };
@@ -99,8 +101,12 @@ const pushItem = (stat: HealthStat, item: HealthItem) => {
   }
 };
 
-/** Build OVN tab stats grouped by cluster-wide vs node. Excludes NetObserv health score. */
-export const buildOvnStats = (alertRules: Rule[], available: boolean): OvnHealthStats => {
+/** Build readonly-alerts context stats grouped by cluster-wide vs node. Excludes NetObserv health score. */
+export const buildReadonlyStats = (
+  alertRules: Rule[],
+  available: boolean,
+  displayName: string
+): ReadonlyHealthStats => {
   const items = rulesToHealthItems(alertRules, {}, []);
   const global = emptyStat('');
   const byNodeMap = new Map<string, HealthStat>();
@@ -127,14 +133,14 @@ export const buildOvnStats = (alertRules: Rule[], available: boolean): OvnHealth
     s => s.name
   );
 
-  return { available, global, byNode };
+  return { available, displayName, global, byNode };
 };
 
-export const countOvnActiveAlerts = (stats: OvnHealthStats): number => {
+export const countReadonlyActiveAlerts = (stats: ReadonlyHealthStats): number => {
   return getAllHealthItems(stats.global).length + stats.byNode.reduce((n, s) => n + getAllHealthItems(s).length, 0);
 };
 
-export const getOvnTabStats = (stats: OvnHealthStats): HealthStat[] => {
+export const getReadonlyTabStats = (stats: ReadonlyHealthStats): HealthStat[] => {
   const result: HealthStat[] = [];
   if (getAllHealthItems(stats.global).length > 0) {
     result.push(stats.global);
