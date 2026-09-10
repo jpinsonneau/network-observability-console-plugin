@@ -1,12 +1,12 @@
 import { Rule } from '@openshift-console/dynamic-plugin-sdk';
-import {
-  buildOvnStats,
-  countOvnActiveAlerts,
-  getNodeNameFromLabels,
-  getOvnSummaryCounts,
-  getOvnTabStats
-} from '../ovn-health-helper';
 import { isOvnPlatformAlertName, OVN_PLATFORM_ALERT_NAMES } from '../ovn-platform-alerts';
+import {
+  buildReadonlyStats,
+  countReadonlyActiveAlerts,
+  getNodeNameFromLabels,
+  getReadonlySummaryCounts,
+  getReadonlyTabStats
+} from '../readonly-health-helper';
 
 const makeRule = (
   name: string,
@@ -35,18 +35,21 @@ const makeRule = (
 });
 
 describe('ovn-platform-alerts', () => {
-  it('contains expected CNO alert names', () => {
+  it('contains expected downstream (CNO) and upstream alert names', () => {
     expect(OVN_PLATFORM_ALERT_NAMES).toContain('OVNKubernetesNodePodAddError');
     expect(OVN_PLATFORM_ALERT_NAMES).toContain('NorthboundStale');
+    expect(OVN_PLATFORM_ALERT_NAMES).toContain('OvnKubeNoRunningManager');
+    expect(OVN_PLATFORM_ALERT_NAMES).toContain('OVNKubeAllocatedV4SubnetsDoNotMatch');
   });
 
-  it('matches allowlisted names only', () => {
+  it('matches allowlisted downstream and upstream names only', () => {
     expect(isOvnPlatformAlertName('OVNKubernetesNodePodAddError')).toBe(true);
+    expect(isOvnPlatformAlertName('OvnKubeNoRunningManager')).toBe(true);
     expect(isOvnPlatformAlertName('NetObservNoFlows')).toBe(false);
   });
 });
 
-describe('ovn-health-helper', () => {
+describe('readonly-health-helper', () => {
   it('extracts node name from labels', () => {
     expect(getNodeNameFromLabels({ node: 'worker-1' })).toBe('worker-1');
     expect(getNodeNameFromLabels({ instance: '10.0.0.1:9090' })).toBe('10.0.0.1');
@@ -60,14 +63,14 @@ describe('ovn-health-helper', () => {
       makeRule('OVNKubernetesNodePodAddError', 'firing', { node: 'worker-a' }),
       makeRule('OVNKubernetesNodePodDeleteError', 'pending', { instance: 'worker-b:9090' })
     ];
-    const stats = buildOvnStats(rules, true);
+    const stats = buildReadonlyStats(rules, true, 'OVN');
     expect(stats.available).toBe(true);
     expect(stats.global.critical.firing).toHaveLength(0);
     expect(stats.global.warning.firing).toHaveLength(1);
     expect(stats.byNode).toHaveLength(2);
     expect(stats.byNode.find(s => s.name === 'worker-b')).toBeDefined();
-    expect(countOvnActiveAlerts(stats)).toBe(3);
-    expect(getOvnTabStats(stats)).toHaveLength(3);
+    expect(countReadonlyActiveAlerts(stats)).toBe(3);
+    expect(getReadonlyTabStats(stats)).toHaveLength(3);
   });
 
   it('merges node and instance identities for the same host', () => {
@@ -75,16 +78,16 @@ describe('ovn-health-helper', () => {
       makeRule('OVNKubernetesNodePodAddError', 'firing', { node: 'worker-a' }),
       makeRule('OVNKubernetesNodePodDeleteError', 'pending', { instance: 'worker-a:9095' })
     ];
-    const stats = buildOvnStats(rules, true);
+    const stats = buildReadonlyStats(rules, true, 'OVN');
     expect(stats.byNode).toHaveLength(1);
     expect(stats.byNode[0].name).toBe('worker-a');
-    expect(countOvnActiveAlerts(stats)).toBe(2);
+    expect(countReadonlyActiveAlerts(stats)).toBe(2);
   });
 
   it('marks unavailable when no allowlisted rules are present', () => {
-    const stats = buildOvnStats([], false);
+    const stats = buildReadonlyStats([], false, 'OVN');
     expect(stats.available).toBe(false);
-    expect(countOvnActiveAlerts(stats)).toBe(0);
+    expect(countReadonlyActiveAlerts(stats)).toBe(0);
   });
 
   it('summarizes OVN alerts by severity and state', () => {
@@ -95,8 +98,8 @@ describe('ovn-health-helper', () => {
       makeRule('NodeWithoutOVNKubeNodePodRunning', 'pending', { node: 'worker-a' })
     ];
     rules[0].alerts[0].labels.severity = 'critical';
-    const stats = buildOvnStats(rules, true);
-    const counts = getOvnSummaryCounts(stats);
+    const stats = buildReadonlyStats(rules, true, 'OVN');
+    const counts = getReadonlySummaryCounts(stats);
     expect(counts.critical.firing).toBe(1);
     expect(counts.warning.firing).toBe(1);
     expect(counts.warning.pending).toBe(1);

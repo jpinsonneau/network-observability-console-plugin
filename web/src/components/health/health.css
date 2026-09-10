@@ -704,31 +704,31 @@
     }
 }
 
-/* Legacy aliases kept for tests and targeted overrides */
-.health-ovn-summary {
+/* Readonly-alerts summary aliases kept for tests and targeted overrides */
+.health-readonly-summary {
     width: 100%;
 }
 
-.health-ovn-summary-cards {
+.health-readonly-summary-cards {
     flex-wrap: nowrap;
     width: 100%;
 }
 
-.health-ovn-summary-compact-row {
+.health-readonly-summary-compact-row {
     flex-wrap: nowrap;
 }
 
-.health-ovn-summary-compact-row .health-summary-compact-item.status {
+.health-readonly-summary-compact-row .health-summary-compact-item.status {
     min-width: 0;
     flex-shrink: 1;
 }
 
-.health-ovn-summary-compact-row .health-summary-compact-text {
+.health-readonly-summary-compact-row .health-summary-compact-text {
     white-space: nowrap;
 }
 
 @media (max-width: 992px) {
-    .health-ovn-summary-cards {
+    .health-readonly-summary-cards {
         flex-wrap: wrap;
     }
 }

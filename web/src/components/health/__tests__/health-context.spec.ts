@@ -7,124 +7,63 @@ import {
   isValidHealthContextId,
   NETOBSERV_CONTEXT_NETOBSERV,
   NETOBSERV_CONTEXT_OVN,
+  parseHealthContextAnnotation,
   sortContextTabIds
 } from '../health-context';
 
+const annotation = (config: object) => ({ netobserv_io_network_health: JSON.stringify(config) });
+
 describe('health-context', () => {
-  it('routes legacy OVN allowlisted names to the ovn tab', () => {
-    expect(getRuleHealthContextId({ name: 'NorthboundStale', labels: {}, annotations: {} })).toBe(
-      NETOBSERV_CONTEXT_OVN
-    );
-    expect(getRuleHealthContextId({ name: 'NetObservNoFlows', labels: {}, annotations: {} })).toBe(
-      NETOBSERV_CONTEXT_NETOBSERV
-    );
+  it('routes rules by their health annotation contextTab', () => {
+    expect(getRuleHealthContextId({ annotations: annotation({ contextTab: 'ovn' }) })).toBe(NETOBSERV_CONTEXT_OVN);
+    expect(getRuleHealthContextId({ annotations: annotation({ contextTab: 'kiali' }) })).toBe('kiali');
   });
 
-  it('routes label and annotation context tabs', () => {
-    expect(
-      getRuleHealthContextId({
-        name: 'FutureOvnAlert',
-        labels: { netobserv_io_health_context: NETOBSERV_CONTEXT_OVN, netobserv: 'true' },
-        annotations: {}
-      })
-    ).toBe(NETOBSERV_CONTEXT_OVN);
-    expect(
-      getRuleHealthContextId({
-        name: 'KialiControlPlaneDown',
-        labels: { netobserv_io_health_context: 'kiali', netobserv: 'true' },
-        annotations: {}
-      })
-    ).toBe('kiali');
-    expect(
-      getRuleHealthContextId({
-        name: 'ThirdPartyAlert',
-        labels: {},
-        annotations: {
-          netobserv_io_network_health: JSON.stringify({ contextTab: 'kiali' })
-        }
-      })
-    ).toBe('kiali');
+  it('routes rules without a contextTab annotation to the netobserv context', () => {
+    expect(getRuleHealthContextId({ annotations: {} })).toBe(NETOBSERV_CONTEXT_NETOBSERV);
+    // A legacy OVN allowlisted name alone no longer routes to OVN (annotation is the single source).
+    expect(getRuleHealthContextId({ annotations: annotation({}) })).toBe(NETOBSERV_CONTEXT_NETOBSERV);
   });
 
   it('excludes non-netobserv contexts from scored health', () => {
-    expect(
-      isExcludedFromNetobservHealth({
-        name: 'KialiControlPlaneDown',
-        labels: { netobserv_io_health_context: 'kiali' },
-        annotations: {}
-      })
-    ).toBe(true);
-    expect(
-      isExcludedFromNetobservHealth({
-        name: 'NetObservNoFlows',
-        labels: { netobserv: 'true' },
-        annotations: { netobserv_io_network_health: '{}' }
-      })
-    ).toBe(false);
+    expect(isExcludedFromNetobservHealth({ annotations: annotation({ contextTab: 'kiali' }) })).toBe(true);
+    expect(isExcludedFromNetobservHealth({ annotations: annotation({ contextTab: 'ovn' }) })).toBe(true);
+    expect(isExcludedFromNetobservHealth({ annotations: {} })).toBe(false);
   });
 
-  it('sorts context tabs with netobserv first, ovn second, then others', () => {
+  it('sorts context tabs with netobserv first then the rest alphabetically', () => {
     expect(sortContextTabIds(['kiali', NETOBSERV_CONTEXT_OVN, NETOBSERV_CONTEXT_NETOBSERV])).toEqual([
       NETOBSERV_CONTEXT_NETOBSERV,
-      NETOBSERV_CONTEXT_OVN,
-      'kiali'
+      'kiali',
+      NETOBSERV_CONTEXT_OVN
     ]);
   });
 
-  it('describes built-in and third-party contexts', () => {
+  it('describes built-in and other contexts', () => {
     expect(getHealthContextDefinition(NETOBSERV_CONTEXT_NETOBSERV).scored).toBe(true);
     expect(getHealthContextDefinition(NETOBSERV_CONTEXT_OVN).scored).toBe(false);
     expect(getHealthContextDefinition('kiali').kind).toBe('readonly-alerts');
     expect(formatContextTabTitle('kiali')).toBe('Kiali');
   });
 
-  it('parses contextTab from health metadata annotation', () => {
-    expect(
-      getHealthContextTabFromAnnotations({
-        netobserv_io_network_health: JSON.stringify({ contextTab: 'ovn' })
-      })
-    ).toBe('ovn');
-  });
-
-  it('routes legacy OVN-named rule to kiali when health-context label overrides', () => {
-    // Regression: a rule with a legacy OVN allowlisted name but an explicit kiali
-    // health-context label must route to kiali, not ovn.
-    expect(
-      getRuleHealthContextId({
-        name: 'NorthboundStale',
-        labels: { netobserv_io_health_context: 'kiali', netobserv: 'true' },
-        annotations: {}
-      })
-    ).toBe('kiali');
-  });
-
-  it('routes legacy OVN-named rule to kiali when annotation overrides', () => {
-    expect(
-      getRuleHealthContextId({
-        name: 'NorthboundStale',
-        labels: {},
-        annotations: { netobserv_io_network_health: JSON.stringify({ contextTab: 'kiali' }) }
-      })
-    ).toBe('kiali');
+  it('parses contextTab and displayName from the health annotation', () => {
+    expect(getHealthContextTabFromAnnotations(annotation({ contextTab: 'ovn' }))).toBe('ovn');
+    expect(parseHealthContextAnnotation(annotation({ contextTab: 'kiali', displayName: 'Kiali Mesh' }))).toEqual({
+      contextTab: 'kiali',
+      displayName: 'Kiali Mesh'
+    });
+    expect(parseHealthContextAnnotation({})).toEqual({});
   });
 
   it('rejects unsafe or invalid context tab identifiers', () => {
     expect(isValidHealthContextId('kiali')).toBe(true);
     expect(isValidHealthContextId('')).toBe(false);
     expect(isValidHealthContextId('__proto__')).toBe(false);
-    expect(
-      getRuleHealthContextId({
-        name: 'BadLabel',
-        labels: { netobserv_io_health_context: '__proto__' },
-        annotations: {}
-      })
-    ).toBe(NETOBSERV_CONTEXT_NETOBSERV);
-    expect(
-      getRuleHealthContextId({
-        name: 'BadAnnotation',
-        labels: {},
-        annotations: { netobserv_io_network_health: JSON.stringify({ contextTab: 'bad id' }) }
-      })
-    ).toBe(NETOBSERV_CONTEXT_NETOBSERV);
+    expect(getRuleHealthContextId({ annotations: annotation({ contextTab: '__proto__' }) })).toBe(
+      NETOBSERV_CONTEXT_NETOBSERV
+    );
+    expect(getRuleHealthContextId({ annotations: annotation({ contextTab: 'bad id' }) })).toBe(
+      NETOBSERV_CONTEXT_NETOBSERV
+    );
   });
 });

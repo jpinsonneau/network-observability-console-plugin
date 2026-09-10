@@ -8,7 +8,7 @@ import {
 } from '@patternfly/react-icons';
 import * as React from 'react';
 import { getAllHealthItems, getResourceSeverity, HealthStat, HealthStats, Severity } from './health-helper';
-import { OvnHealthStats } from './ovn-health-helper';
+import { ReadonlyHealthStats } from './readonly-health-helper';
 
 const getSeverityTabIcon = (severities: (Severity | undefined)[]): React.ReactElement => {
   if (severities.includes('critical')) {
@@ -33,7 +33,7 @@ export const getNetobservContextStats = (health: HealthStats): HealthStat[] => [
   ...health.byOwner
 ];
 
-export const getOvnContextStats = (stats: OvnHealthStats): HealthStat[] => [stats.global, ...stats.byNode];
+export const getReadonlyContextStats = (stats: ReadonlyHealthStats): HealthStat[] => [stats.global, ...stats.byNode];
 
 export const getContextTabActiveCount = (stats: HealthStat[]): number =>
   stats.reduce((total, stat) => total + getAllHealthItems(stat).length, 0);

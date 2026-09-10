@@ -1,7 +1,7 @@
 import { Rule } from '@openshift-console/dynamic-plugin-sdk';
 import { buildStats, emptyStat, HealthStats } from '../health-helper';
-import { buildOvnStats } from '../ovn-health-helper';
-import { getContextTabActiveCount, getNetobservContextStats, getOvnContextStats } from '../tab-title';
+import { buildReadonlyStats } from '../readonly-health-helper';
+import { getContextTabActiveCount, getNetobservContextStats, getReadonlyContextStats } from '../tab-title';
 
 const makeOvnRule = (name: string, state: 'firing' | 'pending' = 'firing'): Rule => ({
   id: `rule-${name}`,
@@ -62,8 +62,8 @@ describe('tab-title context helpers', () => {
   });
 
   it('aggregates OVN platform stats from global and nodes', () => {
-    const ovn = buildOvnStats([makeOvnRule('NoRunningOvnControlPlane')], true);
-    const stats = getOvnContextStats(ovn);
+    const ovn = buildReadonlyStats([makeOvnRule('NoRunningOvnControlPlane')], true, 'OVN');
+    const stats = getReadonlyContextStats(ovn);
     expect(getContextTabActiveCount(stats)).toBe(1);
   });
 });

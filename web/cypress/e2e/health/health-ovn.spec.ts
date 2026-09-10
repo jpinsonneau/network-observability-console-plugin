@@ -36,7 +36,7 @@ describe('health-ovn', () => {
       .and('include', 'github.com/openshift/runbooks');
   });
 
-  it('shows Kiali context tab from netobserv_io_health_context label', () => {
+  it('shows Kiali context tab from netobserv_io_network_health annotation', () => {
     cy.get('[data-test="health-context-tab-kiali"]', { timeout: 60000 }).should('be.visible').click();
     cy.get('[data-test="health-kiali-content"]', { timeout: 60000 }).should('be.visible');
     cy.contains('Kiali control plane is down.').should('be.visible');

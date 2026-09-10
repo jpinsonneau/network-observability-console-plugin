@@ -1,24 +1,25 @@
-import { AlertStates, Rule } from '@openshift-console/dynamic-plugin-sdk';
+import { Rule } from '@openshift-console/dynamic-plugin-sdk';
 import * as _ from 'lodash';
 import { murmur3 } from 'murmurhash-js';
-import { AlertsResult, SilenceMatcher } from '../../api/alert';
-import { getAlerts, getAllSilencedAlerts } from '../../api/routes';
-import { hasOvnHealthContextLabel } from './health-context';
-import { isSilenced } from './health-helper';
-import { buildOvnStats, OvnHealthStats } from './ovn-health-helper';
+import { AlertsResult } from '../../api/alert';
 import { isOvnPlatformAlertName } from './ovn-platform-alerts';
 
 /**
- * Platform alert discovery:
- * 1. Legacy (current OCP): CNO OVN rule group + allowlisted alert names.
- * 2. Labeled (CNO follow-up): netobserv="true" + netobserv_io_health_context="ovn".
- *    New platform alerts can appear without updating the console allowlist.
+ * Temporary OVN platform alert discovery shim.
+ *
+ * OVN-Kubernetes alerts (both the OpenShift CNO downstream set and the upstream ovn-kubernetes helm
+ * set) are emitted without the netobserv_io_network_health annotation, so they cannot flow through the
+ * generic annotation-based routing (see health-context.ts). Until they ship that annotation, discovery
+ * is hard-coded here: match by allowlisted alert name (see ovn-platform-alerts.ts), which is reliable
+ * because the two name sets are distinctive and non-overlapping. Group/file detection is only a
+ * secondary hint for tab availability. Remove this shim once the annotation is available on OVN alerts.
  */
 /** CNO OVN-Kubernetes alert group in Prometheus /api/v1/rules (PrometheusRule CR labels are not exposed on rules). */
 const OVN_RULES_GROUP_NAME = 'cluster-network-operator-ovn.rules';
 
+/** Best-effort OVN group detection (downstream group name or any ovn-kubernetes file path). */
 export const isOvnPlatformRulesGroup = (group: AlertsResult['data']['groups'][number]): boolean =>
-  group.name === OVN_RULES_GROUP_NAME || (group.file?.includes('openshift-ovn-kubernetes') ?? false);
+  group.name === OVN_RULES_GROUP_NAME || (group.file?.includes('ovn-kubernetes') ?? false);
 
 export const injectAlertRuleIds = (groups: AlertsResult['data']['groups']): Rule[] => {
   return groups.flatMap(group => {
@@ -33,66 +34,17 @@ export const injectAlertRuleIds = (groups: AlertsResult['data']['groups']): Rule
   });
 };
 
-const discoverLegacyOvnPlatformRules = (groups: AlertsResult['data']['groups']): Rule[] => {
-  const ovnGroups = groups.filter(isOvnPlatformRulesGroup);
-  return injectAlertRuleIds(ovnGroups).filter(r => isOvnPlatformAlertName(r.name));
-};
-
-const discoverLabeledOvnPlatformRules = (groups: AlertsResult['data']['groups']): Rule[] => {
-  return injectAlertRuleIds(groups).filter(r => r.labels?.netobserv === 'true' && hasOvnHealthContextLabel(r));
-};
-
-/** Union of legacy group/allowlist discovery and future label-based discovery. */
-export const discoverOvnPlatformRules = (groups: AlertsResult['data']['groups']): Rule[] => {
-  return _.uniqBy(
-    [...discoverLabeledOvnPlatformRules(groups), ...discoverLegacyOvnPlatformRules(groups)],
-    r => r.id ?? r.name
-  );
-};
+/**
+ * Discover OVN platform rules by allowlisted alert name (downstream + upstream), across all groups.
+ * Name-based matching lets us catch the upstream set, whose PrometheusRule group (general.rules) is too
+ * generic to key on. The names are distinctive enough that cross-source collisions are not a concern.
+ */
+export const discoverOvnPlatformRules = (groups: AlertsResult['data']['groups']): Rule[] =>
+  injectAlertRuleIds(groups).filter(r => isOvnPlatformAlertName(r.name));
 
 export const isOvnPlatformTabAvailable = (groups: AlertsResult['data']['groups'], platformRules: Rule[]): boolean => {
   if (platformRules.length > 0) {
     return true;
   }
   return groups.some(isOvnPlatformRulesGroup);
-};
-
-const applySilences = (rawRules: Rule[], silenced: SilenceMatcher[][]): Rule[] =>
-  rawRules.map(r => {
-    const alerts = (r.alerts ?? []).map(a => {
-      let state = a.state;
-      const labels = { ...r.labels, ...a.labels };
-      if (silenced.some(s => isSilenced(s, labels))) {
-        state = 'silenced' as AlertStates;
-      }
-      return { ...a, state };
-    });
-    return { ...r, alerts };
-  });
-
-export type OvnPlatformHealthResult = {
-  stats: OvnHealthStats;
-  alertRules: Rule[];
-};
-
-export const fetchOvnPlatformHealth = (): Promise<OvnPlatformHealthResult> => {
-  const alertsP = getAlerts().then(res => {
-    const platformRules = discoverOvnPlatformRules(res.data.groups);
-    return { groups: res.data.groups, platformRules };
-  });
-
-  const silencedP = getAllSilencedAlerts()
-    .then(res => res.filter(a => a.status.state === 'active').map(a => a.matchers))
-    .catch(err => {
-      console.log('Could not get silenced alerts for OVN platform rules:', err);
-      return [] as SilenceMatcher[][];
-    });
-
-  return Promise.all([alertsP, silencedP]).then(([{ groups, platformRules }, silenced]) => {
-    const alertRules = applySilences(platformRules, silenced);
-    return {
-      stats: buildOvnStats(alertRules, isOvnPlatformTabAvailable(groups, platformRules)),
-      alertRules
-    };
-  });
 };
