@@ -243,4 +243,28 @@ describe('isSilenced', () => {
   it('negative matcher does not match when label equals the matcher value', () => {
     expect(isSilenced([{ name: 'severity', value: 'info', isEqual: false }], { severity: 'info' })).toBe(false);
   });
+
+  it('anchors alternation as a whole (RE2 full-match semantics)', () => {
+    const m = [{ name: 'alertname', value: 'foo|bar', isRegex: true }];
+    expect(isSilenced(m, { alertname: 'foo' })).toBe(true);
+    expect(isSilenced(m, { alertname: 'bar' })).toBe(true);
+    // Must NOT match partial values that a non-grouped "^foo|bar$" would wrongly accept.
+    expect(isSilenced(m, { alertname: 'fooBaz' })).toBe(false);
+    expect(isSilenced(m, { alertname: 'Bazbar' })).toBe(false);
+  });
+
+  it('does not apply a silence whose regex JS cannot compile, and logs it', () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      // RE2 inline flags like "(?i)foo" are valid for Alertmanager but throw in JS RegExp.
+      expect(isSilenced([{ name: 'alertname', value: '(?i)foo', isRegex: true }], { alertname: 'FOO' })).toBe(false);
+      // A negative matcher with an unevaluable regex must also not silence the alert.
+      expect(
+        isSilenced([{ name: 'alertname', value: '(?i)foo', isRegex: true, isEqual: false }], { alertname: 'bar' })
+      ).toBe(false);
+      expect(errorSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });

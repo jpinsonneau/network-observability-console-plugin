@@ -696,8 +696,21 @@ export const getSeverityColor = (severity: string | undefined): 'red' | 'orange'
 export const isSilenced = (silence: SilenceMatcher[], labels: PrometheusLabels): boolean =>
   silence.every(m => {
     const labelValue = labels[m.name] ?? '';
-    const isMatch = m.isRegex ? new RegExp(`^${m.value}$`).test(labelValue) : labelValue === m.value;
-    return m.isEqual === false ? !isMatch : isMatch;
+    try {
+      // Alertmanager matchers use RE2 full-match semantics (^(?:...)$). Grouping anchors the whole
+      // pattern, so alternation like "foo|bar" matches only "foo"/"bar", not "^foo" | "bar$".
+      const isMatch = m.isRegex ? new RegExp(`^(?:${m.value})$`).test(labelValue) : labelValue === m.value;
+      return m.isEqual === false ? !isMatch : isMatch;
+    } catch (err) {
+      // Some valid RE2 patterns (e.g. inline flags like "(?i)foo") throw when compiled by JS RegExp.
+      // Rather than let that break the whole health fetch, skip the unevaluable matcher so the silence
+      // is simply not applied (the alert stays visible) instead of hiding data or erroring the page.
+      // NOTE: JS RegExp is backtracking, not linear-time like RE2, so a crafted pattern from an
+      // authorized silence creator could still be slow (ReDoS). A RE2-compatible engine is the
+      // longer-term fix; see follow-up.
+      console.error(`Could not evaluate silence matcher ${m.name}=~"${m.value}":`, err);
+      return false;
+    }
   });
 
 export const getResourceSeverity = (s: HealthStat): Severity | undefined => {
