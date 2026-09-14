@@ -47,6 +47,7 @@ jest.mock('../../../api/routes', () => ({
       status: 'success'
     } as unknown as AlertsResult)
   ),
+  getAlertsByRuleGroup: jest.fn(() => Promise.resolve({ data: { groups: [] }, status: 'success' } as AlertsResult)),
   getSilencedAlerts: jest.fn(() => Promise.resolve([])),
   getAllSilencedAlerts: jest.fn(() => Promise.resolve([])),
   getRecordingRules: jest.fn(() => Promise.resolve({ data: { groups: [] }, status: 'success' } as AlertsResult)),

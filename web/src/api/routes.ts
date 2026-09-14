@@ -45,6 +45,23 @@ export const getAlerts = (match?: string): Promise<AlertsResult> => {
   });
 };
 
+// Narrows the rules fetch to a single Prometheus rule group. OVN platform alerts carry no
+// filterable label (only the universal prometheus/severity), and the rules endpoint does not
+// match on __name__, so filtering by rule group is the only way to avoid pulling every rule.
+// Note: OpenShift's thanos-querier AND-s multiple match[] selectors within one request, so this
+// must stay a separate request rather than being combined with a match[] fetch.
+export const getAlertsByRuleGroup = (ruleGroup: string): Promise<AlertsResult> => {
+  const url = `/api/prometheus/api/v1/rules?type=alert&${encodeURIComponent('rule_group[]')}=${encodeURIComponent(
+    ruleGroup
+  )}`;
+  return axios.get(url).then(r => {
+    if (r.status >= 400) {
+      throw new Error(`${r.statusText} [code=${r.status}]`);
+    }
+    return r.data;
+  });
+};
+
 // Alertmanager filters match silence matcher definitions, not alert labels. Broad silences
 // (e.g. by alertname only) can still suppress OVN alerts whose prometheus label lives on
 // PrometheusRule metadata rather than on the alert itself, so we fetch all active silences.
