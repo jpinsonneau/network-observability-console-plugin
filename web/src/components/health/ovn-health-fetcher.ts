@@ -15,7 +15,7 @@ import { isOvnPlatformAlertName } from './ovn-platform-alerts';
  * secondary hint for tab availability. Remove this shim once the annotation is available on OVN alerts.
  */
 /** CNO OVN-Kubernetes alert group in Prometheus /api/v1/rules (PrometheusRule CR labels are not exposed on rules). */
-const OVN_RULES_GROUP_NAME = 'cluster-network-operator-ovn.rules';
+export const OVN_RULES_GROUP_NAME = 'cluster-network-operator-ovn.rules';
 
 /** Best-effort OVN group detection (downstream group name or any ovn-kubernetes file path). */
 export const isOvnPlatformRulesGroup = (group: AlertsResult['data']['groups'][number]): boolean =>
