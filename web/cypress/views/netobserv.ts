@@ -310,8 +310,11 @@ export const Operator = {
                     // still be starting (DaemonSet rolling out on each node, etc.).
                     // FLP can be a Deployment (Service/Kafka model) or DaemonSet (Direct model),
                     // so we wait on pods rather than a specific resource type.
+                    // The eBPF agent DaemonSet is deployed by the operator in the
+                    // privileged namespace (`<namespace>-privileged`), not in the main
+                    // FlowCollector namespace.
                     cy.adminCLI(
-                        `oc wait --for=condition=Ready pod -l app=netobserv-ebpf-agent -n ${project} --timeout=180s`,
+                        `oc wait --for=condition=Ready pod -l app=netobserv-ebpf-agent -n ${project}-privileged --timeout=180s`,
                         { failOnNonZeroExit: false, timeout: 200000 }
                     )
                     cy.adminCLI(

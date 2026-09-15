@@ -42,9 +42,7 @@ describe('(OCP-67087) DNSTracking test', { tags: ['Network_Observability'] }, fu
         cy.checkPanelsNum(6);
 
         // verify Query Summary stats for DNSTracking
-        cy.get(querySumSelectors.dnsAvg).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
+        cy.checkQuerySummary(querySumSelectors.dnsAvg)
     })
 
     it("(OCP-67087, aramesha) Validate DNSTracking columns and DNSName", function () {

@@ -8,7 +8,7 @@ declare global {
             openColumnsModal(): Chainable<Element>
             selectAndVerifyColumns(columnSelectors: string[]): Chainable<Element>
             checkPopItems(id: string, names: string[]): Chainable<Element>
-            checkQuerySummary(metric: JQuery<HTMLElement>): Chainable<Element>
+            checkQuerySummary(selector: string, options?: Partial<Cypress.Timeoutable>): Chainable<Element>
             checkPerformance(page: string, loadTime: number, memoryUsage: number): Chainable<Element>
             changeQueryOption(name: string): Chainable<Element>
             visitNetflowTrafficTab(page: string): Chainable<Element>
@@ -463,10 +463,12 @@ Cypress.Commands.add('selectAndVerifyColumns', (columnSelectors: string[]) => {
     });
 });
 
-Cypress.Commands.add('checkQuerySummary', (metric) => {
+Cypress.Commands.add('checkQuerySummary', (selector: string, options?: Partial<Cypress.Timeoutable>) => {
+    // Uses .should() (retryable) so async-populated summary values don't flake.
     // parseFloat handles formats: "123 ms", "123+ ms", "1.5k ms", "1.5k+ ms"
-    const num = parseFloat(metric.text())
-    expect(num).to.be.greaterThan(0)
+    cy.get(selector, options).should($el => {
+        expect(parseFloat($el.text())).to.be.greaterThan(0)
+    })
 });
 
 Cypress.Commands.add('changeQueryOption', (name: string) => {

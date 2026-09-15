@@ -41,12 +41,8 @@ describe('(OCP-68246) FlowRTT test', { tags: ['Network_Observability'] }, functi
         cy.checkPanel(overviewSelectors.defaultFlowRTTPanels)
         cy.checkPanelsNum(4);
 
-        // verify Query Summary stats for flowRTT
-        // Use .should() callback so Cypress retries until RTT value is > 0 (up to 120s)
-        cy.get(querySumSelectors.avgRTT, { timeout: 120000 }).should($el => {
-            const num = parseFloat($el.text())
-            expect(num).to.be.greaterThan(0)
-        })
+        // verify Query Summary stats for flowRTT (retries until RTT value is > 0, up to 120s)
+        cy.checkQuerySummary(querySumSelectors.avgRTT, { timeout: 120000 })
     })
 
     it("(OCP-68246, aramesha) Verify default flowRTT column", function () {

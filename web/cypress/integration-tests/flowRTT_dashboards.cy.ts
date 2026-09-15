@@ -61,9 +61,7 @@ describe('(OCP-68246) FlowRTT test', { tags: ['Network_Observability'] }, functi
         netflowPage.clearAllFilters()
 
         // verify Query summary panel
-        cy.get(querySumSelectors.avgRTT, { timeout: 120000 }).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
+        cy.checkQuerySummary(querySumSelectors.avgRTT, { timeout: 120000 })
         netflowPage.resetClearFilters()
     })
 

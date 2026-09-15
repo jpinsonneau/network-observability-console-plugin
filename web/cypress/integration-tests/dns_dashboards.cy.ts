@@ -61,9 +61,7 @@ describe('(OCP-67087) DNSTracking test', { tags: ['Network_Observability'] }, fu
         });
 
         // verify Query Summary stats for DNSTracking
-        cy.get(querySumSelectors.dnsAvg).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
+        cy.checkQuerySummary(querySumSelectors.dnsAvg)
         netflowPage.clearAllFilters()
     })
 

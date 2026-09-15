@@ -48,34 +48,18 @@ describe('(OCP-66141) PacketDrop dashboards test', { tags: ['Network_Observabili
         cy.get('#PktDropBytes').click()
 
         // verify Query Summary stats for Dropped Bytes metric
-        cy.get(querySumSelectors.droppedBytesCount).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
-
-        cy.get(querySumSelectors.droppedBpsCount).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
-
-        cy.get(querySumSelectors.droppedPacketsCount).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
+        cy.checkQuerySummary(querySumSelectors.droppedBytesCount)
+        cy.checkQuerySummary(querySumSelectors.droppedBpsCount)
+        cy.checkQuerySummary(querySumSelectors.droppedPacketsCount)
 
         // update metricType to Dropped packets
         cy.byTestID(topologySelectors.metricTypeDrop).should('exist').click()
         cy.get('#PktDropPackets').click()
 
-        // verify Query Summary stats for Dropped Bytes metric
-        cy.get(querySumSelectors.droppedBytesCount).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
-
-        cy.get(querySumSelectors.droppedBpsCount).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
-
-        cy.get(querySumSelectors.droppedPacketsCount).should($el => {
-            expect(parseFloat($el.text())).to.be.greaterThan(0)
-        })
+        // verify Query Summary stats for Dropped Packets metric
+        cy.checkQuerySummary(querySumSelectors.droppedBytesCount)
+        cy.checkQuerySummary(querySumSelectors.droppedBpsCount)
+        cy.checkQuerySummary(querySumSelectors.droppedPacketsCount)
         netflowPage.resetClearFilters()
     })
 
