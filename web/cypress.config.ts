@@ -10,7 +10,6 @@ export default defineConfig({
   viewportWidth: 1920,
   viewportHeight: 1080,
   defaultCommandTimeout: 30000,
-  pageLoadTimeout: 120000,
   projectId: "tjknpb",
   screenshotsFolder: './gui_test_screenshots/cypress/screenshots',
   screenshotOnRunFailure: true,
@@ -53,16 +52,8 @@ export default defineConfig({
         isHeadless: false
       }, launchOptions) => {
         if (browser.family === 'chromium' && browser.name !== 'electron') {
-          // OpenShift CI pods: small /dev/shm + no sandbox privileges
+          // auto open devtools
           launchOptions.args.push('--enable-precise-memory-info')
-          launchOptions.args.push('--no-sandbox')
-          launchOptions.args.push('--disable-dev-shm-usage')
-          launchOptions.args.push('--disable-gpu')
-        }
-        if (browser.name === 'electron') {
-          launchOptions.args.push('--no-sandbox')
-          launchOptions.args.push('--disable-dev-shm-usage')
-          launchOptions.args.push('--disable-gpu')
         }
 
         return launchOptions

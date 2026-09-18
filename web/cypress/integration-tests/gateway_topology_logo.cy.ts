@@ -31,10 +31,12 @@ describe("(OCP-87215) Gateway API owner metadata", { tags: ['Network_Observabili
 
                 cy.adminCLI('oc apply -f cypress/fixtures/gateway-api.yaml')
 
+                // Wait for pods to be created
+                cy.wait(10000)
+
                 // Wait for pods to be ready
-                cy.wait(5000)
-                cy.adminCLI('oc wait --for=condition=Ready pod -l app=traffic-generator -n netobserv-gateway-test --timeout=120s', { timeout: 140000 })
-                cy.adminCLI('oc wait --for=condition=Ready pod -l app=echo-server -n netobserv-gateway-test --timeout=120s', { timeout: 140000 })
+                cy.adminCLI('oc wait --for=condition=Ready pod -l app=traffic-generator -n netobserv-gateway-test --timeout=120s')
+                cy.adminCLI('oc wait --for=condition=Ready pod -l app=echo-server -n netobserv-gateway-test --timeout=120s')
             }
         })
     })
@@ -65,7 +67,7 @@ describe("(OCP-87215) Gateway API owner metadata", { tags: ['Network_Observabili
             return
         }
 
-        cy.adminCLI('oc delete -f cypress/fixtures/gateway-api.yaml --ignore-not-found', { failOnNonZeroExit: false, timeout: 120000 })
+        cy.adminCLI('oc delete -f cypress/fixtures/gateway-api.yaml --ignore-not-found')
         Operator.deleteFlowCollector()
         cy.adminCLI(`oc adm policy remove-cluster-role-from-user cluster-admin ${Cypress.env('LOGIN_USERNAME')}`)
     })

@@ -13,13 +13,13 @@ describe('(OCP-67615, OCP-72874) Return external traffic and custom subnet label
 
         // deploy test pod and wait for it to complete (generates traffic to external IP)
         cy.adminCLI('oc create -f cypress/fixtures/test-pod.yaml')
-        cy.adminCLI('oc wait --for=jsonpath=\'{.status.phase}\'=Succeeded pod/test -n netobserv-test-67615 --timeout=180s', { timeout: 200000 })
+        cy.adminCLI('oc wait --for=jsonpath=\'{.status.phase}\'=Succeeded pod/test -n netobserv-test-67615 --timeout=120s')
     })
 
     it("(OCP-67615, aramesha) External traffic and custom subnet label", function () {
         netflowPage.visit()
         cy.get('#tabs-container').contains('Traffic flows').click()
-        netflowPage.waitForTableRows(1)
+        cy.byTestID("table-composable").should('exist')
 
         // enable SrcSubnetLabel and DstSubnetLabel columns
         cy.selectAndVerifyColumns([
@@ -30,11 +30,14 @@ describe('(OCP-67615, OCP-72874) Return external traffic and custom subnet label
         // filter on SrcSubnetLabel Pods and DstIP 52.200.142.250
         cy.get(filterSelectors.filterInput).type("src_subnet_label=Pods" + '{enter}')
         cy.get(filterSelectors.filterInput).type("dst_address=52.200.142.250" + '{enter}')
-        // Flows may lag behind pod Succeeded; refresh until the filtered table has rows.
-        // Do not assert an exact row count: the test pod may emit multiple matching flows.
-        netflowPage.waitForTableRows(1)
+        netflowPage.waitForLokiQuery()
 
-        // validate SrcSubnetLabel=Pods and DstCustomLabel=testcustomlabel for custom subnet labels
+        // validate rows count=1
+        cy.byTestID('table-composable').invoke('attr', 'data-test-rows-count').then(count => {
+            expect(count).to.contain(1)
+        })
+
+        // validate SrcSubnetLabel=Pods and DstSustomLabel=testcustomlabel for custom subnet labels
         cy.get('[data-test-td-column-id=SrcSubnetLabel]').each((td) => {
             expect(td).attr("data-test-td-value").to.contain('Pods')
         })
@@ -42,9 +45,13 @@ describe('(OCP-67615, OCP-72874) Return external traffic and custom subnet label
             expect(td).to.contain('testcustomlabel')
         })
 
-        // validate bidirectional flows (at least the request + reply pair)
+        // validate bidirectional flows
         cy.get('#match-1-dropdown').click().get(filterSelectors.biDirectional).click()
-        netflowPage.waitForTableRows(2)
+
+        // validate rows count=2
+        cy.byTestID('table-composable').invoke('attr', 'data-test-rows-count').then(count => {
+            expect(count).to.contain(2)
+        })
 
         netflowPage.clearAllFilters()
     })

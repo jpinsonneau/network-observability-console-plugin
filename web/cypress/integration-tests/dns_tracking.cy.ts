@@ -42,7 +42,9 @@ describe('(OCP-67087) DNSTracking test', { tags: ['Network_Observability'] }, fu
         cy.checkPanelsNum(6);
 
         // verify Query Summary stats for DNSTracking
-        cy.checkQuerySummary(querySumSelectors.dnsAvg)
+        cy.get(querySumSelectors.dnsAvg).should('exist').then(DNSAvg => {
+            cy.checkQuerySummary(DNSAvg)
+        })
     })
 
     it("(OCP-67087, aramesha) Validate DNSTracking columns and DNSName", function () {
@@ -60,7 +62,6 @@ describe('(OCP-67087) DNSTracking test', { tags: ['Network_Observability'] }, fu
         const dns_name = "loki.netobserv.svc.cluster"
         cy.get(filterSelectors.filterInput).type("dst_namespace=" + project + '{enter}')
         cy.get(filterSelectors.filterInput).type("dns_name=" + dns_name + '{enter}')
-        netflowPage.waitForTableRows(1)
 
         // select DNS Id, DNS Error and DNS Name columns
         cy.selectAndVerifyColumns([
