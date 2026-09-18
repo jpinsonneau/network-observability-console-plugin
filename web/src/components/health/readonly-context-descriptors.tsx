@@ -26,6 +26,46 @@ const SeverityHeading: React.FC<{ colorVar: string; label: string }> = ({ colorV
   </Content>
 );
 
+/**
+ * Severity and state descriptions shared by every read-only alerts context. These are always
+ * Prometheus alerts, so the severity buckets and alert states are identical regardless of the
+ * owning component and must not differ between tabs.
+ */
+const ReadonlySeverityStatesInfo: React.FC = () => {
+  const { t } = useTranslation('plugin__netobserv-plugin');
+  return (
+    <>
+      <Content component={ContentVariants.h3}>{t('Severity Levels')}</Content>
+      <Content component={ContentVariants.p}>
+        {t(
+          'Alerts are grouped by their Prometheus severity label. Counts in the summary reflect firing, pending, and silenced alerts at each level:'
+        )}
+      </Content>
+
+      <SeverityHeading colorVar="--pf-t--global--text--color--status--danger--default" label={t('Critical')} />
+      <Content component={ContentVariants.p}>{t('Severe problems requiring immediate attention.')}</Content>
+
+      <SeverityHeading colorVar="--pf-t--global--text--color--status--warning--default" label={t('Warning')} />
+      <Content component={ContentVariants.p}>{t('Moderate issues that should be reviewed.')}</Content>
+
+      <SeverityHeading colorVar="--pf-t--global--text--color--status--info--default" label={t('Info')} />
+      <Content component={ContentVariants.p}>{t('Minor observations worth noting.')}</Content>
+
+      <Content component={ContentVariants.h3}>{t('Alert States')}</Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('Firing')}</strong>: {t('Active alert condition - counted in severity totals')}
+      </Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('Pending')}</strong>: {t('Condition detected, awaiting confirmation - counted in severity totals')}
+      </Content>
+      <Content component="p" className="health-scoring-list-item">
+        <strong>{t('Silenced')}</strong>:{' '}
+        {t('Known issue, temporarily ignored in Alertmanager - still shown here for visibility')}
+      </Content>
+    </>
+  );
+};
+
 const GenericScoringInfoContent: React.FC<{ displayName: string }> = ({ displayName }) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
   return (
@@ -36,6 +76,9 @@ const GenericScoringInfoContent: React.FC<{ displayName: string }> = ({ displayN
           'These alerts are contributed by another component and shown for visibility only. They do not contribute to the 0–10 NetObserv health score.'
         )}
       </Content>
+
+      <ReadonlySeverityStatesInfo />
+
       <Content component={ContentVariants.h3}>{t('Read-only view')}</Content>
       <Content component={ContentVariants.p}>
         {t(

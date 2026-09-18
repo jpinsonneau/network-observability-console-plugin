@@ -214,7 +214,15 @@ const getHealthMetadata = (annotations: PrometheusLabels): HealthMetadata => {
   };
   const parseFloat0 = (s?: string) => (s ? parseFloat(s) || 0 : 0);
   if (annotations && 'netobserv_io_network_health' in annotations) {
-    const md = (JSON.parse(annotations['netobserv_io_network_health']) as HealthMetadata) || undefined;
+    let md: HealthMetadata | undefined;
+    try {
+      md = (JSON.parse(annotations['netobserv_io_network_health']) as HealthMetadata) || undefined;
+    } catch (err) {
+      // Malformed annotation JSON (e.g. a third-party rule with a truncated value): fall back to
+      // defaults rather than throwing, which would take down the whole Network Health page.
+      console.error('Could not parse netobserv_io_network_health annotation:', err);
+      md = undefined;
+    }
     if (md) {
       // Setup defaults and derived
       md.unit = md.unit || defaultMetadata.unit;

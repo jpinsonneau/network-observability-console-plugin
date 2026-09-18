@@ -4,11 +4,13 @@ import { PrometheusLabels, Rule } from '@openshift-console/dynamic-plugin-sdk';
  * Routes alerts to Network Health context tabs.
  *
  * Contract (CNO / third-party PrometheusRules):
- * - netobserv="true" — label used only as a fast fetch filter (see health-fetcher.ts).
+ * - netobserv="true" — MANDATORY label: a rule without it is never fetched (see health-fetcher.ts)
+ *   and therefore cannot appear in Network Health, regardless of its annotation. Third-party
+ *   PrometheusRules must set it to integrate.
  * - netobserv_io_network_health JSON annotation — single source of routing/config:
  *     { "contextTab": "<tab>", "displayName": "<human title>" , ... }
- *   contextTab selects the target context tab (e.g. ovn, kiali); when absent the rule
- *   belongs to the scored NetObserv context.
+ *   contextTab selects the target context tab (e.g. ovn, kiali); when absent (or when the JSON
+ *   is malformed) the rule belongs to the scored NetObserv context.
  *
  * OVN platform alerts on current OpenShift clusters carry no such annotation; they are
  * discovered by a temporary hard-coded shim (see ovn-health-fetcher.ts) until CNO ships

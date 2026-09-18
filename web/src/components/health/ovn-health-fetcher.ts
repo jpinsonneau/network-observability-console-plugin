@@ -14,12 +14,28 @@ import { isOvnPlatformAlertName } from './ovn-platform-alerts';
  * because the two name sets are distinctive and non-overlapping. Group/file detection is only a
  * secondary hint for tab availability. Remove this shim once the annotation is available on OVN alerts.
  */
-/** CNO OVN-Kubernetes alert group in Prometheus /api/v1/rules (PrometheusRule CR labels are not exposed on rules). */
-export const OVN_RULES_GROUP_NAME = 'cluster-network-operator-ovn.rules';
+/**
+ * CNO OVN-Kubernetes alert groups in Prometheus /api/v1/rules (PrometheusRule CR labels are not
+ * exposed on rules). The CNO splits its OVN alerts across two groups:
+ * - cluster-network-operator-ovn.rules (networking-rules): node/controller/OVS/DB alerts.
+ * - cluster-network-operator-master.rules (master-rules): control-plane / subnet-allocation alerts
+ *   (NoRunningOvnControlPlane, NoOvnClusterManagerLeader, V4/V6SubnetAllocationThresholdExceeded).
+ * Both must be fetched so the OVN tab surfaces the control-plane alerts too.
+ */
+export const OVN_RULES_GROUP_NAMES = [
+  'cluster-network-operator-ovn.rules',
+  'cluster-network-operator-master.rules'
+] as const;
 
-/** Best-effort OVN group detection (downstream group name or any ovn-kubernetes file path). */
+/** @deprecated Kept for existing callers/tests; prefer OVN_RULES_GROUP_NAMES. */
+export const OVN_RULES_GROUP_NAME = OVN_RULES_GROUP_NAMES[0];
+
+const OVN_RULES_GROUP_NAME_SET = new Set<string>(OVN_RULES_GROUP_NAMES);
+
+/** Best-effort OVN group detection (downstream group names or any ovn-kubernetes file path). */
 export const isOvnPlatformRulesGroup = (group: AlertsResult['data']['groups'][number]): boolean =>
-  group.name === OVN_RULES_GROUP_NAME || (group.file?.includes('ovn-kubernetes') ?? false);
+  (group.name !== undefined && OVN_RULES_GROUP_NAME_SET.has(group.name)) ||
+  (group.file?.includes('ovn-kubernetes') ?? false);
 
 export const injectAlertRuleIds = (groups: AlertsResult['data']['groups']): Rule[] => {
   return groups.flatMap(group => {

@@ -45,15 +45,17 @@ export const getAlerts = (match?: string): Promise<AlertsResult> => {
   });
 };
 
-// Narrows the rules fetch to a single Prometheus rule group. OVN platform alerts carry no
+// Narrows the rules fetch to one or more Prometheus rule groups. OVN platform alerts carry no
 // filterable label (only the universal prometheus/severity), and the rules endpoint does not
 // match on __name__, so filtering by rule group is the only way to avoid pulling every rule.
-// Note: OpenShift's thanos-querier AND-s multiple match[] selectors within one request, so this
-// must stay a separate request rather than being combined with a match[] fetch.
-export const getAlertsByRuleGroup = (ruleGroup: string): Promise<AlertsResult> => {
-  const url = `/api/prometheus/api/v1/rules?type=alert&${encodeURIComponent('rule_group[]')}=${encodeURIComponent(
-    ruleGroup
-  )}`;
+// Note: OpenShift's thanos-querier AND-s multiple match[] selectors within one request, but
+// repeated rule_group[] params are OR-ed, so several groups can be requested at once. This must
+// still stay a separate request rather than being combined with a match[] fetch.
+export const getAlertsByRuleGroup = (ruleGroups: string | readonly string[]): Promise<AlertsResult> => {
+  const groups = Array.isArray(ruleGroups) ? ruleGroups : [ruleGroups];
+  const groupKeyEnc = encodeURIComponent('rule_group[]');
+  const query = groups.map(g => `${groupKeyEnc}=${encodeURIComponent(g)}`).join('&');
+  const url = `/api/prometheus/api/v1/rules?type=alert&${query}`;
   return axios.get(url).then(r => {
     if (r.status >= 400) {
       throw new Error(`${r.statusText} [code=${r.status}]`);

@@ -137,7 +137,15 @@ export const NetworkHealth: React.FC<{}> = ({}) => {
     (contextId: string) => {
       const definition = getHealthContextDefinition(contextId);
       if (definition.titleKey) {
-        return t(definition.titleKey);
+        // Resolve builtin titles with static t() calls so i18next-parser extracts them; a bare
+        // t(definition.titleKey) is a dynamic key the parser cannot see, which leaves the key out
+        // of the catalog and logs a runtime "missing key" warning.
+        switch (definition.titleKey) {
+          case 'NetObserv':
+            return t('NetObserv');
+          default:
+            return t(definition.titleKey);
+        }
       }
       const fallback = readonlyContexts[contextId]?.displayName ?? formatContextTabTitle(contextId);
       return getReadonlyContextDescriptor(contextId, fallback, t).displayName;
