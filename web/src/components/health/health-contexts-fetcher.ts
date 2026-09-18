@@ -19,7 +19,7 @@ import {
   discoverOvnPlatformRules,
   injectAlertRuleIds,
   isOvnPlatformTabAvailable,
-  OVN_RULES_GROUP_NAME
+  OVN_RULES_GROUP_NAMES
 } from './ovn-health-fetcher';
 import { buildReadonlyStats, ReadonlyHealthStats } from './readonly-health-helper';
 
@@ -66,7 +66,7 @@ export const fetchHealthContexts = (recordingAnnotations: RecordingAnnotations):
   // - OVN platform alerts carry no filterable label and the rules endpoint can't match __name__,
   //   so they are narrowed by their (CNO) rule group instead.
   const netobservAlertsP = getAlerts('netobserv="true"');
-  const ovnAlertsP = getAlertsByRuleGroup(OVN_RULES_GROUP_NAME).catch(err => {
+  const ovnAlertsP = getAlertsByRuleGroup(OVN_RULES_GROUP_NAMES).catch(err => {
     console.log('Could not get OVN platform rules for health contexts:', err);
     return { status: 'success', data: { groups: [] } } as AlertsResult;
   });

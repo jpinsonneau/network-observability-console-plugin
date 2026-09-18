@@ -26,11 +26,27 @@ const makeRule = (name: string): Rule => ({
 });
 
 describe('ovn-health-fetcher discovery', () => {
-  it('detects OVN rule groups (downstream group name or any ovn-kubernetes file)', () => {
+  it('detects OVN rule groups (downstream group names or any ovn-kubernetes file)', () => {
     expect(isOvnPlatformRulesGroup(makeGroup('cluster-network-operator-ovn.rules', []))).toBe(true);
+    // Control-plane / subnet-allocation alerts live in the CNO master-rules group and must be detected too.
+    expect(isOvnPlatformRulesGroup(makeGroup('cluster-network-operator-master.rules', []))).toBe(true);
     expect(isOvnPlatformRulesGroup(makeGroup('other', [], 'foo/openshift-ovn-kubernetes/bar.yaml'))).toBe(true);
     expect(isOvnPlatformRulesGroup(makeGroup('general.rules', [], 'ovn-kubernetes/ovnkube-alerts.yaml'))).toBe(true);
     expect(isOvnPlatformRulesGroup(makeGroup('other', [], 'other.yaml'))).toBe(false);
+  });
+
+  it('discovers control-plane allowlisted rules from the CNO master-rules group', () => {
+    const groups = [
+      makeGroup('cluster-network-operator-master.rules', [
+        makeRule('NoRunningOvnControlPlane'),
+        makeRule('V4SubnetAllocationThresholdExceeded'),
+        makeRule('UnrelatedAlert')
+      ])
+    ];
+    expect(discoverOvnPlatformRules(groups).map(r => r.name)).toEqual([
+      'NoRunningOvnControlPlane',
+      'V4SubnetAllocationThresholdExceeded'
+    ]);
   });
 
   it('discovers downstream allowlisted rules by name', () => {

@@ -1,4 +1,4 @@
-import { PrometheusLabels } from '@openshift-console/dynamic-plugin-sdk';
+import { PrometheusLabels, Rule } from '@openshift-console/dynamic-plugin-sdk';
 import {
   AlertState,
   apportionToOneDecimal,
@@ -10,6 +10,7 @@ import {
   HealthStat,
   isSilenced,
   NamedItem,
+  rulesToHealthItems,
   Severity
 } from '../health-helper';
 
@@ -252,7 +253,48 @@ describe('isSilenced', () => {
     expect(isSilenced(m, { alertname: 'fooBaz' })).toBe(false);
     expect(isSilenced(m, { alertname: 'Bazbar' })).toBe(false);
   });
+});
 
+describe('rulesToHealthItems, malformed annotation', () => {
+  const ruleWithAnnotation = (netobservHealth: string): Rule =>
+    ({
+      name: 'ThirdPartyAlert',
+      annotations: {
+        summary: 'Third party summary',
+        netobserv_io_network_health: netobservHealth
+      },
+      labels: { severity: 'critical' },
+      alerts: [
+        {
+          state: 'firing',
+          labels: { severity: 'critical' },
+          annotations: { summary: 'Third party summary' },
+          value: '1'
+        }
+      ]
+    } as unknown as Rule);
+
+  it('falls back to default metadata (and logs) instead of throwing on truncated JSON', () => {
+    // Regression: a third-party rule with a truncated netobserv_io_network_health value used to throw
+    // from JSON.parse and take down the whole Network Health page. It must now degrade gracefully.
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const malformed = '{"contextTab":"kiali","displayName":"Truncated"';
+      expect(() => rulesToHealthItems([ruleWithAnnotation(malformed)], {}, [])).not.toThrow();
+      const items = rulesToHealthItems([ruleWithAnnotation(malformed)], {}, []);
+      expect(items).toHaveLength(1);
+      // Default metadata unit is used since the annotation could not be parsed.
+      expect(items[0].metadata.unit).toBe('%');
+      expect(items[0].summary).toBe('Third party summary');
+      // The parse failure is surfaced to the console rather than silently swallowed.
+      expect(errorSpy).toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+describe('isSilenced, regex compilation', () => {
   it('does not apply a silence whose regex JS cannot compile, and logs it', () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     try {

@@ -755,3 +755,18 @@
 .health-ovn-content .health-drawer-container {
     margin-top: var(--pf-t--global--spacer--lg);
 }
+
+/* Read-only context (e.g. OVN) node view: stretch the inline drawer to the full panel height so
+   the divider between the card list and the detail panel spans the whole height. */
+.health-readonly-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.health-readonly-content .pf-v6-c-drawer,
+.health-readonly-content .health-drawer-container {
+    flex: 1 1 auto;
+    min-height: 0;
+}
