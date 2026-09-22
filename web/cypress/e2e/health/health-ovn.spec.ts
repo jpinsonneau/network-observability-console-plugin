@@ -18,7 +18,11 @@ describe('health-ovn', () => {
     cy.get('[data-test="health-ovn-tab-nodes"]').click();
     cy.get('[data-test="health-ovn-content"]', { timeout: 60000 }).should('be.visible');
     cy.contains('OVN alerts per node').should('be.visible');
-    cy.get('[data-test="health-card-ip-10-0-1-7.ec2.internal"]', { timeout: 60000 }).find('button').click();
+    // PF5 renders the clickable card action as a (screen-reader) radio input, PF6 as a button.
+    cy.get('[data-test="health-card-ip-10-0-1-7.ec2.internal"]', { timeout: 60000 })
+      .find('button, input[type="radio"]')
+      .first()
+      .click({ force: true });
     cy.get('[data-test="health-drawer-content"]', { timeout: 60000 }).should('be.visible');
     cy.contains('OVN Kubernetes is experiencing pod creation errors at an elevated rate.').should('be.visible');
   });
