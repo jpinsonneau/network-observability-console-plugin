@@ -44,9 +44,11 @@ describe('(OCP-72610) Export automation', { tags: ['Network_Observability'] }, f
         cy.byTestID('export-modal').should('be.visible')
         // Export modal content can rerender while the CSV is prepared. Re-query
         // the button after the modal is stable instead of clicking a stale subject.
-        cy.byTestID('export-button').should('be.visible').then(() => {
-            cy.byTestID('export-button').click({ force: true })
-        })
+        cy.get('[data-test="export-modal"]').find('[data-test="export-button"]')
+            .should('be.visible')
+            .then(() => {
+                cy.get('[data-test="export-modal"]').find('[data-test="export-button"]').click({ force: true })
+            })
         const waitForCsv = (retries = 5): void => {
             cy.exec("ls cypress/downloads", { failOnNonZeroExit: false }).then((response) => {
                 const files = (response.stdout || '').trim().split('\n').filter(f => f.endsWith('.csv'))
