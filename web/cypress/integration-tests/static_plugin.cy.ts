@@ -73,8 +73,8 @@ describe('(OCP-84156 OCP-88744) StaticPlugin test with Status Check', { tags: ['
             .should('have.attr', 'data-test-status', 'True')
             .should('have.attr', 'data-test-reason', 'Ready')
         // The button can remain guarded briefly while the status page catches up
-        // with the operator. Require its explicit enabled state before clicking;
-        // a missing aria-disabled attribute can otherwise turn this into a no-op.
+        // with the operator. The ready condition above is the portable guard because
+        // PF5 exposes aria-disabled while PF6 omits it when the link is enabled.
         // PF5 exposes aria-disabled on this link while PF6 omits it when enabled.
         // The ready condition above is the portable guard; re-query before clicking
         // because the status page can rerender after reconciliation.
