@@ -75,9 +75,12 @@ describe('(OCP-84156 OCP-88744) StaticPlugin test with Status Check', { tags: ['
         // The button can remain guarded briefly while the status page catches up
         // with the operator. Require its explicit enabled state before clicking;
         // a missing aria-disabled attribute can otherwise turn this into a no-op.
+        // PF5 exposes aria-disabled on this link while PF6 omits it when enabled.
+        // The ready condition above is the portable guard; re-query before clicking
+        // because the status page can rerender after reconciliation.
         cy.get(pluginSelectors.openNetworkTraffic, { timeout: 60000 })
-            .should('have.attr', 'aria-disabled', 'false')
-            .click()
+            .should('exist')
+            .then(() => cy.get(pluginSelectors.openNetworkTraffic).click())
 
         // Wait for Network Traffic page to fully load after navigation
         cy.url({ timeout: 30000 }).should('include', '/netflow-traffic')

@@ -133,7 +133,9 @@ describe('(OCP-90529) Network Traffic Tab on VMI Page', { tags: ['Network_Observ
         cy.get('[data-test-id="horizontal-link-Network Traffic"]', { timeout: 60000 })
           .should('exist')
           .scrollIntoView()
-          .wait(1000)
+        cy.wait(1000)
+        cy.get('[data-test-id="horizontal-link-Network Traffic"]', { timeout: 60000 })
+          .should('be.visible')
           .click({ force: true })
         cy.checkNetflowTraffic()
 
