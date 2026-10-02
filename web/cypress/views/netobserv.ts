@@ -405,7 +405,10 @@ export const Operator = {
         // causing the onSelect to silently not fire. Verify the toggle text and retry.
         const selectMonolithic = (retries = 3): void => {
             cy.get(pluginSelectors.lokiMode).should('exist').click()
-            cy.get(pluginSelectors.monolithicMode).should('be.visible').click()
+            // Dropdown items can be duplicated by the PF overlay. Click only the
+            // visible option and allow React to commit the controlled value.
+            cy.get(pluginSelectors.monolithicMode).filter(':visible').last().click({ force: true })
+            cy.wait(500)
             cy.get(pluginSelectors.lokiMode).then($toggle => {
                 if (!$toggle.text().includes('Monolithic')) {
                     if (retries > 0) {
