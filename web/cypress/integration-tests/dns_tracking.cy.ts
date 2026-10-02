@@ -68,7 +68,11 @@ describe('(OCP-67087) DNSTracking test', { tags: ['Network_Observability'] }, fu
         // Avoid selectAndVerifyColumns (reloads and would drop the draft view).
         cy.openColumnsModal().then(() => {
             cy.get(colSelectors.columnsModal).should('be.visible')
-            cy.get(colSelectors.dnsName).check()
+            // DNSName also exists as a table-header id behind the modal. Filter
+            // the modal first, then scope the checkbox lookup to avoid selecting
+            // that duplicate id.
+            cy.get(`${colSelectors.columnsModal} .custom-chip`).contains('dns').click()
+            cy.get(colSelectors.columnsModal).find(colSelectors.dnsName).check()
             cy.byTestID(colSelectors.save).click()
         })
         cy.byTestID('table-composable').within(() => {
