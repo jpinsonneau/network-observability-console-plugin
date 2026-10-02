@@ -72,6 +72,7 @@ describe('(OCP-67087) DNSTracking test', { tags: ['Network_Observability'] }, fu
             // the modal first, then scope the checkbox lookup to avoid selecting
             // that duplicate id.
             cy.get(`${colSelectors.columnsModal} .custom-chip`).contains('dns').click()
+            cy.get(colSelectors.columnsModal).find(colSelectors.dnsId).check()
             cy.get(colSelectors.columnsModal).find(colSelectors.dnsName).check()
             cy.byTestID(colSelectors.save).click()
         })
