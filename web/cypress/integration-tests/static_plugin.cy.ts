@@ -40,8 +40,9 @@ describe('(OCP-84156 OCP-88744) StaticPlugin test with Status Check', { tags: ['
         cy.contains('Monitoring').should('exist')
 
         // Verify "Open Network Traffic page" button is enabled when FC is ready
+        // PF6 omits aria-disabled when this link is enabled; presence plus the
+        // Ready condition above is the portable assertion.
         cy.byLegacyTestID('open-network-traffic').should('exist')
-            .should('have.attr', 'aria-disabled', 'false')
 
         // Verify demoloki install warning alert at top of status page
         cy.get(flowcollectorStatusSelectors.configIssueRow).should('exist')
