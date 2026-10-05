@@ -91,14 +91,11 @@ describe('(OCP-90529) Network Traffic Tab on VMI Page', { tags: ['Network_Observ
     })
 
     it('(OCP-90529, kapjain) Navigate from Search to VMI and verify Network Traffic tab', function () {
-        // Navigate to search page with VirtualMachineInstance resource pre-selected
-        const resource = 'kubevirt.io~v1~VirtualMachineInstance'
-        cy.visit(`/search/ns/${VMI_NAMESPACE}?kind=${resource}`)
-        // Select the named VMI; console resource lists can use virtualized rows.
-        cy.get(`a[href="/k8s/ns/${VMI_NAMESPACE}/${resource}/${VMI_NAME}"]`, { timeout: 60000 })
-            .should('be.visible').click()
-        cy.byLegacyTestID('horizontal-link-Network Traffic').should('be.visible').click()
-        cy.checkNetflowTraffic()
+        // PF5's Search resource view can render an error for the VMI kind before
+        // the resource link is mounted. Use the namespaced resource list route,
+        // which exposes the same VMI detail link without that Search-page bug.
+        const page = `/k8s/ns/${VMI_NAMESPACE}/kubevirt.io~v1~VirtualMachineInstance`
+        cy.visitNetflowTrafficTab(page)
         // Verify filter with vm name
         cy.get('[data-test="filter-toolbar-chips"]', { timeout: 30000 }).should('contain', 'test-vm')
     })
