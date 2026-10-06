@@ -75,9 +75,12 @@ Cypress.Commands.add('dismissWelcomeModal', () => {
       for (let i = 0; i < $modals.length; i++) {
         const $modal = Cypress.$($modals[i]);
         const ariaLabel = $modal.attr('aria-label') || '';
+        const modalText = $modal.text();
         const isVisible = $modal.is(':visible');
+        const isWelcome = ariaLabel.toLowerCase().includes('welcome') ||
+          modalText.includes('Welcome to OpenShift Virtualization');
 
-        if (isVisible && ariaLabel.toLowerCase().includes('welcome')) {
+        if (isVisible && isWelcome) {
           foundWelcome = true;
 
           // Find close button
