@@ -409,7 +409,11 @@ export const Operator = {
         // This field is rendered only when the form state is Monolithic. Its
         // presence verifies that the selection reached the controlled form before
         // the checkbox is changed.
-        cy.get(pluginSelectors.installDemoLoki).should('be.visible')
+        // PatternFly renders the switch input as an opacity-hidden checkbox and
+        // exposes visibility through its surrounding switch control. Assert that
+        // the controlled input exists instead of requiring the input itself to be
+        // visible.
+        cy.get(pluginSelectors.installDemoLoki).should('exist')
         // Enable demo Loki. The switch is a *controlled* component bound to the wizard's
         // form data (SwitchWidget renders isChecked={value}), so if React's onChange does
         // not persist the toggle, the DOM switch is reset to unchecked on the next render.
