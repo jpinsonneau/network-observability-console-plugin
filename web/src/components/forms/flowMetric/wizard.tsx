@@ -12,12 +12,12 @@ import { flowMetricPath, navigateTo, useNavigate, useParams } from '../../../uti
 import { safeYAMLToJS } from '../../../utils/yaml';
 import { DynamicForm } from '../dynamic-form/dynamic-form';
 import { ErrorTemplate } from '../dynamic-form/templates';
+import { EditorType } from '../editor-toggle';
 import '../forms.css';
 import { useResourceEditor } from '../resource-form';
 import ResourceWatcher, { Consumer, useResourceWatcher } from '../resource-watcher';
 import { getFilteredUISchema } from '../utils';
 import { flowMetricUISchema } from './uiSchema';
-import { EditorType } from '../editor-toggle';
 
 export type FlowMetricWizardProps = {
   name?: string;

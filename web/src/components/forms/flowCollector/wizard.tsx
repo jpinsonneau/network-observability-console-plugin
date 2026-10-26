@@ -15,22 +15,16 @@ import React, { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextSingleton } from '../../../utils/context';
 import { useDiscardGuard } from '../../../utils/discard-guard-hook';
-import {
-  flowCollectorPath,
-  navigateTo,
-  useNavigate,
-  useParams,
-  useSearchParams
-} from '../../../utils/url';
+import { flowCollectorPath, navigateTo, useNavigate, useParams, useSearchParams } from '../../../utils/url';
 import { DynamicForm } from '../dynamic-form/dynamic-form';
 import { ErrorTemplate } from '../dynamic-form/templates';
+import { EditorType } from '../editor-toggle';
 import '../forms.css';
 import { useResourceEditor } from '../resource-form';
 import ResourceWatcher, { Consumer, useResourceWatcher } from '../resource-watcher';
 import { getFilteredUISchema } from '../utils';
 import Consumption from './consumption';
 import { flowCollectorUISchema } from './uiSchema';
-import { EditorType } from '../editor-toggle';
 
 export type FlowCollectorWizardProps = {
   name?: string;
@@ -207,9 +201,7 @@ export const FlowCollectorWizard: FC<FlowCollectorWizardProps> = props => {
                       data-test-id="open-flow-collector-form"
                       className="no-padding"
                       variant="link"
-                      onClick={() =>
-                        editor ? editor.setView(EditorType.FORM) : navigateTo(flowCollectorPath('new')!)
-                      }
+                      onClick={() => (editor ? editor.setView(EditorType.FORM) : navigateTo(flowCollectorPath('new')!))}
                     >
                       {t('FlowCollector form')}
                     </Button>

@@ -91,7 +91,7 @@ export const EditorToggle: FC<EditorToggleProps> = ({
       <FlexItem id="editor-content-container" flex={{ default: 'flex_1' }}>
         {type === EditorType.FORM ? formChild : type === EditorType.WIZARD ? wizardChild : yamlChild}
       </FlexItem>
-      {(type !== EditorType.WIZARD && (type === EditorType.FORM || ContextSingleton.isStandalone())) && (
+      {type !== EditorType.WIZARD && (type === EditorType.FORM || ContextSingleton.isStandalone()) && (
         <FlexItem id="editor-toggle-footer" style={{ paddingBottom: '30px' }}>
           {updated && (
             <Alert isInline className="co-alert" variant="info" title={t('This object has been updated.')}>

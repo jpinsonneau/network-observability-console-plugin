@@ -1,10 +1,5 @@
 import { ContextSingleton } from '../context';
-import {
-  flowCollectorPath,
-  flowMetricPath,
-  getFlowCollectorResourceName,
-  isFlowCollectorCreatePath
-} from '../url';
+import { flowCollectorPath, flowMetricPath, getFlowCollectorResourceName, isFlowCollectorCreatePath } from '../url';
 
 describe('isFlowCollectorCreatePath', () => {
   it('should recognize ~new and setup as create routes', () => {
