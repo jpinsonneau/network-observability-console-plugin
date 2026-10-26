@@ -54,7 +54,7 @@ export const ResourceForm: FC<ResourceFormProps> = ({ uiSchema, wizardChild }) =
     } else {
       url.searchParams.set('view', next);
     }
-    window.history.replaceState({}, '', url.toString());
+    window.history.replaceState(window.history.state, '', url.toString());
   }, []);
 
   const hasChanged = React.useCallback(
